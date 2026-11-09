@@ -663,3 +663,21 @@ TrapMap rejects unchecked original out-of-map reads and fails atomically after
 any tentative RNG draws. Twenty-one local groups pass, with lifecycle/rollback
 checks. Current trap runtime awaits MacCI and Session/save/native ownership;
 spell execution, full level queues and trap UI/audio remain unimplemented.
+
+Trap runtime run42637405068 passed all38 actual Mac tests and packaging. Combined
+RoomTrapRecord1a0ffe→GetRandomTrap4e410/named lookup→full Trap/Item/GameObj ctor→
+TrapTeleportTo1079f2→base finalizer19f45c now matches1024 original creations via
+verify_room_trap.py (multiple inheritance composes Traps and TrapOracle boundaries).
+Compared accepted/null, actual selected definition, origin/state, full push/roomID,
+libc/normal cache and next8MT. Resource/base placement/origin blocker/safeTeleport/
+ID-binding and library inputs remain supplied. Earlier1024 runtime sequences still
+pass. Reports room-traps.json and trap-runtime.json remain private in analysis/.
+Session owns active trap instances separately from loot; item-ID allocation and
+save duplicate checks include them. Appearance rejection bypasses all resources;
+missing named trap commits accepted-null. Placement/map mismatch failures roll
+back gate/selection/origin RNG and IDs. Optional savev7<traps> stores all modeled
+state, origin requests and room metadata; earlier saves migrate empty. Named lookup
+ordering, resumed random+appearance creation, bad maps and cross-container duplicate
+IDs pass in21 local groups. Trap movement activation, owning origin blockers,
+spell effects and native presentation are still pending. Source awaits own MacCI;
+next dependency is measured spell execution rather than silently omitting effects.

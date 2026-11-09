@@ -120,7 +120,8 @@ Actor read_actor(const XmlNode& node,bool currency_fields,bool room_fields) {
         actor.room_local_id=attribute(node,"room-id");actor.can_push=attribute_number<std::uint8_t>(node,"push");actor.room_spawned=flag(node,"room-spawned");
     }
     if (node.attributes.count("monster-flags")) {
-        if (!room_fields) throw std::runtime_error("monster flags require save version seven");actor.monster_flags=attribute_number<std::uint32_t>(node,"monster-flags");
+        if (!room_fields) throw std::runtime_error("monster flags require save version seven");
+        actor.monster_flags=attribute_number<std::uint32_t>(node,"monster-flags");
     }
     actor.position={attribute_number<int>(node,"x"),attribute_number<int>(node,"y")};
     actor.health=attribute_number<std::int32_t>(node,"hp");actor.mana=attribute_number<std::int32_t>(node,"mana");
@@ -227,7 +228,17 @@ void Session::save(std::ostream& out) const {
     for (std::size_t i=0;i<12;++i) if (equipment_.slots()[i]) write_item(out,*equipment_.slots()[i],"slot=\""+std::to_string(i)+"\"");
     out<<"</equipment><ground>\n";
     for (const auto& item:ground_) write_item(out,item.item,"x=\""+std::to_string(item.position.x)+"\" y=\""+std::to_string(item.position.y)+"\"");
-    out<<"</ground>\n";write_array(out,"ranks",ranks_);write_array(out,"intrinsic-damage",intrinsic_damage_);
+    out<<"</ground>\n";
+    if (!traps_.empty()) {
+        out<<"<traps>\n";
+        for (const auto& trap:traps_) out<<"<trap instance=\""<<trap.instance<<"\" definition=\""<<trap.definition<<"\" x=\""<<trap.position.x<<"\" y=\""<<trap.position.y
+            <<"\" origin-x=\""<<trap.origin.x<<"\" origin-y=\""<<trap.origin.y<<"\" origin-object=\""<<trap.has_origin_object<<"\" charges=\""<<trap.charges
+            <<"\" discovered=\""<<trap.discovered<<"\" spent=\""<<trap.spent<<"\" disarmed=\""<<trap.disarmed<<"\" pending=\""<<trap.pending_destruction
+            <<"\" revealed=\""<<trap.sprite_revealed<<"\" disabled=\""<<trap.disabled<<"\" placed=\""<<trap.player_placed<<"\" id=\""<<escape(trap.room_local_id)
+            <<"\" push=\""<<unsigned(trap.can_push)<<"\"/>\n";
+        out<<"</traps>\n";
+    }
+    write_array(out,"ranks",ranks_);write_array(out,"intrinsic-damage",intrinsic_damage_);
     write_array(out,"intrinsic-resistance",intrinsic_resistance_);
     if (!factory_state_.spawned_artifacts.empty()) {
         out<<"<spawned-artifacts>";for (auto index:factory_state_.spawned_artifacts) out<<index<<' ';out<<"</spawned-artifacts>\n";
@@ -353,6 +364,21 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     for (const auto& node:child(root,"ground").children) {
         if (session.ground_.size()>=10000) throw std::runtime_error("saved ground item limit exceeded");
         session.drop(validate_item(node),{attribute_number<int>(node,"x"),attribute_number<int>(node,"y")});
+    }
+    if (root.first("traps")) {
+        if (version!="7" || !session.definitions_) throw std::runtime_error("saved traps need version seven and definitions");
+        for (const auto& node:child(root,"traps").children) {
+            TrapInstance trap;trap.instance=attribute_number<std::uint64_t>(node,"instance");trap.definition=attribute_number<std::uint32_t>(node,"definition");
+            trap.position={attribute_number<int>(node,"x"),attribute_number<int>(node,"y")};trap.origin={attribute_number<int>(node,"origin-x"),attribute_number<int>(node,"origin-y")};
+            trap.charges=attribute_number<std::int32_t>(node,"charges");trap.room_local_id=attribute(node,"id");trap.can_push=attribute_number<std::uint8_t>(node,"push");
+            trap.has_origin_object=flag(node,"origin-object");trap.discovered=flag(node,"discovered");trap.spent=flag(node,"spent");trap.disarmed=flag(node,"disarmed");
+            trap.pending_destruction=flag(node,"pending");trap.sprite_revealed=flag(node,"revealed");trap.disabled=flag(node,"disabled");trap.player_placed=flag(node,"placed");
+            auto inside=[&](Position p){return p.x>=0 && p.y>=0 && p.x<session.world_.width() && p.y<session.world_.height();};
+            if (node.tag!="trap" || !node.children.empty() || !trap.instance || !items.insert(trap.instance).second || session.traps_.size()>=10000 ||
+                trap.definition>=session.definitions_->size() || session.definitions_->at(trap.definition).kind!=ItemKind::trap || !session.definitions_->at(trap.definition).trap ||
+                !inside(trap.position) || (trap.has_origin_object && !inside(trap.origin))) throw std::runtime_error("invalid saved trap state");
+            session.traps_.push_back(std::move(trap));
+        }
     }
     session.ranks_=array<std::int32_t,3>(child(root,"ranks"));
     session.intrinsic_damage_=array<std::int32_t,16>(child(root,"intrinsic-damage"));

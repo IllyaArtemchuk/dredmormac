@@ -20,6 +20,30 @@ TrapInstance make_trap(std::uint64_t instance,std::uint32_t index,const ItemDefi
     if (!instance) throw std::invalid_argument("trap instance needs an ID");
     TrapInstance result;result.instance=instance;result.definition=index;result.charges=trap_definition(definition).charges;return result;
 }
+TrapConstruction create_room_trap(const RoomTrapRecord& record,const std::vector<ItemDefinition>& definitions,
+    const ItemFactoryTables& tables,const ItemFactoryContext& context,const TrapMap& map,
+    std::uint64_t instance,GameRandom& random,Position origin) {
+    auto candidate=random;const auto plan=plan_room_population(RoomPopulationRecord{record},origin,candidate.libc);TrapConstruction result;
+    if (plan.request!=PopulationRequest::none) {
+        result.accepted=true;std::optional<std::uint32_t> selected;
+        if (plan.request==PopulationRequest::named_trap) {
+            for (const auto& pool:tables.traps) {
+                for (auto index:pool) if (definitions.at(index).name==plan.name) {selected=index;break;}
+                if (selected) break;
+            }
+        } else {
+            if (context.level_set>=4) throw std::invalid_argument("trap level set outside range");
+            const auto& pool=tables.traps[context.level_set];std::vector<TrapCandidate> candidates;
+            for (auto index:pool) {const auto& definition=definitions.at(index);candidates.push_back({definition.level,definition.special,definition.debug});}
+            selected=pool.at(select_trap(candidates,candidate,context.depth,context.trap_deviation).index);
+        }
+        if (selected) {
+            auto trap=make_trap(instance,*selected,definitions.at(*selected));place_trap(trap,definitions.at(*selected),plan.position,map,candidate.mt);
+            trap.room_local_id=record.placement.id;trap.can_push=record.placement.can_push;result.object=std::move(trap);
+        }
+    }
+    random=std::move(candidate);return result;
+}
 void place_trap(TrapInstance& instance,const ItemDefinition& definition,Position position,const TrapMap& map,Random& random) {
     const auto& trap=trap_definition(definition);auto next=instance;auto candidate=random;next.position=position;
     const std::array<Position,4> directions={Position{0,-1},Position{1,0},Position{0,1},Position{-1,0}};

@@ -8,6 +8,7 @@
 #include "dredmor/currency.hpp"
 #include "dredmor/factory.hpp"
 #include "dredmor/monsters.hpp"
+#include "dredmor/traps.hpp"
 #include <memory>
 
 namespace dredmor {
@@ -27,6 +28,7 @@ struct Actor {
 };
 struct GroundItem { InventoryItem item;Position position; };
 struct RoomLootCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
+struct RoomTrapCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
 enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken };
 struct TurnEvent {
     EventKind kind;
@@ -45,6 +47,7 @@ public:
     const std::vector<GroundItem>& ground_items() const { return ground_; }
     const std::vector<CustomRoomObject>& custom_objects() const { return custom_objects_; }
     const std::vector<BreakableRoomObject>& breakables() const { return breakables_; }
+    const std::vector<TrapInstance>& traps() const {return traps_;}
     bool passable(Position position) const;
     std::optional<std::size_t> create_custom_object(const CustomRoomDefinition& definition,Position origin={0,0});
     std::optional<std::size_t> create_pedestal(const RoomPedestalRecord& definition,Position origin={0,0});
@@ -70,6 +73,8 @@ public:
     std::optional<std::uint64_t> create_room_monster(const RoomMonsterRecord& record,
         const std::function<Actor(const RoomPopulationPlan&,GameRandom&,MonsterSpawnState&)>& constructor,Position origin={0,0});
     const MonsterSpawnState& monster_spawn_state() const {return monster_state_;}
+    RoomTrapCreation create_room_trap(const RoomTrapRecord& record,const ItemFactoryTables& tables,
+        const ItemFactoryContext& context,const TrapMap& map,Position origin={0,0});
     void give_currency(std::int32_t amount);
     void take_currency(std::int32_t amount);
     void step(Action action);
@@ -94,6 +99,7 @@ private:
     std::vector<GroundItem> ground_;
     std::vector<CustomRoomObject> custom_objects_;
     std::vector<BreakableRoomObject> breakables_;
+    std::vector<TrapInstance> traps_;
     std::vector<TurnEvent> events_;
     Inventory inventory_;
     Equipment equipment_;

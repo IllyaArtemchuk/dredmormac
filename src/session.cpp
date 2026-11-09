@@ -101,7 +101,8 @@ bool Session::hit_breakable_impl(std::size_t index) {
 }
 bool Session::strike_breakable(std::size_t index) {
     if (index>=breakables_.size()) throw std::out_of_range("invalid breakable index");
-    if (!player_.alive()) return false;const auto p=breakables_[index].object.position;
+    if (!player_.alive()) return false;
+    const auto p=breakables_[index].object.position;
     if (std::abs(p.x-player_.position.x)+std::abs(p.y-player_.position.y)!=1) return false;
     if (world_.turn()==std::numeric_limits<std::uint64_t>::max()) throw std::overflow_error("turn counter exhausted");
     auto next=*this;next.events_.clear();if (!next.hit_breakable_impl(index)) return false;
@@ -131,6 +132,7 @@ void Session::drop(InventoryItem item,Position position) {
         throw std::invalid_argument("ground item definition mismatch");
     for (const auto& slot:equipment_.slots()) if (slot && slot->instance==item.instance) throw std::invalid_argument("ground item is already equipped");
     for (const auto& existing:ground_) if (existing.item.instance==item.instance) throw std::invalid_argument("duplicate ground item");
+    for (const auto& existing:traps_) if (existing.instance==item.instance) throw std::invalid_argument("ground item ID is owned by a trap");
     ground_.push_back({item,position});
 }
 std::uint64_t Session::next_item_instance() const {
@@ -143,6 +145,7 @@ std::uint64_t Session::next_item_instance() const {
     for (const auto& slot:inventory_.belt()) if (slot) observe(*slot);
     for (const auto& slot:equipment_.slots()) if (slot) observe(*slot);
     for (const auto& ground:ground_) observe(ground.item);
+    for (const auto& trap:traps_) {InventoryItem identity;identity.instance=trap.instance;observe(identity);}
     return identifier;
 }
 std::uint64_t Session::create_ground_item(std::uint32_t definition,Position position,std::int32_t quantity) {
@@ -188,7 +191,8 @@ std::optional<std::uint64_t> Session::create_ground_loot_impl(const ItemFactoryT
     if (!definitions_) throw std::invalid_argument("loot creation needs item definitions");
     const auto identifier=next_item_instance();static const std::vector<AbilityDefinition> empty;
     auto item=make_loot_item(*definitions_,tables,context,type,subtype,quantity,artifact,identifier,random_,skills_,abilities_?*abilities_:empty,&factory_state_);
-    if (!item) return std::nullopt;drop(*item,position);return identifier;
+    if (!item) return std::nullopt;
+    drop(*item,position);return identifier;
 }
 RoomLootCreation Session::create_room_loot(const RoomLootRecord& record,const ItemFactoryTables& tables,
     const ItemFactoryContext& context,Position origin) {
@@ -200,6 +204,19 @@ RoomLootCreation Session::create_room_loot(const RoomLootRecord& record,const It
     *this=std::move(next);return result;
 }
 void Session::give_currency(std::int32_t amount) {auto next=*this;next.currency_transfer_impl(amount,CurrencyOperation::give);*this=std::move(next);}
+RoomTrapCreation Session::create_room_trap(const RoomTrapRecord& record,const ItemFactoryTables& tables,
+    const ItemFactoryContext& context,const TrapMap& map,Position origin) {
+    static const std::vector<ItemDefinition> empty;auto next=*this;
+    auto created=dredmor::create_room_trap(record,definitions_?*definitions_:empty,tables,context,map,next.next_item_instance(),next.random_,origin);
+    RoomTrapCreation result{created.accepted,{}};
+    if (created.object) {
+        const auto position=created.object->position;
+        if (map.width!=world_.width() || map.height!=world_.height() || position.x<0 || position.y<0 || position.x>=world_.width() || position.y>=world_.height() || next.traps_.size()>=10000)
+            throw std::invalid_argument("invalid session trap position/count");
+        result.instance=created.object->instance;next.traps_.push_back(std::move(*created.object));
+    }
+    *this=std::move(next);return result;
+}
 std::optional<std::uint64_t> Session::create_room_monster(const RoomMonsterRecord& record,
     const std::function<Actor(const RoomPopulationPlan&,GameRandom&,MonsterSpawnState&)>& constructor,Position origin) {
     auto next=*this;const auto plan=plan_room_population(RoomPopulationRecord{record},origin,next.random_.libc);

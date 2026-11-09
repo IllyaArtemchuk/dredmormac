@@ -2,6 +2,8 @@
 #include "dredmor/items.hpp"
 #include "dredmor/random.hpp"
 #include "dredmor/world.hpp"
+#include "dredmor/factory.hpp"
+#include "dredmor/room_records.hpp"
 
 namespace dredmor {
 struct TrapInstance {
@@ -20,6 +22,10 @@ struct TrapMap {
     std::uint8_t tile(Position position) const;
 };
 TrapInstance make_trap(std::uint64_t instance,std::uint32_t index,const ItemDefinition& definition);
+struct TrapConstruction {bool accepted=false;std::optional<TrapInstance> object;};
+TrapConstruction create_room_trap(const RoomTrapRecord& record,const std::vector<ItemDefinition>& definitions,
+    const ItemFactoryTables& tables,const ItemFactoryContext& context,const TrapMap& map,
+    std::uint64_t instance,GameRandom& random,Position origin={0,0});
 // Produces the original origin-blocker request. Resource loading and actual
 // square/list attachment belong to the owner. Invalid original reads fail here.
 void place_trap(TrapInstance& instance,const ItemDefinition& definition,Position position,const TrapMap& map,Random& random);

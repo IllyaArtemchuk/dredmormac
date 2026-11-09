@@ -216,14 +216,16 @@ GameContent GameContent::load(const std::filesystem::path& root,bool expansions)
     currency.name="Zorkmids";currency.icon="items/cash0.png";content.items_.push_back(std::move(currency));
     if (!found_tweaks) throw std::runtime_error("base tweakDB.xml is required");
     content.monsters_=load_monsters(content.catalog_);
-    if (!expansions) content.monster_tables_=build_base_monster_tables(content.catalog_,content.monsters_);return content;
+    if (!expansions) content.monster_tables_=build_base_monster_tables(content.catalog_,content.monsters_);
+    return content;
 }
 const ItemFactoryTables& GameContent::item_factory_tables() const {
     if (!item_factory_tables_) throw std::runtime_error("expansion item registration is not implemented");
     return *item_factory_tables_;
 }
 const MonsterTables& GameContent::monster_tables() const {
-    if (!monster_tables_) throw std::runtime_error("expansion monster registration is not implemented");return *monster_tables_;
+    if (!monster_tables_) throw std::runtime_error("expansion monster registration is not implemented");
+    return *monster_tables_;
 }
 ItemFactoryContext GameContent::loot_context(SpawnDepthContext depth,std::size_t level_set,Difficulty difficulty) const {
     ItemFactoryContext context;context.depth=depth;context.level_set=level_set;
