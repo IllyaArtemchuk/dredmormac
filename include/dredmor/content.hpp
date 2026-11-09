@@ -5,6 +5,7 @@
 #include "dredmor/abilities.hpp"
 #include "dredmor/names.hpp"
 #include "dredmor/room_records.hpp"
+#include "dredmor/artifact.hpp"
 
 namespace dredmor {
 struct SkillLoadout { std::string type,subtype;int amount=1;bool always=false; };
@@ -36,6 +37,7 @@ public:
     const MonsterDefinition& monster(std::string_view name) const;
     const Tweaks& tweaks() const { return tweaks_; }
     const RoomNameWords& room_name_words() const { return room_name_words_; }
+    const ArtifactWords& artifact_words() const { return artifact_words_; }
     const ItemFactoryTables& item_factory_tables() const;
     Actor make_monster(std::string_view name,Position position,Difficulty difficulty,int dungeon_level=0) const;
     ClassRanks starting_ranks(const std::vector<int>& skill_ids) const;
@@ -49,6 +51,7 @@ private:
     std::vector<RoomDefinition> rooms_;
     Tweaks tweaks_;
     RoomNameWords room_name_words_;
+    ArtifactWords artifact_words_;
     std::optional<ItemFactoryTables> item_factory_tables_;
 };
 }

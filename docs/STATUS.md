@@ -250,3 +250,13 @@ selectors. Seventeen local groups pass. Artifact generation still throws atomica
 Upper weapon target buckets outside the original20 populated levels are empty in
 the port, and exhausted/invalid tables or retry-budget overflow fail atomically;
 these safety policies are not original behavior claims. New gear source awaits MacCI.
+
+Gear run42620199153 passed all28 native checks and packaged-app smoke. Artifact
+name/description/stat construction now matches1,024 complete original executions
+with Buff constructor and virtual item-text boundaries. Actual artifact name,
+CreateArtifact control flow and both RNG streams execute; generated/fixed names,
+all text/modifier/weapon-damage outputs and subsequent RNG agree. Artifact text
+loading matches2,048 original callbacks including missing/empty/case variations;
+all900 supplied base word entries agree independently. Eighteen local groups pass.
+This standalone artifact core awaits MacCI; item ownership, factory integration,
+equipment aggregation, uniqueness and save persistence are still pending.

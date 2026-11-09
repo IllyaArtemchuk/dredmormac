@@ -966,3 +966,32 @@ out-of-array reads are excluded. Expanded full factory comparison still matches
 2,100 cases with actual gear/trap selectors and simple-constructor boundaries.
 Seventeen local groups pass. Registration/native run42619110918 passed27 Mac checks
 and packaged-app smoke; gear integration MacCI pending.
+
+## Artifact construction core
+
+artifact.cpp models GenArtifactName3c290 and CreateArtifact3c540. Name assembly uses
+libc word picks with two MT binary decisions. It always runs before a named-item
+name replacement. Descriptions select qualities/material/decor by quality, always
+consume another MT binary choice, and conditionally append extra decor above6.
+Buff description is base item description plus space plus generated description.
+
+Stat categories use libc bounded82. Damage0..15 and resistance16..31, duplicate
+secondary ranges32..50/51..69 (index15 ignored), and primary70..75 each try up to
+three MT binary additions while quality remains. Categories76..81 add a primary
+point without consuming quality or MT; they can add free points. Weapon damage
+also writes the weapon's damage array; armour writes only the Buff damage array.
+Named definition quality overrides the passed quality after name generation.
+Port roll budgets and invalid/missing word guards fail atomically.
+
+verify_artifact.py matches1,024 full original calls. Actual name/description/roll
+code and MT execute; zero-modifier Buff constructor, item virtual text and string/
+allocation/libc boundaries are supplied. Compares names, descriptions, quality,
+6primary/24secondary/16damage/16resistance/16weapon values, libc and next8 MT draws.
+Fixed-name cases pass a different caller quality to prove the definition override.
+This does not compare complete Buff construction, item factory, equipment or saves.
+verify_artifact_words.py matches2,048 actual text-loader callbacks with reserved
+vectors and ASCII/string boundaries, including case/empty/missing attributes.
+All900 base word entries independently agree:49 starts,40 phonemes,58 titles,
+192 nouns/192 plurals,180 adjectives,65 qualities,63 materials,61 decor. GameContent
+retains these words. Eighteen local groups pass; artifact core MacCI pending.
+Gear run42620199153 passed all28 native checks and relocated packaged-app smoke.

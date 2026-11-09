@@ -155,3 +155,10 @@ ORIGINAL_BINARY build/dredmor-gear-buckets --content DATA_ROOT --out
 PRIVATE_REPORT.json` checks original bucketing and independent base ingestion.
 These preserve the selectors' different alternate-depth and retry rules; exhausted
 or invalid tables fail atomically under a port resource guard.
+
+Artifact construction primitives are checked with `verify_artifact.py ORIGINAL_BINARY
+build/dredmor-artifact --out PRIVATE_REPORT.json`; metadata uses
+`verify_artifact_words.py ORIGINAL_BINARY build/dredmor-artifact --content DATA_ROOT
+--out PRIVATE_REPORT.json`. These compare names, descriptions, stat rolls and RNG
+with explicit Buff-constructor/item-text boundaries. Artifact item ownership,
+equipment, save persistence and complete factory integration are still pending.

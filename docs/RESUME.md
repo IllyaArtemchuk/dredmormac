@@ -435,3 +435,21 @@ local groups pass; gear source awaits MacCI. Private weapon-armour-selection.txt
 and item-level-buckets.txt are exports; keep them private. Next: artifact creation
 and special factory artifact branch (decompiler weapon loop needs disassembly),
 then room content/population ordering and full-level session/native integration.
+
+Gear run42620199153 passed28 Mac checks/package (job129170050695). Artifact core
+in artifact.hpp/cpp is now implemented; verify_artifact.py matches1,024 full
+GenArtifactName3c290/CreateArtifact3c540 executions with actual MT/naming/rolls,
+Buff zero-modifier ctor and item virtual name/description boundaries. Named items
+still consume generated-name RNG before replacing name, then use definitionquality
+(overrides a deliberately different passed quality in oracle). Description pools
+and per-category rolls compare, including free primary additions at categories
+76..81 and duplicate secondary ranges with index15 skipped. Damage writes both
+buff and weapon arrays only for weapons. Normal cache untouched. Eighteen local
+groups pass. Artifact factory/instance/equipment/save integration still absent.
+ArtifactWords loads9 tables from base text; verify_artifact_words.py matches2,048
+original callbacks, all900 supplied word entries independently, including empty/
+missingtext/plural and case variants. GameContent.artifact_words accessor added.
+Next: optional Artifact instance payload, original factory quality/RNG behavior,
+unique state, equipment aggregation and save migration; full room population still
+pending. Private artifact-creation.txt/artifact-name-and-buff.txt exports. Source
+awaits next MacCI. Do not stop at CI milestones.

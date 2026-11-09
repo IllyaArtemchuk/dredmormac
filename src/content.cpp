@@ -150,7 +150,9 @@ GameContent GameContent::load(const std::filesystem::path& root,bool expansions)
     if (!expansions) content.item_factory_tables_.emplace();
     bool found_tweaks=false;
     for (const auto& database:content.catalog_.databases()) {
-        if (database->layer=="base" && database->source.filename()=="text.xml") content.room_name_words_=read_room_name_words(database->root);
+        if (database->layer=="base" && database->source.filename()=="text.xml") {
+            content.room_name_words_=read_room_name_words(database->root);content.artifact_words_=read_artifact_words(database->root);
+        }
         if (database->layer=="base" && database->source.filename()=="tweakDB.xml") {content.tweaks_=Tweaks::read(database->root);found_tweaks=true;}
         for (const auto& node:database->root.children) {
             if (database->source.filename()=="skillDB.xml" && node.tag=="ability") content.abilities_.push_back(read_ability(node));
