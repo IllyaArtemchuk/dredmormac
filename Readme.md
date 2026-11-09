@@ -179,3 +179,23 @@ startup mount requests and supplied sprite lookup. Packed core ZIP installations
 and runtime mod mounts are not implemented; the supplied installation uses loose
 files. Native breakable smoke also verifies layer precedence and atomic resource
 validation during save loading.
+
+Spell execution now supports basic damage, healing, player mana effects,
+immediate trigger chains and template area effects. Template rules and facing
+persist through saves. Deferred effects, buffs and remaining spell families are
+still incomplete; this does not establish full-game parity.
+
+The following original-executable comparisons require your private installation
+and the analysis Python environment. Keep the JSON reports outside the repository.
+
+| Scope | Command arguments after `python scripts/` |
+| --- | --- |
+| Immediate trigger chains | `verify_triggers.py ORIGINAL_BINARY build/dredmor-trigger --out PRIVATE_REPORT.json` |
+| Mana arithmetic and mixed casts | `verify_spellpoints.py ORIGINAL_BINARY build/dredmor-spells build/dredmor-spell-cast --out PRIVATE_REPORT.json` |
+| Template targeting and base ingestion | `verify_maneuvers.py ORIGINAL_BINARY build/dredmor-maneuver --content DATA_ROOT --out PRIVATE_REPORT.json` |
+| Template casts with nested effects | `verify_maneuver_cast.py ORIGINAL_BINARY build/dredmor-maneuver-cast --out PRIVATE_REPORT.json` |
+
+The template importer normalizes three missing source cells to empty and skips
+effect coordinates outside the map, where the original can perform invalid reads.
+The comparison scopes and other remaining limits are recorded in
+[findings](docs/FINDINGS.md) and [deviations](docs/DEVIATIONS.md).

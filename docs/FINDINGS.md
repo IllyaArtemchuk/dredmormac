@@ -1435,3 +1435,14 @@ arithmetic+4096 mixed resource casts still match after effect-loop refactor. Nat
 trap fixture now triggers a template damage/mana child and saves its template hash.
 Current AoE source awaits MacCI. Next: scheduled effects/buffs, broader spell types,
 full population/scripts and complete generated-floor play.
+
+Area-spell integration a39f97b passed actual macos-15 arm64 run42692141736: all43
+checks and relocated development-app packaging. This includes template rules/facing
+save tests and the native trap→trigger→template damage/mana replay, with both
+activations, depletion, save/reload and invalid resource/rule rollback. Twenty-four
+local groups pass. New source is pushed on implementation/native-foundation only.
+No original assets/reports were committed and main/releases remain unchanged.
+Next concrete work is deferred trigger/buff scheduling and additional spell types,
+then horde/element/script population and complete generated-floor session/UI flow.
+The overall reimplementation remains incomplete; these validations cover the named
+subsystems and supplied original-routine comparisons, not whole-game parity.

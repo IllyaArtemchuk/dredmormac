@@ -31,7 +31,7 @@ Verified:
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
 - Twenty-four local CTest groups pass, including deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42689569756 passed all forty-two checks, including
+- Actual macos-15 arm64 CI run 42692141736 passed all forty-three checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -612,3 +612,14 @@ arithmetic+4096 mixed resource casts still match after effect-loop refactor. Nat
 trap fixture now triggers a template damage/mana child and saves its template hash.
 Current AoE source awaits MacCI. Next: scheduled effects/buffs, broader spell types,
 full population/scripts and complete generated-floor play.
+
+Area-spell integration a39f97b passed actual macos-15 arm64 run42692141736: all43
+checks and relocated development-app packaging. This includes template rules/facing
+save tests and the native trap→trigger→template damage/mana replay, with both
+activations, depletion, save/reload and invalid resource/rule rollback. Twenty-four
+local groups pass. New source is pushed on implementation/native-foundation only.
+No original assets/reports were committed and main/releases remain unchanged.
+Next concrete work is deferred trigger/buff scheduling and additional spell types,
+then horde/element/script population and complete generated-floor session/UI flow.
+The overall reimplementation remains incomplete; these validations cover the named
+subsystems and supplied original-routine comparisons, not whole-game parity.
