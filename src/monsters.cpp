@@ -92,6 +92,7 @@ MonsterDefinition read_monster(const XmlNode& node,const MonsterDefinition* pare
     result.display_name=attribute(node,"displayname").value_or("");if (result.display_name.empty()) result.display_name=result.name;
     result.special=integer(node,"special",result.special);result.diggle_hell=integer(node,"digglehell",result.diggle_hell)!=0;
     result.max_spawns=integer(node,"maxspawns",result.max_spawns);
+    result.terrain=integer(node,"terrain",result.terrain);
     result.level=integer(node,"level",result.level);
     result.source_chain.push_back(node);
     for (const auto& child:node.children) {

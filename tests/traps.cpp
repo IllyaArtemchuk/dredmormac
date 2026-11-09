@@ -59,6 +59,7 @@ int main() {
         const auto created=session.create_room_trap(record,tables,context,map);
         check(created.instance && session.traps()[0].definition==1 && session.traps()[0].charges==7 && session.traps()[0].origin.x==3);
         check(session.traps()[0].room_local_id==record.placement.id && session.traps()[0].can_push==0);
+        check(!session.passable({3,1}) && session.world().passable({3,1}));
         const auto wand=session.create_ground_item(2,{2,1});check(wand>*created.instance);
         DarwinRandom item_random(1);auto duplicate=make_inventory_item(items[0],0,*created.instance,item_random);failed=false;
         try {session.drop(duplicate,{2,1});} catch(const std::invalid_argument&) {failed=true;}

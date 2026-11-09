@@ -14,7 +14,7 @@ class Traps(GeometryOracle):
     def __init__(self,binary):
         from unicorn import UC_HOOK_CODE
         super().__init__(binary)
-        self.handled=[0x5abce,0x1122c0,0xac4a0,0x36e80,0xa9860,0x29990,0x2ba60,0x5c0e6,0x5f4b0,
+        self.handled=[0x5abce,0x1122c0,0xac4a0,0xabf20,0x36e80,0xa9860,0x29990,0x2ba60,0x5c0e6,0x5f4b0,
                       0x1081c4,0x7c760,0x994e0,0x115872,0x4d95a,0xe23f0,0x116c60,0x5beb0,0x1c9c10,0xf7ee0]
         for address in self.handled:self.machine.hook_add(UC_HOOK_CODE,self.boundary,begin=address,end=address)
 
@@ -31,9 +31,15 @@ class Traps(GeometryOracle):
         elif address==0x36e80:self.write(a+0x50,b,c);self.write(a+0x64,d)
         elif address==0xa9860:
             if b!=self.level or c or self.cstring(d)!='Fixture Origin.png':raise AssertionError('trap origin blocker request differs')
-            self.origin_object=a
+            self.origin_object=a;return
+        elif address==0xabf20:
+            if self.cstring(a)!='Fixture Origin.png' or self.cstring(b)!='Fixture Origin.png' or self.cstring(c) or d or e or f:
+                raise AssertionError('trap origin sprite request differs')
+            result=self.visible
         elif address==0x29990:
             if a!=self.origin_object or d!=self.level:raise AssertionError('trap origin placement target differs')
+            if self.read(a+0x3c)[0]!=1 or self.read(a+0x44)[0] or self.read(a+0x1c)[0] or tuple(self.machine.mem_read(a+0x15,2))!=(1,1):
+                raise AssertionError('trap origin blocker collision/frame/animation differs')
             self.origin_position=(b,c)
         elif address==0x2ba60:
             if a!=self.actor:raise AssertionError('unexpected trap destruction object')
@@ -138,7 +144,7 @@ def verify(binary,port):
         differences=[(i,a,b) for i,(a,b) in enumerate(zip(actual[index],expected[index])) if a!=b]
         raise AssertionError(f'trap runtime fixture {index}, {cases[index][:-1]}: {differences[:20]}')
     return dict(binary_sha256=hashlib.sha256(oracle.original.data).hexdigest(),cases=len(expected),mismatches=0,
-                scope='actual Trap/Item/GameObj constructors, TrapTeleportTo origin scan, Draw, SteppedOn, MonsterSteppedOn, BlowUpTrap and DisarmTrap; sprites/placement/blocker/safeTeleport/spell I/O/UI/XP/achievement/library inputs supplied; state, origin, detection, avoidance, charge/destruction, spell request, disarm outcomes and next8MT compared; owner queues, actual spell effects/render/audio/UI excluded')
+                scope='actual Trap/Item/GameObj and origin Blocker constructors, TrapTeleportTo origin scan, Draw, SteppedOn, MonsterSteppedOn, BlowUpTrap and DisarmTrap; sprites/base placement/safeTeleport/spell I/O/UI/XP/achievement/library inputs supplied; state, origin/blocker collision/animation, detection, avoidance, charge/destruction, spell request, disarm outcomes and next8MT compared; owner queues, actual spell effects/render/audio/UI excluded')
 
 
 if __name__=='__main__':

@@ -112,6 +112,15 @@ static NSArray<SpriteImage*> *breakableSprites(const dredmor::RoomSprite& intact
 static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
     return {static_cast<uint16_t>([images[0] frameCount]),static_cast<uint16_t>([images[1] frameCount]),static_cast<uint16_t>([images[2] frameCount])};
 }
+static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,const dredmor::ItemDefinition& definition,const std::filesystem::path& root) {
+    auto prepare=[&](const std::string& relative) {
+        const auto path=roomResource(root,relative);SpriteImage *image=[[SpriteImage alloc] initWithPath:[NSString stringWithUTF8String:path.c_str()]];
+        if (!image || ![image frameCount]) throw std::runtime_error("cannot prepare trap sprite");return image;
+    };
+    SpriteImage *hidden=prepare("dungeon/trap_hidden.png"),*visible=prepare(definition.icon);
+    SpriteImage *origin=trap.has_origin_object?prepare(definition.trap->origin):hidden;
+    return @[hidden,visible,origin];
+}
 
 @interface RoomView : NSView<DredmorInventoryOwner> {
     std::unique_ptr<dredmor::Session> _session;
@@ -123,6 +132,7 @@ static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
     NSMutableDictionary<NSNumber*,SpriteImage*> *_enemyImages;
     NSArray<SpriteImage*> *_objectImages;
     NSArray<NSArray<SpriteImage*>*> *_breakableImages;
+    NSArray<NSArray<SpriteImage*>*> *_trapImages;
     NSMutableArray<NSDictionary*> *_breakAnimations;
     NSTimer *_animationTimer;
     NSTimeInterval _animationStart;
@@ -146,6 +156,7 @@ static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
 - (BOOL)smokeSkillSelection;
 - (BOOL)smokeCustomObjects;
 - (BOOL)smokeBreakables;
+- (BOOL)smokeTraps;
 - (void)recordBreakableAnimations;
 @end
 
@@ -186,10 +197,13 @@ static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
             _session->character_profile(ranks,std::make_shared<const std::vector<dredmor::ItemDefinition>>(_content->items()),
                 std::move(skillRanks),std::make_shared<const std::vector<dredmor::AbilityDefinition>>(_content->abilities()));
         }
+        if (_content) _session->spell_profile(std::make_shared<const std::vector<dredmor::SpellDefinition>>(_content->spells()));
         NSMutableArray<NSArray<SpriteImage*>*> *breakables=[NSMutableArray array];
         if (scene[@"room_objects"]) {
             if (!_content || ![scene[@"room_objects"] isKindOfClass:NSString.class]) throw std::runtime_error("room objects need a content room name");
             const auto& room=_content->room([scene[@"room_objects"] UTF8String]);
+            const auto numeric=room.numeric_template();dredmor::TrapMap trapMap{numeric.width,numeric.height,{}};
+            for (const auto& cell:numeric.cells) trapMap.tiles.push_back(cell.kind);
             // Preview builds supported objects/loot in relative source order.
             // Other constructors/RNG and full population still belong to level generation.
             for (const auto& record:room.records()) std::visit([&](const auto& definition) {
@@ -203,6 +217,8 @@ static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
                         return _content->create_room_monster(plan,{},dredmor::Difficulty::medium,random,state);
                     });
                 }
+                else if constexpr (std::is_same_v<T,dredmor::RoomTrapRecord>)
+                    _session->create_room_trap(definition,_content->item_factory_tables(),_content->loot_context(),trapMap);
                 else if constexpr (std::is_same_v<T,dredmor::BreakableRoomDefinition>) {
                     NSArray<SpriteImage*> *prepared=nil;
                     const auto created=_session->create_breakable(definition,{0,0},[&](const auto& value) {
@@ -216,6 +232,9 @@ static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
             },record);
         }
         _breakableImages=breakables;_breakAnimations=[NSMutableArray array];
+        NSMutableArray<NSArray<SpriteImage*>*> *traps=[NSMutableArray array];
+        for (const auto& trap:_session->traps()) [traps addObject:trapSprites(trap,_content->items().at(trap.definition),_dataRoot)];
+        _trapImages=traps;
         NSMutableArray<SpriteImage*> *objects=[NSMutableArray array];
         for (const auto& object:_session->custom_objects()) {
             SpriteImage *image=[[SpriteImage alloc] initWithRoomSprite:object.sprite root:_dataRoot];
@@ -390,7 +409,8 @@ static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
     std::string bytes(static_cast<const char*>(data.bytes),data.length);std::istringstream input(bytes);
     auto definitions=_content?std::make_shared<const std::vector<dredmor::ItemDefinition>>(_content->items()):nullptr;
     auto abilities=_content?std::make_shared<const std::vector<dredmor::AbilityDefinition>>(_content->abilities()):nullptr;
-    auto loaded=std::make_unique<dredmor::Session>(dredmor::Session::load(input,definitions,abilities));
+    auto spells=_content?std::make_shared<const std::vector<dredmor::SpellDefinition>>(_content->spells()):nullptr;
+    auto loaded=std::make_unique<dredmor::Session>(dredmor::Session::load(input,definitions,abilities,spells));
     // Current renderer supports a single prepared room. Reject another layout
     // before replacing either the session or its images.
     const auto& old=_session->world();const auto& world=loaded->world();
@@ -425,7 +445,9 @@ static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
             throw std::runtime_error("saved breakable frames do not match resources");
         if (object.single_breaking_delay) [prepared[1] setSingleFrameDelay:object.single_breaking_delay];[breakables addObject:prepared];
     }
-    _session=std::move(loaded);_enemyImages=images;_objectImages=objects;_breakableImages=breakables;[_breakAnimations removeAllObjects];
+    NSMutableArray<NSArray<SpriteImage*>*> *traps=[NSMutableArray array];
+    for (const auto& trap:loaded->traps()) [traps addObject:trapSprites(trap,_content->items().at(trap.definition),_dataRoot)];
+    _session=std::move(loaded);_enemyImages=images;_objectImages=objects;_breakableImages=breakables;_trapImages=traps;[_breakAnimations removeAllObjects];
     [_inventoryController refresh];self.needsDisplay=YES;
 }
 - (void)showFailure:(const std::exception&)error {
@@ -538,6 +560,38 @@ static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
         random.room_spawned && random.room_local_id=="fixture-random" && random.can_push==255 && !random.sprite.empty() &&
         !(random.monster_flags&~10U) && count!=_session->monster_spawn_state().counts.end() && count->second==1;
 }
+- (BOOL)smokeTraps {
+    NSURL *url=[NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:
+        [NSUUID.UUID.UUIDString stringByAppendingString:@".dredmor-save"]]];
+    try {
+        if (_session->traps().size()!=2 || _trapImages.count!=2) return NO;
+        const auto& ceiling=_session->traps()[0];const auto& floor=_session->traps()[1];
+        if (ceiling.charges!=1 || !ceiling.discovered || ceiling.pending_destruction || ceiling.room_local_id!="fixture-trap" || ceiling.can_push!=0 ||
+            _session->player().health!=_session->player().secondary[0]-7 || !floor.has_origin_object || floor.origin.x!=1 || floor.origin.y!=2 ||
+            _session->passable(floor.origin) || !_session->world().passable(floor.origin) || [_trapImages[0][1] frameCount]!=2 || [_trapImages[1][2] frameCount]!=2) return NO;
+        if (![self smokeSaveLoad]) return NO;
+        std::ostringstream before;_session->save(before);NSArray *images=_trapImages;std::vector<std::string> invalid;
+        auto wrongSpell=before.str();auto start=wrongSpell.find("<spell-rules content=\"");
+        if (start==std::string::npos) return NO;start+=std::string("<spell-rules content=\"").size();const auto end=wrongSpell.find('"',start);
+        wrongSpell.replace(start,end-start,"1");invalid.push_back(std::move(wrongSpell));
+        auto badOrigin=before.str();start=badOrigin.find("origin-object=\"0\"");if (start==std::string::npos) return NO;
+        badOrigin.replace(start,std::string("origin-object=\"0\"").size(),"origin-object=\"1\"");invalid.push_back(std::move(badOrigin));
+        for (const auto& bytes:invalid) {
+            NSData *data=[NSData dataWithBytes:bytes.data() length:bytes.size()];if (![data writeToURL:url options:NSDataWritingAtomic error:nullptr]) return NO;
+            bool failed=false;try {[self loadFromURL:url];} catch(const std::exception&) {failed=true;}
+            std::ostringstream after;_session->save(after);if (!failed || after.str()!=before.str() || images!=_trapImages) return NO;
+        }
+        [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];
+        for (NSString *key in @[@"\uf702",@"\uf703"]) {
+            NSEvent *event=[NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:0 timestamp:0
+                windowNumber:self.window.windowNumber context:nil characters:key charactersIgnoringModifiers:key isARepeat:NO keyCode:0];[self keyDown:event];
+        }
+        return _session->traps()[0].charges==0 && _session->traps()[0].pending_destruction &&
+            _session->player().health==_session->player().secondary[0]-14 && !_session->passable(_session->traps()[1].origin);
+    } catch(const std::exception& error) {
+        [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];fprintf(stderr,"native traps: %s\n",error.what());return NO;
+    }
+}
 - (BOOL)smokeSkillSelection {
     if (!_content) return YES;
     DredmorSkillSelectionController *controller=[[DredmorSkillSelectionController alloc] initWithSkills:_content->skills()];
@@ -605,6 +659,12 @@ static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
     for (std::size_t i=0;i<_session->breakables().size();++i) {
         const auto& object=_session->breakables()[i];const NSUInteger sprite=object.hits_taken>=object.hits_needed?2:0;
         drawObject(object.object.position,[_breakableImages[i][sprite] frameAtIndex:object.object.frame]);
+    }
+    for (std::size_t i=0;i<_session->traps().size();++i) {
+        const auto& trap=_session->traps()[i];if (trap.has_origin_object) drawObject(trap.origin,[_trapImages[i][2] frameAt:animationTime]);
+    }
+    for (auto i:_session->detect_traps()) {
+        const auto& trap=_session->traps()[i];drawObject(trap.position,[_trapImages[i][trap.sprite_revealed?1:0] frameAtIndex:0]);
     }
     for (NSDictionary *animation in [_breakAnimations copy]) {
         SpriteImage *sprite=animation[@"sprite"];
@@ -769,6 +829,7 @@ int main(int argc,const char**argv) {
                     ([scene[@"smoke_inventory"] boolValue] && ![view smokeInventory]) ||
                     ([scene[@"smoke_artifact"] boolValue] && ![view smokeArtifact]) ||
                     ([scene[@"smoke_room_monsters"] boolValue] && ![view smokeRoomMonsters]) ||
+                    ([scene[@"smoke_traps"] boolValue] && ![view smokeTraps]) ||
                     ([scene[@"smoke_objects"] boolValue] && ![view smokeCustomObjects]) ||
                     ([scene[@"smoke_breakables"] boolValue] && ![view smokeBreakables]) ||
                     ![view smokeSaveLoad] || ![view smokeSkillSelection]) {

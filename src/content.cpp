@@ -22,7 +22,7 @@ std::optional<int> legacy_attribute(const XmlNode& node,std::string_view key) {
 Actor monster_actor(const MonsterDefinition& definition,Position position,const MonsterStats& stats) {
     Actor actor;actor.name=definition.name;actor.position=position;actor.primary=stats.primary;actor.secondary=stats.secondary;
     actor.health=stats.secondary[0];actor.mana=stats.secondary[1];actor.damage=definition.damage;actor.resistance=definition.resistance;
-    actor.experience_reward=definition.experience;actor.sprite=definition.idle_sprites[3];return actor;
+    actor.experience_reward=definition.experience;actor.sprite=definition.idle_sprites[3];actor.monster_terrain=definition.terrain;return actor;
 }
 }
 std::vector<RoomElementDefinition> RoomDefinition::elements() const {

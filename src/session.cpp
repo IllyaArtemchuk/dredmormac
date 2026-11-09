@@ -61,6 +61,7 @@ bool Session::passable(Position position) const {
     if (!world_.passable(position)) return false;
     for (const auto& object:custom_objects_) if (object.blocks_movement && same(object.position,position)) return false;
     for (const auto& object:breakables_) if (object.object.blocks_movement && same(object.object.position,position)) return false;
+    for (const auto& trap:traps_) if (trap.has_origin_object && same(trap.origin,position)) return false;
     return true;
 }
 TrapSelection Session::select_trap_candidate(const std::vector<TrapCandidate>& pool,SpawnDepthContext depth,float deviation) {
@@ -273,6 +274,32 @@ bool Session::cast_damage_spell_impl(const SpellDefinition& spell,Position origi
     }
     return true;
 }
+std::vector<std::size_t> Session::detect_traps() {
+    std::vector<std::size_t> visible;
+    for (std::size_t i=0;i<traps_.size();++i) {
+        auto& trap=traps_[i];
+        if (!trap.pending_destruction && definitions_ && detect_trap(trap,definitions_->at(trap.definition),player_.position,player_.secondary)) visible.push_back(i);
+    }
+    return visible;
+}
+void Session::activate_traps_impl(Actor& actor) {
+    const bool monster=actor.id!=player_.id;
+    if (monster && actor.monster_terrain!=0) return;
+    for (auto& trap:traps_) {
+        if (!actor.alive()) return;
+        if (trap.pending_destruction || !same(trap.position,actor.position)) continue;
+        const auto step=step_on_trap(trap,actor.secondary,random_.mt,monster);
+        if (step.clicked) events_.push_back({EventKind::trap_click,actor.id,trap.instance});
+        if (!step.triggered) continue;
+        if (!spells_ || !definitions_) throw std::runtime_error("trap activation needs spell and item definitions");
+        const auto& definition=definitions_->at(trap.definition);const SpellDefinition* spell=nullptr;
+        for (const auto& candidate:*spells_) if (candidate.name==definition.trap->spell) {spell=&candidate;break;}
+        const auto request=trigger_trap(trap,definition,actor.position,spell!=nullptr,monster);
+        if (!request) {events_.push_back({EventKind::trap_spell_missing,actor.id,trap.instance});continue;}
+        events_.push_back({EventKind::trap_triggered,actor.id,trap.instance});
+        cast_damage_spell_impl(*spell,request->origin,request->target,request->caster_is_target?actor.id:player_.id,request->monster_cast);
+    }
+}
 void Session::take_currency(std::int32_t amount) {auto next=*this;next.currency_transfer_impl(amount,CurrencyOperation::take);*this=std::move(next);}
 void Session::pickup_currency() {
     for (auto item=ground_.begin();item!=ground_.end();) {
@@ -336,7 +363,7 @@ void Session::enemy_turns() {
     for (auto& enemy:enemies_) if (enemy.alive() && player_.alive()) {
         const auto dx=std::abs(enemy.position.x-player_.position.x),dy=std::abs(enemy.position.y-player_.position.y);
         if (dx+dy==1) attack(enemy,player_);
-        else if (auto next=next_step(enemy)) { enemy.position=*next;events_.push_back({EventKind::moved,enemy.id}); }
+        else if (auto next=next_step(enemy)) { enemy.position=*next;events_.push_back({EventKind::moved,enemy.id});activate_traps_impl(enemy); }
     }
 }
 void Session::step_impl(Action action) {
@@ -358,6 +385,7 @@ void Session::step_impl(Action action) {
     player_.position=world_.player();
     if (outcome==Outcome::moved) events_.push_back({EventKind::moved,player_.id});
     if (outcome==Outcome::moved) pickup_currency();
+    if (outcome==Outcome::moved) activate_traps_impl(player_);
     enemy_turns();
 }
 void Session::step(Action action) { auto next=*this;next.step_impl(action);*this=std::move(next); }

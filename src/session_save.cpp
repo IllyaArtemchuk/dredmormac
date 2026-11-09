@@ -100,6 +100,25 @@ std::uint64_t ability_signature(const std::shared_ptr<const std::vector<AbilityD
     }
     return hash?hash:1;
 }
+std::uint64_t spell_signature(const std::shared_ptr<const std::vector<SpellDefinition>>& definitions) {
+    if (!definitions) return 0;
+    std::uint64_t hash=14695981039346656037ull;
+    auto add=[&](const std::string& text){for (unsigned char c:text) {hash^=c;hash*=1099511628211ull;}hash^=0;hash*=1099511628211ull;};
+    auto real=[&](float value){std::uint32_t bits;std::memcpy(&bits,&value,4);add(std::to_string(bits));};
+    std::function<void(const XmlNode&)> node=[&](const XmlNode& n) {add(n.tag);add(n.text);for (const auto& a:n.attributes) {add(a.first);add(a.second);}for (const auto& c:n.children) node(c);};
+    for (const auto& spell:*definitions) {
+        add(spell.name);add(spell.type);node(spell.source);
+        for (const auto& effect:spell.effects) {
+            add(effect.type);add(effect.spell);add(effect.taxa);add(effect.buff_tag);node(effect.source);
+            for (auto n:effect.damage) add(std::to_string(n));
+            for (auto n:effect.scaling) real(n);
+            for (std::int32_t n:{effect.amount,effect.percent,effect.turns,effect.primary_scale,effect.secondary_scale,effect.self,effect.affects_caster,
+                    effect.unblockable,effect.permanent,effect.kickback,int(effect.resistable),int(effect.affects_corpses),int(effect.is_sleeping),int(effect.midas),int(effect.burn),int(effect.regeneration_graphic)}) add(std::to_string(n));
+            real(effect.amount_scale);real(effect.floor_scale);
+        }
+    }
+    return hash?hash:1;
+}
 void write_actor(std::ostream& out,std::string_view tag,const Actor& actor) {
     out<<'<'<<tag<<" id=\""<<actor.id<<"\" name=\""<<escape(actor.name)<<"\" sprite=\""<<escape(actor.sprite)
        <<"\" x=\""<<actor.position.x<<"\" y=\""<<actor.position.y<<"\" hp=\""<<actor.health
@@ -107,6 +126,7 @@ void write_actor(std::ostream& out,std::string_view tag,const Actor& actor) {
     if (!actor.room_local_id.empty() || actor.can_push!=1 || actor.room_spawned)
         out<<" room-id=\""<<escape(actor.room_local_id)<<"\" push=\""<<unsigned(actor.can_push)<<"\" room-spawned=\""<<actor.room_spawned<<"\"";
     if (actor.monster_flags) out<<" monster-flags=\""<<actor.monster_flags<<"\"";
+    if (actor.monster_terrain) out<<" monster-terrain=\""<<actor.monster_terrain<<"\"";
     out<<">\n";
     write_array(out,"primary",actor.primary);write_array(out,"secondary",actor.secondary);
     write_array(out,"damage",actor.damage);write_array(out,"resistance",actor.resistance);
@@ -122,6 +142,10 @@ Actor read_actor(const XmlNode& node,bool currency_fields,bool room_fields) {
     if (node.attributes.count("monster-flags")) {
         if (!room_fields) throw std::runtime_error("monster flags require save version seven");
         actor.monster_flags=attribute_number<std::uint32_t>(node,"monster-flags");
+    }
+    if (node.attributes.count("monster-terrain")) {
+        if (!room_fields) throw std::runtime_error("monster terrain requires save version seven");
+        actor.monster_terrain=attribute_number<int>(node,"monster-terrain");
     }
     actor.position={attribute_number<int>(node,"x"),attribute_number<int>(node,"y")};
     actor.health=attribute_number<std::int32_t>(node,"hp");actor.mana=attribute_number<std::int32_t>(node,"mana");
@@ -253,6 +277,7 @@ void Session::save(std::ostream& out) const {
     out<<"</skills>\n<custom-objects>\n";
     for (const auto& object:custom_objects_) write_room_object(out,object);
     out<<"</custom-objects>\n";
+    if (spells_) out<<"<spell-rules content=\""<<spell_signature(spells_)<<"\"/>\n";
     if (!breakables_.empty()) {
         out<<"<breakables>\n";
         for (const auto& object:breakables_) {
@@ -270,7 +295,7 @@ void Session::save(std::ostream& out) const {
     if (!out) throw std::runtime_error("cannot write session save");
 }
 Session Session::load(std::istream& input,std::shared_ptr<const std::vector<ItemDefinition>> definitions,
-                       std::shared_ptr<const std::vector<AbilityDefinition>> abilities) {
+                       std::shared_ptr<const std::vector<AbilityDefinition>> abilities,std::shared_ptr<const std::vector<SpellDefinition>> spells) {
     std::string content;std::array<char,4096> buffer;
     while (input) {input.read(buffer.data(),buffer.size());content.append(buffer.data(),static_cast<std::size_t>(input.gcount()));if (content.size()>64*1024*1024) throw std::runtime_error("save exceeds size limit");}
     if (input.bad()) throw std::runtime_error("cannot read session save");
@@ -279,12 +304,16 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     if (root.tag!="dredmor-session" || (version!="1" && version!="2" && version!="3" && version!="4" && version!="5" && version!="6" && version!="7")) throw std::runtime_error("unsupported session save version");
     const bool legacy_types=version=="1" || version=="2";
     if (attribute_number<std::uint64_t>(root,"content")!=signature(definitions,legacy_types)) throw std::runtime_error("save item content does not match loaded definitions");
+    if (root.first("spell-rules")) {
+        if (version!="7" || !spells || attribute_number<std::uint64_t>(child(root,"spell-rules"),"content")!=spell_signature(spells))
+            throw std::runtime_error("save spell content does not match loaded definitions");
+    }
     const auto turn=attribute_number<std::uint64_t>(root,"turn");
     if (turn==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("saved turn counter exhausted");
     std::istringstream rows(child(root,"room").text);auto world=World::restore(rows,turn);auto player=read_actor(child(root,"player"),version=="6" || version=="7",version=="7");
     if (player.position.x!=world.player().x || player.position.y!=world.player().y) throw std::runtime_error("saved player/room position mismatch");
     Session session(std::move(world),player,0,attribute_number<int>(root,"experience-n"));
-    session.definitions_=std::move(definitions);session.next_actor_=attribute_number<std::uint64_t>(root,"next-actor");
+    session.definitions_=std::move(definitions);session.spells_=std::move(spells);session.next_actor_=attribute_number<std::uint64_t>(root,"next-actor");
     std::set<std::uint64_t> actors={player.id},items;
     for (const auto& node:child(root,"enemies").children) {
         if (node.tag!="enemy" || session.enemies_.size()>=512) throw std::runtime_error("invalid saved enemy list");

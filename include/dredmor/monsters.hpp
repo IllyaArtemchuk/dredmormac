@@ -10,7 +10,7 @@ namespace dredmor {
 struct MonsterDefinition {
     std::string name,parent,layer,display_name;
     int level=0,experience=0,armour_ac=0,aggressiveness=0,span=0;
-    int special=0,max_spawns=0;
+    int special=0,max_spawns=0,terrain=0;
     bool diggle_hell=false;
     ClassRanks ranks{};
     PrimaryStats primary{};

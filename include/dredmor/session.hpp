@@ -25,12 +25,13 @@ struct Actor {
     std::uint8_t can_push=1;
     bool room_spawned=false;
     std::uint32_t monster_flags=0;
+    int monster_terrain=0;
     bool alive() const { return health>0; }
 };
 struct GroundItem { InventoryItem item;Position position; };
 struct RoomLootCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
 struct RoomTrapCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
-enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken,spell_damage };
+enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken,spell_damage,trap_click,trap_triggered,trap_spell_missing };
 struct TurnEvent {
     EventKind kind;
     std::uint64_t actor=0,target=0;
@@ -79,6 +80,8 @@ public:
     // Low-level cast: no mana/cooldown/turn scheduling. Unsupported dispatch or
     // effects fail atomically while the remaining spell engine is implemented.
     bool cast_damage_spell(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster=0,bool allow_haywire=true);
+    void spell_profile(std::shared_ptr<const std::vector<SpellDefinition>> definitions) {spells_=std::move(definitions);}
+    std::vector<std::size_t> detect_traps();
     void give_currency(std::int32_t amount);
     void take_currency(std::int32_t amount);
     void step(Action action);
@@ -93,7 +96,8 @@ public:
     std::string snapshot() const;
     void save(std::ostream& output) const;
     static Session load(std::istream& input,std::shared_ptr<const std::vector<ItemDefinition>> definitions={},
-                        std::shared_ptr<const std::vector<AbilityDefinition>> abilities={});
+                        std::shared_ptr<const std::vector<AbilityDefinition>> abilities={},
+                        std::shared_ptr<const std::vector<SpellDefinition>> spells={});
 private:
     MonsterSpawnState monster_state_;
     friend class CharacterBuilder;
@@ -112,6 +116,7 @@ private:
     std::shared_ptr<const std::vector<ItemDefinition>> definitions_;
     std::vector<SkillRank> skills_;
     std::shared_ptr<const std::vector<AbilityDefinition>> abilities_;
+    std::shared_ptr<const std::vector<SpellDefinition>> spells_;
     GameRandom random_;
     ItemFactoryState factory_state_;
     Progression progression_;
@@ -131,6 +136,7 @@ private:
     std::optional<std::uint64_t> create_ground_loot_impl(const ItemFactoryTables& tables,const ItemFactoryContext& context,
         std::string_view type,std::string_view subtype,int quantity,bool artifact,Position position);
     bool cast_damage_spell_impl(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire);
+    void activate_traps_impl(Actor& actor);
 };
 Actor make_player(const ClassRanks& ranks,std::string name="Player");
 }

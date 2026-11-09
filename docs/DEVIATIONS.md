@@ -53,5 +53,6 @@
 
 - Trap runtime primitives now have1024 original sequence comparisons, including
   placement origin, detection, avoidance, charge/trigger/disarm state and spell
-  requests. Spell execution and Session/native trap ownership remain unfinished;
-  these primitives do not yet establish playable trap behavior.
+  requests. Session/native trap ownership, origin rendering/collision and automatic basic
+  damage casts now exist. Other spell effects, disarm UI, full destruction queues,
+  actual VFX/audio and original scheduling remain unfinished/unverified.

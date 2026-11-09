@@ -741,3 +741,31 @@ self/adjacent bounds, mixed unsupported-effect rollback and resumed chance casts
 All21 local groups pass. Parser run42640439157 is inprogress; current basic-cast
 source awaits MacCI. Automatic trap movement/casting, spell rules/save identity,
 origin blocker ownership and native trap presentation are the next integration.
+
+Basic cast run42642317094 passed Mac CI/packaging. Session now activates traps
+on player and enemy movement using measured avoidance, spell requests, basic
+damage casts and charge/destruction state. Actor terrain metadata parses/inherits/
+persists, and nonzero monster terrain skips trap steps. Missing player spells
+leave charges unchanged; missing monster spells consume charges per original.
+Unsupported effects fail the entire provisional turn atomically, not silently.
+Deferred pending traps stay in the owned vector, remain saved and are inactive;
+original destruction-queue processing/global ID lifecycle is not yet reproduced.
+Spell profiles are immutable shared definitions. Optional savev7<spell-rules>
+content identity includes raw XML and all modeled typed effect fields/float bits;
+load requires matching definitions. Older saves without identity migrate when a
+profile is supplied. Native setup and reload attach the installation's spell rules.
+Origin Blocker ctor a9860→a9732 and Builda91fa now execute in both trap oracles,
+with sprite and SafeTeleport boundaries. They match movement-blocking1/vision0,
+frame0/playing+looping1; full1024 runtime and1024 record comparisons still pass.
+Trap::DestroyObject108baa only enqueues itself; the separate origin blocker remains.
+Session collision and native origin sprites preserve that independent blocker
+through trap depletion. Original tile/list attachment and visual timing remain
+outside the oracle. Native record execution now includes traps with numeric room
+cells, hidden/revealed stopped sprites, animated origins and sticky detection.
+Loads prepare every trap image before replacing session/cache. New native-traps
+fixture tests real movement damage, charges, reload, spell-identity/resource rollback
+and persistent origin collision. Linux logic probe:HP22→15→8 (damage8 minus armour1),
+charges2→1→0, origin(1,2). Full22 local groups pass with new activation/terrain/
+profile-migration/rollback tests; current integration awaits MacCI. Complete spell
+families/buffs, disarm UI, actual spell VFX/audio, horde/element population and
+full-level play remain unfinished. Next: validate MacCI while extending effects.

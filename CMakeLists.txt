@@ -45,6 +45,9 @@ include(CTest)
 add_executable(trap-runtime-tests tests/traps.cpp)
 target_link_libraries(trap-runtime-tests PRIVATE dredmor_core)
 add_test(NAME trap-runtime COMMAND trap-runtime-tests)
+add_executable(trap-activation-tests tests/trap_activation.cpp)
+target_link_libraries(trap-activation-tests PRIVATE dredmor_core)
+add_test(NAME trap-activation COMMAND trap-activation-tests)
 add_executable(dredmor-sprite src/sprite_cli.cpp)
 target_link_libraries(dredmor-sprite PRIVATE dredmor_core)
 add_executable(dredmor-generation src/generation_cli.cpp)
@@ -238,5 +241,12 @@ if(APPLE)
     add_test(NAME native-monsters-window COMMAND $<TARGET_FILE:DredmorMac>
       ${CMAKE_BINARY_DIR}/native-monsters/scene.json --smoke-test)
     set_tests_properties(native-monsters-window PROPERTIES FIXTURES_REQUIRED native-monsters TIMEOUT 15)
+    add_test(NAME native-traps-fixture COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-traps
+      --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --traps)
+    set_tests_properties(native-traps-fixture PROPERTIES FIXTURES_SETUP native-traps)
+    add_test(NAME native-traps-window COMMAND $<TARGET_FILE:DredmorMac>
+      ${CMAKE_BINARY_DIR}/native-traps/scene.json --smoke-test)
+    set_tests_properties(native-traps-window PROPERTIES FIXTURES_REQUIRED native-traps TIMEOUT 15)
   endif()
 endif()
