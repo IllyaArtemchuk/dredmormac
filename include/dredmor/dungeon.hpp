@@ -2,6 +2,7 @@
 #include "dredmor/generation.hpp"
 #include "dredmor/names.hpp"
 #include <optional>
+#include <array>
 
 namespace dredmor {
 struct GeometryOptions {
@@ -32,4 +33,17 @@ GeometryAttempt generate_geometry_attempt(const std::vector<RoomStamp>& active_p
                                          GameRandom& random,const GeometryOptions& options={});
 GeometryAttempt generate_level_geometry(const std::vector<RoomStamp>& active_pool,const RoomNameWords& words,
                                        GameRandom& random,const GeometryOptions& options={});
+struct DoorAssembly {
+    Position center{};
+    bool horizontal=false,locked=false,open=false;
+    std::array<Position,3> parts{};
+};
+struct DoorBuildPlan {
+    std::vector<DoorAssembly> doors{};
+    std::vector<Position> repaired{};
+};
+// Original BuildDoors traversal, repair rule and constructor/placement plan.
+// Entity construction, sprites and PlaceInLevel/Open side effects are separate.
+// Malformed layouts fail before mutation; generated layouts have valid margins.
+DoorBuildPlan build_door_plan(DungeonLayout& layout);
 }

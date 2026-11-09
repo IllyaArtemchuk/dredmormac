@@ -197,3 +197,12 @@ branch configuration remain inputs. Private room-registration-and-doors.txt has
 EndElement 0x19bf20, LoadRoomTemplates 0x199ce0, BuildDoors 0x192d6e.
 Next: door construction/plans, then content/scripts/population; full level native
 play remains absent. New geometry native validation pending push.
+
+Geometry native run 42601954130 passed all twenty-one checks and package smoke.
+Door assembly planning is implemented as build_door_plan in dungeon.cpp.
+verify_doors.py matches 1,024 original BuildDoors executions / 32,244 assemblies /
+521 repairs with constructor/place/Open recording boundaries. Door entity and
+sprite side effects are not included. Private door-behavior.txt and
+door-interaction.txt export constructor, Build, Open, Close, ToggleDoor, Clicked,
+RemoteActivation and GameObj constructor/save. Next: verified toggle/lock/obstruction
+transitions, then room scripts/content. New door planning awaits native CI.

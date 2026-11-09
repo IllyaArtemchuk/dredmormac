@@ -65,6 +65,27 @@ int main() {
         options.starters={99};rejected=false;
         try {generate_geometry_attempt(pool(9),words,random,options);} catch(const std::invalid_argument&) {rejected=true;}
         check(rejected && same(before,random));
+        DungeonLayout doors(11,11,std::vector<DungeonCell>(121));
+        doors.at(3,7)={6,42,2,0x80}; // vertical, locked
+        doors.at(3,4)={6,43,1,0x81}; // bad horizontal doorway
+        doors.at(1,4).kind=doors.at(5,4).kind=1;
+        doors.at(7,7)={6,44,5,0x82}; // horizontal, open
+        doors.at(5,7).kind=13;doors.at(9,7).kind=1;
+        doors.at(0,0)={6,45,7,0x83}; // ignored boundary row
+        auto plan=build_door_plan(doors);
+        check(plan.doors.size()==2 && plan.repaired.size()==1);
+        check(plan.repaired[0].x==3 && plan.repaired[0].y==4 && doors.at(3,4).kind==1);
+        check(doors.at(3,4).room_id==43 && doors.at(3,4).door_flags==1 && doors.at(3,4).flags==0x81);
+        check(plan.doors[0].center.x==3 && plan.doors[0].center.y==7 && !plan.doors[0].horizontal && plan.doors[0].locked);
+        check(plan.doors[0].parts[0].y==6 && plan.doors[0].parts[2].y==8 && !plan.doors[0].open);
+        check(plan.doors[1].horizontal && plan.doors[1].open && !plan.doors[1].locked);
+        check(plan.doors[1].parts[0].x==6 && plan.doors[1].parts[2].x==8 && doors.at(0,0).kind==6);
+        DungeonLayout malformed(10,10,std::vector<DungeonCell>(100));
+        malformed.at(3,4).kind=6;malformed.at(3,4).door_flags=1;
+        malformed.at(1,4).kind=malformed.at(5,4).kind=1;
+        malformed.at(9,4).kind=6;malformed.at(9,4).door_flags=1;rejected=false;
+        try {build_door_plan(malformed);} catch(const std::invalid_argument&) {rejected=true;}
+        check(rejected && malformed.at(3,4).kind==6);
         std::cout<<"original geometry goldens, retry flags, graph constraints and atomic guard failures passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

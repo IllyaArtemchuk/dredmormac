@@ -131,3 +131,8 @@ RNG streams. Retry wall flags and the three-door automatic starter requirement
 are preserved. Twelve local groups pass; this new geometry awaits native CI.
 Branch/template registration is an explicit input boundary. Door objects, room
 scripts, stairs, population and native full-level integration remain unfinished.
+
+Geometry run 42601954130 passed all twenty-one native checks and packaging.
+Door assembly plans now match 1,024 original executions / 32,244 assemblies / 521
+repairs. Constructors, placement and Open are recording boundaries; actual
+entities, sprites and interactions remain pending. Twelve local groups pass.

@@ -39,6 +39,8 @@ struct DungeonCell {
 class DungeonLayout {
 public:
     DungeonLayout(int width,int height,std::vector<DungeonCell> cells);
+    int width() const { return width_; }
+    int height() const { return height_; }
     const std::vector<DungeonCell>& cells() const { return cells_; }
     DungeonCell& at(int x,int y);
     const DungeonCell& at(int x,int y) const;

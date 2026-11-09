@@ -572,3 +572,24 @@ objects, scripts, stairs, secret doors and population are not implemented here.
 Explicit candidate/room/retry budgets are port resource policy and fail without
 committing caller RNG state. Twelve local groups include original golden layouts,
 retry persistence, reciprocal graph constraints and atomic guard failures.
+
+Run 42601954130 (eda6db8) passed all twenty-one native arm64 checks and relocated
+signed package smoke, including the new geometry goldens.
+
+## Door assembly plans
+
+build_door_plan reproduces BuildDoors (0x192d6e) traversal and repair rule before
+entity side effects: x ascending, y descending from height-2 through 1. Horizontal
+door markers with ordinary floor exactly two cells to each side become floor;
+shop/zoo/liquid cells do not satisfy that test. Other markers create three linked
+parts, with orientation, lock and initial-open bits from door flags. The plan
+retains constructor/placement order and the three part positions.
+
+verify_doors.py matches 1,024 original executions / 32,244 assemblies / 521 repairs.
+Allocation, Door constructors, virtual placement, Open and printf are recording
+boundaries. Grid mutation, constructor arguments, lock state on each object,
+previous/next links, placement coordinates/order and opening calls are checked.
+Actual constructor/sprite/place/open side effects and player interactions are
+excluded. Malformed port layouts reject invalid part positions atomically; the
+original assumes generator margins. Twelve local groups pass with repair, ignored
+boundary rows, orientation, lock/open and atomic-failure coverage.

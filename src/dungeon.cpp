@@ -88,4 +88,31 @@ GeometryAttempt generate_level_geometry(const std::vector<RoomStamp>& pool,const
     }
     throw std::runtime_error("geometry reroll budget exceeded");
 }
+DoorBuildPlan build_door_plan(DungeonLayout& layout) {
+    auto candidate=layout;DoorBuildPlan result;
+    const auto width=layout.width(),height=layout.height();
+    auto neighbor=[&](int x,int y) {
+        // Original arithmetic uses a linear cell offset, including crossing a
+        // row boundary. Preserve that distinction from coordinate validation.
+        const auto index=std::int64_t(y)*width+x;
+        if (index<0 || index>=std::int64_t(width)*height) throw std::invalid_argument("door neighbor outside allocated grid");
+        return candidate.cells()[std::size_t(index)].kind;
+    };
+    for (int x=0;x<width;++x) for (int y=height-2;y>0;--y) {
+        auto& cell=candidate.at(x,y);
+        if (cell.kind!=6) continue;
+        const bool horizontal=(cell.door_flags&1)!=0;
+        if (horizontal && neighbor(x-2,y)==1 && neighbor(x+2,y)==1) {
+            cell.kind=1;result.repaired.push_back({x,y});continue;
+        }
+        DoorAssembly assembly{{x,y},horizontal,(cell.door_flags&2)!=0,(cell.door_flags&4)!=0,{}};
+        for (int i=0;i<3;++i) {
+            const Position part{horizontal?x+i-1:x,horizontal?y:y+i-1};
+            if (part.x<0 || part.y<0 || part.x>=width || part.y>=height) throw std::invalid_argument("door part outside allocated grid");
+            assembly.parts[std::size_t(i)]=part;
+        }
+        result.doors.push_back(assembly);
+    }
+    layout=std::move(candidate);return result;
+}
 }
