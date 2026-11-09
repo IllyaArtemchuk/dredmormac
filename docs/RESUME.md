@@ -347,3 +347,10 @@ except artifact/zorkmids/misc and calls CreateItem(name). Misc lockpick/lockpick
 map0, spores1. Quantity>1 overrides count and enables stacking; <=1 keeps ctor
 defaults. Artifact path's decompiler has a suspicious weapon loop; inspect actual
 instructions before implementing it. Keep all supplied data/outputs private.
+
+Trap run42612861333 failed AppleClang compilation: tests assign streams={} and
+the implicit aggregate member initialization cannot select DarwinRandom's explicit
+defaulted constructor. GameRandom.libc now has an explicit default member
+initializer{1}, preserving seed1 and allowing portable aggregate reset. Re-run Mac
+CI before treating trap integration validated. Currency core work is underway;
+see the current working tree and its verify_currency.py report before continuing.

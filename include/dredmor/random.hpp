@@ -56,7 +56,7 @@ private:
 };
 struct GameRandom {
     Random mt;
-    DarwinRandom libc;
+    DarwinRandom libc{1};
     NormalRandom normal;
     // The original seed routines leave box_muller's static cache unchanged.
     void seed(std::uint32_t value) { libc.seed(value);mt.seed(value); }

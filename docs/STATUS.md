@@ -197,3 +197,8 @@ retains future selections. Trap metadata matches1,024 original callback fixtures
 retained trigger/spell/charge/mount/facing fields. Fourteen local groups pass;
 new trap selection/metadata source awaits Mac CI. Activation/full gameplay remain
 unfinished.
+
+Trap run42612861333 failed in the new test's aggregate initialization on AppleClang.
+GameRandom libc now initializes explicitly to1; numeric behavior is unchanged.
+Native revalidation is pending. This does not affect the passing original-routine
+comparisons, but the new trap code is not yet a successful native checkpoint.
