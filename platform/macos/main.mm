@@ -564,12 +564,19 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
     NSURL *url=[NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:
         [NSUUID.UUID.UUIDString stringByAppendingString:@".dredmor-save"]]];
     try {
-        if (_session->traps().size()!=2 || _trapImages.count!=2) return NO;
+        auto fail=[&](const char* stage) {
+            fprintf(stderr,"native traps failed at %s: HP %d/%d, traps %zu, images %lu\n",stage,_session->player().health,
+                _session->player().secondary[0],_session->traps().size(),static_cast<unsigned long>(_trapImages.count));
+            for (const auto& trap:_session->traps()) fprintf(stderr,"trap %u: charges %d, discovered %d, pending %d, origin %d,%d/%d, push %u\n",
+                trap.definition,trap.charges,trap.discovered,trap.pending_destruction,trap.origin.x,trap.origin.y,trap.has_origin_object,unsigned(trap.can_push));
+            return NO;
+        };
+        if (_session->traps().size()!=2 || _trapImages.count!=2) return fail("ownership");
         const auto& ceiling=_session->traps()[0];const auto& floor=_session->traps()[1];
         if (ceiling.charges!=1 || !ceiling.discovered || ceiling.pending_destruction || ceiling.room_local_id!="fixture-trap" || ceiling.can_push!=0 ||
             _session->player().health!=_session->player().secondary[0]-7 || !floor.has_origin_object || floor.origin.x!=1 || floor.origin.y!=2 ||
-            _session->passable(floor.origin) || !_session->world().passable(floor.origin) || [_trapImages[0][1] frameCount]!=2 || [_trapImages[1][2] frameCount]!=2) return NO;
-        if (![self smokeSaveLoad]) return NO;
+            _session->passable(floor.origin) || !_session->world().passable(floor.origin) || [_trapImages[0][1] frameCount]!=2 || [_trapImages[1][2] frameCount]!=2) return fail("initial activation");
+        if (![self smokeSaveLoad]) return fail("save/load");
         std::ostringstream before;_session->save(before);NSArray *images=_trapImages;std::vector<std::string> invalid;
         auto wrongSpell=before.str();auto start=wrongSpell.find("<spell-rules content=\"");
         if (start==std::string::npos) return NO;start+=std::string("<spell-rules content=\"").size();const auto end=wrongSpell.find('"',start);
@@ -579,15 +586,20 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
         for (const auto& bytes:invalid) {
             NSData *data=[NSData dataWithBytes:bytes.data() length:bytes.size()];if (![data writeToURL:url options:NSDataWritingAtomic error:nullptr]) return NO;
             bool failed=false;try {[self loadFromURL:url];} catch(const std::exception&) {failed=true;}
-            std::ostringstream after;_session->save(after);if (!failed || after.str()!=before.str() || images!=_trapImages) return NO;
+            std::ostringstream after;_session->save(after);
+            if (!failed || after.str()!=before.str() || images!=_trapImages) {
+                fprintf(stderr,"native traps rollback: rejected %d, same session %d, same images %d\n",failed,after.str()==before.str(),images==_trapImages);
+                return fail("invalid load rollback");
+            }
         }
         [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];
         for (NSString *key in @[@"\uf702",@"\uf703"]) {
             NSEvent *event=[NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:0 timestamp:0
                 windowNumber:self.window.windowNumber context:nil characters:key charactersIgnoringModifiers:key isARepeat:NO keyCode:0];[self keyDown:event];
         }
-        return _session->traps()[0].charges==0 && _session->traps()[0].pending_destruction &&
-            _session->player().health==_session->player().secondary[0]-14 && !_session->passable(_session->traps()[1].origin);
+        if (_session->traps()[0].charges!=0 || !_session->traps()[0].pending_destruction ||
+            _session->player().health!=_session->player().secondary[0]-14 || _session->passable(_session->traps()[1].origin)) return fail("second activation");
+        return YES;
     } catch(const std::exception& error) {
         [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];fprintf(stderr,"native traps: %s\n",error.what());return NO;
     }
