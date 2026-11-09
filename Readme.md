@@ -184,7 +184,8 @@ Spell execution now supports basic damage, healing, player mana effects,
 immediate and delayed trigger chains, damage over time and template area effects.
 Active player stat buffs support refresh, stack caps, expiry and mana upkeep.
 Trigger chains support required and forbidden buff-name conditions.
-Pending spells, buffs, template rules and facing persist through saves. Generic buff gates,
+Generic effect conditions check missing buff icons with the original loop-return behavior.
+Pending spells, buffs, template rules and facing persist through saves. Other status families,
 remaining spell families and the complete original action queue are still
 incomplete; this does not establish full-game parity.
 
@@ -195,6 +196,7 @@ and the analysis Python environment. Keep the JSON reports outside the repositor
 | --- | --- |
 | Immediate trigger chains | `verify_triggers.py ORIGINAL_BINARY build/dredmor-trigger --out PRIVATE_REPORT.json` |
 | Scheduled spell creation and updates | `verify_scheduled.py ORIGINAL_BINARY build/dredmor-scheduled --out PRIVATE_REPORT.json` |
+| Generic effect buff condition | `verify_effect_gate.py ORIGINAL_BINARY build/dredmor-effect-gate --out PRIVATE_REPORT.json` |
 | Trigger buff conditions | `verify_trigger_gates.py ORIGINAL_BINARY build/dredmor-trigger-gates --out PRIVATE_REPORT.json` |
 | Buff ordering and tie behavior | `verify_buff_order.py ORIGINAL_BINARY build/dredmor-buffs --out PRIVATE_REPORT.json` |
 | Player stat buffs and mana upkeep | `verify_buff_session.py ORIGINAL_BINARY build/dredmor-buff-session --out PRIVATE_REPORT.json` |

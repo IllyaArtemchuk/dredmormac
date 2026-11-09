@@ -98,3 +98,8 @@
   and256 large-stack lifecycle cases. Independent flat modifiers preserve the
   original residual-stat quirks across save11, including empty active vectors.
   The room-view buff-name/timer HUD is a port interface, not original UI parity.
+
+- Generic requirebuff9c icon eligibility, chance order and whole-effect-loop return
+  now match2048 original casts. Actual buff application is a boundary in this
+  comparison, with separate active-buff sequence comparisons. Owned monster buffs
+  and complete spell/turn/UI execution remain unfinished.

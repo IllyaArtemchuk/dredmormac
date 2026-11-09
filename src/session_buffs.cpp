@@ -14,6 +14,19 @@ bool Session::actor_has_buff(const Actor& actor,const std::string& name) const {
     for (const auto& buff:player_buffs_) if (spells_->at(buff.spell).name==name) return true;
     return false;
 }
+bool Session::effect_buff_gate(const SpellDefinition& spell,Position target) const {
+    for (const auto& definition:spell.buffs) if (definition.apply_to_player) {
+        if (same(target,player_.position)) {
+            bool present=false;for (const auto& buff:player_buffs_) if (buff_icon(buff)==definition.icon) {present=true;break;}
+            if (!present) return true;
+        } else {
+            // Owned monster buffs are unavailable in the current session;
+            // the modeled monster buff vector is empty.
+            for (const auto& enemy:enemies_) if (enemy.alive() && same(enemy.position,target)) return true;
+        }
+    }
+    return false;
+}
 bool Session::has_player_buff_state() const {
     return !player_buffs_.empty() || std::any_of(buff_primary_flat_.begin(),buff_primary_flat_.end(),[](auto n){return n!=0;}) ||
         std::any_of(buff_secondary_flat_.begin(),buff_secondary_flat_.end(),[](auto n){return n!=0;});

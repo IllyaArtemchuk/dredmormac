@@ -175,6 +175,7 @@ private:
     const BuffDefinition& buff_definition(const ActiveBuff& buff) const;
     std::string buff_icon(const ActiveBuff& buff) const;
     bool actor_has_buff(const Actor& actor,const std::string& name) const;
+    bool effect_buff_gate(const SpellDefinition& spell,Position target) const;
     bool has_player_buff_state() const;
     void sort_player_buffs();
     void validate_player_buff(const BuffDefinition& definition) const;

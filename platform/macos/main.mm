@@ -637,6 +637,9 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
         if (_session->player_buffs().size()!=12 || _session->player().primary!=primary || ![self smokeSaveLoad]) return fail("large buff traversal");
         _session->step(dredmor::Action::wait);
         if (!_session->player_buffs().empty() || _session->player().primary[0]!=std::max(0,primary[0]-12) || ![self smokeSaveLoad]) return fail("large buff residual state");
+        const auto gateMana=_session->player().mana;
+        if (!schedule("Fixture effect gate") || _session->player().mana!=gateMana-1 || ![self smokeSaveLoad]) return fail("effect gate application");
+        if (!schedule("Fixture effect gate") || _session->player().mana!=gateMana-1 || _session->player_buffs().size()!=1) return fail("effect gate suppression");
         return YES;
     } catch(const std::exception& error) {
         [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];fprintf(stderr,"native traps: %s\n",error.what());return NO;

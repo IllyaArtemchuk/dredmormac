@@ -30,8 +30,8 @@ Verified:
 - Room-placement collision: 69,632 original executions match.
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
-- Twenty-eight local CTest groups pass, including buff metadata, scheduled spells, deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42719863912 passed all forty-seven checks, including
+- Twenty-nine local CTest groups pass, including buff metadata, scheduled spells, deterministic session and save/load tests.
+- Actual macos-15 arm64 CI run 42721134617 passed all forty-seven checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -792,3 +792,33 @@ large-stack expiry, midpoint saves and residual-state saves. The room-view HUD
 shows up to three active buff names and remaining turns, with an overflow count.
 Current sorting/state/HUD source awaits MacCI. Monster buffs, other upkeep/status
 families, lethal apply paths, generic requirebuff and full floor play remain work.
+
+
+Buff sort/residual/HUD source33d4912 passed actual arm64 macos-15 run42721134617,
+job129515080122: all47 checks and relocated packaged-app smoke, including24-stack
+expiry ordering, midpoint saves and residual-stat saves after the active vector
+is empty. The room-view name/timer HUD compiles on actual AppleClang.
+
+The generic ApplyEffectAt requirebuff9c condition is implemented. Despite its
+name, it permits effects when at least one eligible spell-template buff icon is
+missing from the target. If no eligible template/target or every eligible icon
+is already present, ApplyEffectAt returns from the whole remaining effect loop.
+A rejected chance skips only that effect, so later effects still execute. Chance
+precedes this condition. Subsequent spell buff application still executes after
+a condition-driven return. Template applytoplayer flags gate eligibility;
+player and live unbuffed monster target paths are modeled. This gate uses icon
+strings, unlike trigger conditions which use parent spell names.
+verify_effect_gate.py matches2048 actual original self/adjacent/target/targetfloor
+casts with zero/one/two templates, existing/missing icons, applytoplayer flags,
+percent/chance and empty/outside targets. Accepted state, global player MP and
+libc state agree. Buff application is a no-op recording boundary in this oracle;
+buff icons and virtual identity/library are supplied. Separate active-buff
+comparisons and integration tests cover modeled application/removal. Monster
+owned buffs and original VFX remain excluded. The4096 spellpoints arithmetic
+and4096 mixed resource cast regressions still match after common chance handling.
+All29 local groups pass. Native smoke now checks conditional resource use on
+first application, suppression while a matching buff is present and save/reload.
+Current generic-gate source awaits MacCI. Next major gap: owned monster buffs
+need retained constructor/stat profiles and persistence before safe rebuilding;
+remaining statuses/upkeep, more spell families and complete generated-floor play
+also remain. The overall game is not finished.

@@ -79,6 +79,7 @@ if __name__=='__main__':
 <spell name="Fixture gated" type="self"><effect type="trigger" amount="1" spell="Fixture gate resource" requireBuffOnTrigger="1" requireBuffOnTriggerName="Fixture active buff"/></spell>
 <spell name="Fixture gate resource" type="target"><effect type="spellpoints" amount="-1"/></spell>
 <spell name="Fixture large buff" type="self"><buff time="0" allowstacking="1" icon="dungeon/trap_hidden.png"><primarybuff id="0" amount="1"/></buff></spell>
+<spell name="Fixture effect gate" type="self"><effect type="spellpoints" amount="-1" requireBuff="1"/><buff time="0" allowstacking="0" icon="dungeon/trap_hidden.png"/></spell>
 </spellDB>''')
             (root/'game/manTemplateDB.xml').write_text('''<templatedb><template width="1" height="1" name="7" affectsPlayer="1"><row text="#"/></template></templatedb>''')
             (root/'dungeon/trap.spr').write_bytes(sprite());(root/'dungeon/origin.spr').write_bytes(sprite())
