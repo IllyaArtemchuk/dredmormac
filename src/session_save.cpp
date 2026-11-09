@@ -136,6 +136,15 @@ std::uint64_t maneuver_signature(const std::shared_ptr<const std::vector<SpellDe
     }
     return groups.empty()?0:hash?hash:1;
 }
+std::uint64_t buffs_signature(const std::shared_ptr<const std::vector<SpellDefinition>>& definitions) {
+    std::uint64_t hash=14695981039346656037ull;bool any=false;
+    auto add=[&](const std::string& value){for (unsigned char c:value) {hash^=c;hash*=1099511628211ull;}hash^=0;hash*=1099511628211ull;};
+    if (definitions) for (const auto& spell:*definitions) {
+        add(spell.name);add(std::to_string(spell.buffs.size()));
+        for (const auto& buff:spell.buffs) {any=true;add(std::to_string(buff_signature(buff)));}
+    }
+    return any?(hash?hash:1):0;
+}
 void write_actor(std::ostream& out,std::string_view tag,const Actor& actor) {
     out<<'<'<<tag<<" id=\""<<actor.id<<"\" name=\""<<escape(actor.name)<<"\" sprite=\""<<escape(actor.sprite)
        <<"\" x=\""<<actor.position.x<<"\" y=\""<<actor.position.y<<"\" hp=\""<<actor.health
@@ -251,7 +260,7 @@ CustomRoomObject read_room_object(const XmlNode& node,const World& world) {
 }
 void Session::save(std::ostream& out) const {
     bool scheduled=!player_.triggers.empty();for (const auto& actor:enemies_) scheduled=scheduled || !actor.triggers.empty();
-    out<<"<dredmor-session version=\""<<(scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
+    out<<"<dredmor-session version=\""<<(!player_buffs_.empty()?9:scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
        <<"\" content=\""<<signature(definitions_)<<"\"";
     if (player_facing_!=2) out<<" facing=\""<<player_facing_<<"\"";
     out<<">\n<room>"<<escape(world_.room_text())<<"</room>\n";
@@ -311,9 +320,18 @@ void Session::save(std::ostream& out) const {
         write(player_);for (const auto& actor:enemies_) write(actor);
         out<<"</scheduled-spells>\n";
     }
+    if (!player_buffs_.empty()) {
+        out<<"<player-buffs>\n";
+        for (const auto& buff:player_buffs_) {
+            buff_definition(buff);if (buff.deapplied) throw std::runtime_error("cannot save a transient deapplied buff");
+            out<<"<buff spell=\""<<buff.spell<<"\" definition=\""<<buff.buff<<"\" remaining=\""<<buff.remaining<<"\" upkeep=\""<<buff.upkeep_remaining<<"\"/>\n";
+        }
+        out<<"</player-buffs>\n";
+    }
     if (spells_) {
         out<<"<spell-rules content=\""<<spell_signature(spells_)<<"\"";const auto maneuvers=maneuver_signature(spells_);
         if (maneuvers) out<<" maneuvers=\""<<maneuvers<<"\"";
+        const auto buffs=buffs_signature(spells_);if (buffs) out<<" buffs=\""<<buffs<<"\"";
         out<<"/>\n";
     }
     if (!breakables_.empty()) {
@@ -339,8 +357,9 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     if (input.bad()) throw std::runtime_error("cannot read session save");
     const auto root=parse_xml(content,"session save");
     const auto version=attribute(root,"version");
-    const bool modern=version=="7" || version=="8";
+    const bool modern=version=="7" || version=="8" || version=="9";
     if (version=="8" && !root.first("scheduled-spells")) throw std::runtime_error("version eight requires scheduled spell state");
+    if (version=="9" && !root.first("player-buffs")) throw std::runtime_error("version nine requires active buff state");
     if (root.tag!="dredmor-session" || (version!="1" && version!="2" && version!="3" && version!="4" && version!="5" && version!="6" && !modern)) throw std::runtime_error("unsupported session save version");
     const bool legacy_types=version=="1" || version=="2";
     if (attribute_number<std::uint64_t>(root,"content")!=signature(definitions,legacy_types)) throw std::runtime_error("save item content does not match loaded definitions");
@@ -350,6 +369,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
         const auto& rules=child(root,"spell-rules");
         if (rules.attributes.count("maneuvers") && attribute_number<std::uint64_t>(rules,"maneuvers")!=maneuver_signature(spells))
             throw std::runtime_error("save maneuver content does not match loaded definitions");
+        if (rules.attributes.count("buffs") && attribute_number<std::uint64_t>(rules,"buffs")!=buffs_signature(spells)) throw std::runtime_error("save buff content does not match loaded definitions");
     }
     const auto turn=attribute_number<std::uint64_t>(root,"turn");
     if (turn==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("saved turn counter exhausted");
@@ -373,7 +393,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     }
     if (!session.next_actor_ || session.next_actor_<=*actors.rbegin()) throw std::runtime_error("invalid saved actor sequence");
     if (root.first("scheduled-spells")) {
-        if (version!="8" || !session.spells_ || !root.first("spell-rules")) throw std::runtime_error("scheduled spells require version eight and matching rules");
+        if ((version!="8" && version!="9") || !session.spells_ || !root.first("spell-rules")) throw std::runtime_error("scheduled spells require version eight or nine and matching rules");
         std::size_t count=0;
         for (const auto& node:child(root,"scheduled-spells").children) {
             if (node.tag!="trigger" || !node.children.empty() || ++count>4096*513) throw std::runtime_error("invalid scheduled spell list");
@@ -385,6 +405,18 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
             auto& actor=session.actor_by_id(owner);
             if (actor.triggers.size()>=4096) throw std::runtime_error("scheduled spell capacity exceeded");
             actor.triggers.push_back(std::move(trigger));
+        }
+    }
+    if (root.first("player-buffs")) {
+        if (version!="9" || !session.spells_ || !root.first("spell-rules") || !child(root,"spell-rules").attributes.count("buffs")) throw std::runtime_error("active buffs require version nine and matching rules");
+        for (const auto& node:child(root,"player-buffs").children) {
+            if (node.tag!="buff" || !node.children.empty() || session.player_buffs_.size()>=4096) throw std::runtime_error("invalid saved buff list");
+            ActiveBuff buff;buff.spell=attribute_number<std::size_t>(node,"spell");buff.buff=attribute_number<std::size_t>(node,"definition");buff.remaining=attribute_number<std::int32_t>(node,"remaining");
+            const auto& definition=session.buff_definition(buff);session.validate_player_buff(definition);
+            buff.upkeep_remaining=attribute_number<std::int32_t>(node,"upkeep");
+            if (!definition.mana_upkeep && buff.upkeep_remaining) throw std::runtime_error("inactive buff upkeep has a countdown");
+            if (!session.player_buffs_.empty() && session.spells_->at(session.player_buffs_.back().spell).name>session.spells_->at(buff.spell).name) throw std::runtime_error("saved buffs are out of order");
+            session.player_buffs_.push_back(buff);
         }
     }
     const auto& progress=child(root,"progress");

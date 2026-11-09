@@ -235,6 +235,7 @@ bool Session::cast_spell_impl(const SpellDefinition& spell,Position origin,Posit
 }
 void Session::spell_profile(std::shared_ptr<const std::vector<SpellDefinition>> definitions) {
     if (definitions!=spells_) {
+        if (!player_buffs_.empty()) throw std::invalid_argument("cannot replace rules with active buffs");
         if (!player_.triggers.empty()) throw std::invalid_argument("cannot replace rules with pending spells");
         for (const auto& actor:enemies_) if (!actor.triggers.empty()) throw std::invalid_argument("cannot replace rules with pending spells");
     }
@@ -248,7 +249,6 @@ bool Session::cast_spell_recursive(const SpellDefinition& spell,Position origin,
     std::size_t depth,std::size_t& remaining) {
     if (depth>=64 || !remaining) throw std::runtime_error("spell recursion execution budget exhausted");
     --remaining;
-    if (!spell.buffs.empty()) throw std::invalid_argument("spell buff application is not implemented");
     const bool maneuver=spell.type=="template";
     if (spell.type=="self") target=origin;
     else if (spell.type=="adjacent") {
@@ -256,7 +256,7 @@ bool Session::cast_spell_recursive(const SpellDefinition& spell,Position origin,
         const auto bits=dx*dx+dy*dy;std::int32_t distance;std::memcpy(&distance,&bits,4);if (distance>=2) return false;
     } else if (spell.type!="target" && spell.type!="targetfloor" && !maneuver) throw std::invalid_argument("spell dispatch is not implemented: "+spell.type);
     if (!maneuver && (target.x<0 || target.y<0 || target.x>=world_.width() || target.y>=world_.height())) return false;
-    for (const auto& node:spell.source.children) if (node.tag!="effect" && node.tag!="anim" && node.tag!="impact" && node.tag!="description" && node.tag!="requirements")
+    for (const auto& node:spell.source.children) if (node.tag!="effect" && node.tag!="buff" && node.tag!="anim" && node.tag!="impact" && node.tag!="description" && node.tag!="requirements")
         throw std::invalid_argument("spell child execution is not implemented: "+node.tag);
     for (const auto& attribute:spell.source.attributes) {
         auto key=attribute.first;for (auto& c:key) if (c>='A' && c<='Z') c+=32;
@@ -265,18 +265,21 @@ bool Session::cast_spell_recursive(const SpellDefinition& spell,Position origin,
     }
     if (maneuver) {
         if (!spell.maneuvers) throw std::invalid_argument("maneuver templates are unavailable");
-        if (spell.effects.empty()) throw std::invalid_argument("empty maneuver attack dispatch is not implemented");
+        if (spell.effects.empty() && spell.buffs.empty()) throw std::invalid_argument("empty maneuver attack dispatch is not implemented");
         int id=-1,anchored=0;
         for (const auto& a:spell.source.attributes) {
             auto key=a.first;for (auto& c:key) if (c>='A' && c<='Z') c+=32;
             if (key=="templateid") id=legacy_integer(a.second);else if (key=="anchored") anchored=legacy_integer(a.second);
         }
         const auto plan=plan_maneuver(*spell.maneuvers,id,anchored,player_facing_,origin,target,random_.libc);
-        for (auto point:plan.targets) if (point.x>=0 && point.y>=0 && point.x<world_.width() && point.y<world_.height())
+        for (auto point:plan.targets) if (point.x>=0 && point.y>=0 && point.x<world_.width() && point.y<world_.height()) {
             apply_spell_effects(spell,point,caster,true,depth,remaining);
+            apply_spell_buffs(spell,point,caster,false);
+        }
         return plan.accepted;
     }
-    apply_spell_effects(spell,target,caster,allow_haywire || spell.type=="self" || spell.type=="adjacent",depth,remaining);return true;
+    apply_spell_effects(spell,target,caster,allow_haywire || spell.type=="self" || spell.type=="adjacent",depth,remaining);
+    apply_spell_buffs(spell,target,caster,spell.type=="self");return true;
 }
 void Session::apply_spell_effects(const SpellDefinition& spell,Position target,std::uint64_t caster,bool allow_haywire,std::size_t depth,std::size_t& remaining) {
     Actor* source=nullptr;if (!caster || caster==player_.id) source=&player_;
@@ -477,7 +480,7 @@ void Session::enemy_turns() {
             else if (auto next=next_step(enemy)) { enemy.position=*next;events_.push_back({EventKind::moved,enemy.id});activate_traps_impl(enemy); }
         }
     }
-    update_triggers_impl(player_,remaining);
+    update_player_buffs_impl();update_triggers_impl(player_,remaining);
 }
 void Session::step_impl(Action action) {
     events_.clear();if (!player_.alive()) return;
@@ -524,12 +527,21 @@ void Session::equipment_profile(ClassRanks ranks,std::shared_ptr<const std::vect
 void Session::rebuild_equipment() {
     if (!definitions_) return;
     static const std::vector<AbilityDefinition> empty;
-    auto stats=equipment_.rebuild(ranks_,*definitions_,{},{},skills_,abilities_?*abilities_:empty);
+    ItemModifiers buffs;
+    for (const auto& active:player_buffs_) {
+        const auto& modifiers=buff_definition(active).modifiers;
+        if (!active.deapplied) {
+            for (std::size_t i=0;i<6;++i) buffs.primary[i]=add(buffs.primary[i],modifiers.primary[i]);
+            for (std::size_t i=0;i<24;++i) buffs.secondary[i]=add(buffs.secondary[i],modifiers.secondary[i]);
+        }
+        for (std::size_t i=0;i<16;++i) {buffs.damage[i]=add(buffs.damage[i],modifiers.damage[i]);buffs.resistance[i]=add(buffs.resistance[i],modifiers.resistance[i]);}
+    }
+    auto stats=equipment_.rebuild(ranks_,*definitions_,buffs.primary,buffs.secondary,skills_,abilities_?*abilities_:empty);
     player_.primary=stats.primary;player_.secondary=stats.secondary;
     player_.health=std::min(player_.health,stats.secondary[0]);player_.mana=std::min(player_.mana,stats.secondary[1]);
     for (std::size_t i=0;i<16;++i) {
-        player_.damage[i]=add(intrinsic_damage_[i],stats.damage_bonus[i]);
-        player_.resistance[i]=add(intrinsic_resistance_[i],stats.resistance[i]);
+        player_.damage[i]=add(add(intrinsic_damage_[i],stats.damage_bonus[i]),buffs.damage[i]);
+        player_.resistance[i]=add(add(intrinsic_resistance_[i],stats.resistance[i]),buffs.resistance[i]);
     }
     for (const auto& slot:equipment_.slots()) if (slot && slot->kind==ItemKind::weapon) {
         const auto& definition=definitions_->at(slot->definition);

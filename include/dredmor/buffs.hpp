@@ -15,6 +15,7 @@ struct BuffDefinition {
 // Typed fields from the original Buff constructor/XML callback. Unmodeled
 // children remain in source; parsing does not imply execution support.
 BuffDefinition read_buff(const XmlNode& node);
+std::uint64_t buff_signature(const BuffDefinition& buff);
 struct BuffClock {std::int32_t remaining=0;bool permanent=false,use_timer=true,pending=false;};
 struct BuffTick {BuffClock clock;bool deapply=false,remove=false;};
 // One Hittable::UpdateBuffs counter/eligibility decision, before virtual

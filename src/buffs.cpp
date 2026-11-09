@@ -3,6 +3,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <stdexcept>
+#include <functional>
 
 namespace dredmor {
 namespace {
@@ -54,6 +55,20 @@ BuffDefinition read_buff(const XmlNode& node) {
         }
     }
     return result;
+}
+std::uint64_t buff_signature(const BuffDefinition& buff) {
+    std::uint64_t hash=14695981039346656037ull;
+    auto add=[&](const std::string& value) {for (unsigned char c:value) {hash^=c;hash*=1099511628211ull;}hash^=0;hash*=1099511628211ull;};
+    for (const auto* value:{&buff.tag,&buff.description,&buff.gameplay_text,&buff.icon,&buff.small_icon,&buff.insufficient_funds}) add(*value);
+    for (auto value:buff.modifiers.primary) add(std::to_string(value));
+    for (auto value:buff.modifiers.secondary) add(std::to_string(value));
+    for (auto value:buff.modifiers.damage) add(std::to_string(value));
+    for (auto value:buff.modifiers.resistance) add(std::to_string(value));
+    for (int value:{buff.time,buff.stack_size,buff.apply_to_player,buff.destroy_on_move,buff.brittle,buff.attacks,buff.mana_upkeep,buff.zorkmid_upkeep,buff.requires_weapon,buff.requires_shield,
+        int(buff.use_timer),int(buff.allow_stacking),int(buff.self),int(buff.bad),int(buff.removable),int(buff.diggle_god),int(buff.invisible),int(buff.mute)}) add(std::to_string(value));
+    std::uint32_t bits;std::memcpy(&bits,&buff.zorkmid_scale,4);add(std::to_string(bits));
+    std::function<void(const XmlNode&)> source=[&](const XmlNode& node) {add(node.tag);add(node.text);for (const auto& a:node.attributes) {add(a.first);add(a.second);}for (const auto& child:node.children) source(child);};
+    source(buff.source);return hash?hash:1;
 }
 BuffTick tick_buff(BuffClock clock) {
     bool deapply=false;

@@ -619,6 +619,17 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
             if (i==1 && ![self smokeSaveLoad]) return fail("dot save");
         }
         if (!_session->player().triggers.empty()) return fail("dot expiration");
+        const auto primary=_session->player().primary;const auto secondary=_session->player().secondary;
+        const auto resistance=_session->player().resistance;const auto buffHealth=_session->player().health,buffMana=_session->player().mana;
+        if (!schedule("Fixture active buff") || _session->player_buffs().size()!=1 || _session->player().primary[0]!=primary[0]+1 ||
+            _session->player().secondary[0]!=secondary[0]+3 || _session->player().health!=buffHealth+2) return fail("buff application");
+        _session->step(dredmor::Action::wait);
+        if (_session->player_buffs()[0].remaining!=0 || _session->player_buffs()[0].upkeep_remaining!=1 || ![self smokeSaveLoad]) return fail("buff save");
+        if (!schedule("Fixture active buff") || _session->player_buffs().size()!=1 || _session->player_buffs()[0].remaining!=1 || _session->player_buffs()[0].upkeep_remaining!=1) return fail("buff refresh");
+        _session->step(dredmor::Action::wait);_session->step(dredmor::Action::wait);
+        if (!_session->player_buffs().empty() || _session->player().primary!=primary || _session->player().secondary!=secondary ||
+            _session->player().health!=buffHealth || _session->player().mana!=buffMana-1 || _session->player().resistance[7]!=resistance[7]+3) return fail("buff expiration");
+        if (!schedule("Fixture buff rebuild") || _session->player().resistance!=resistance) return fail("buff subsequent rebuild");
         return YES;
     } catch(const std::exception& error) {
         [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];fprintf(stderr,"native traps: %s\n",error.what());return NO;

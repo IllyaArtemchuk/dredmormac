@@ -81,3 +81,9 @@
 - Scheduled session ordering now follows the identified GameTick/Monster::Update
   relative order: monster triggers before its AI; player triggers after monster
   updates. Complete object-queue order and speed/time flags remain unverified.
+
+- Active player stat buffs and mana upkeep now match1024 original sequences with
+  full attribute rebuilding and save/resume. Monster buffs, lethal apply paths,
+  other upkeep/status callbacks, icon resource aliases and large equal-name sort
+  ties remain outside the verified scope. Relative turn ordering is measured;
+  the full action queue remains provisional. Save9 is port-specific.

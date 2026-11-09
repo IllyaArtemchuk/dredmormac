@@ -955,3 +955,33 @@ by additional spell dispatch/effect families and complete generated-floor play.
 The overall reimplementation is still incomplete; no completion percentage has
 been inferred from kernel tests or code line counts. Archive/tools and actual
 native compilation are available, rather than external blockers.
+
+
+Active player stat buffs now apply after spell effects for supported self/target/
+adjacent/template dispatch. Primary/secondary flats compose with character,
+equipment and ability rebuilding; HP/MP flat changes and clamps follow measured
+apply/deapply paths. Nonstacking refresh replaces the lifetime without reapplying
+stats or resetting upkeep. Stack caps use supplied icon identities; ordering is
+by parent spell name. Expiry cancels scheduled triggers with that parent name.
+Legacy damage/resistance residue survives expiry until a later rebuild, matching
+the original rather than eagerly correcting it. Player buff timers run before
+player triggers at the existing turn boundary.
+Mana upkeep uses its own wrapping countdown, consumes1MP per interval, and marks
+the buff for removal if MP is exhausted. All upkeep payments precede the shared
+timer/deapplication pass. Timed and untimed buffs are supported. Save format9
+persists ordered spell/buff indices, lifetime/upkeep counters and matched typed
+buff rules. Versions1..8 remain readable; active rules cannot be replaced. Bad
+indices/order/content and unsupported state transitions reject atomically.
+verify_buff_session.py matches1024 original full sequences through Player::ApplyBuff,
+Hittable apply/deapply/update, Player::UpdateBuffs, Player::DeapplyBuff, Buff copy/
+sorting and full Player::RebuildAttributes. Each operation compares primary6,
+secondary24, damage16, resistance16, HP/MP and ordered buff identity/counters;
+port save/resume operations are interleaved. Original string/allocation, icon
+identity and destructor boundaries are supplied. No abilities/equipment in the
+comparison fixture; their existing composition tests remain separate.
+Monster-owned buffs, lethal apply transitions, non-mana upkeep, equipment/status
+callbacks, icon-resource aliases and large equal-name sort ties remain excluded.
+They must not be inferred from these comparisons. Unsupported buff families fail
+atomically. Native trap smoke now also tests active buff apply/refresh, mana
+upkeep, mid-buff save/reload, expiry residue and a subsequent rebuild. All27 local
+groups pass. Current active-buff source awaits MacCI; full game remains incomplete.

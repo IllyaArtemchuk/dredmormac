@@ -20,6 +20,12 @@ struct ScheduledSpell {
     std::uint64_t caster=0;
     std::string parent;
 };
+struct ActiveBuff {
+    std::size_t spell=0,buff=0;
+    std::int32_t remaining=0;
+    std::int32_t upkeep_remaining=0;
+    bool deapplied=false;
+};
 struct Actor {
     std::uint64_t id=0;
     std::string name,sprite;
@@ -90,6 +96,8 @@ public:
     bool cast_spell(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster=0,bool allow_haywire=true);
     // One measured Hittable::UpdateTriggers pass; does not advance the world.
     void update_triggers(std::uint64_t actor);
+    const std::vector<ActiveBuff>& player_buffs() const {return player_buffs_;}
+    void update_player_buffs();
     int player_facing() const {return player_facing_;}
     void player_facing(int direction);
     void spell_profile(std::shared_ptr<const std::vector<SpellDefinition>> definitions);
@@ -112,6 +120,7 @@ public:
                         std::shared_ptr<const std::vector<SpellDefinition>> spells={});
 private:
     int player_facing_=2;
+    std::vector<ActiveBuff> player_buffs_;
     MonsterSpawnState monster_state_;
     friend class CharacterBuilder;
     World world_;
@@ -155,6 +164,12 @@ private:
     void activate_traps_impl(Actor& actor);
     Actor& actor_by_id(std::uint64_t id);
     void update_triggers_impl(Actor& actor,std::size_t& remaining);
+    void apply_spell_buffs(const SpellDefinition& spell,Position target,std::uint64_t caster,bool self);
+    void apply_player_buff(std::size_t spell,std::size_t buff);
+    void update_player_buffs_impl();
+    const BuffDefinition& buff_definition(const ActiveBuff& buff) const;
+    std::string buff_icon(const ActiveBuff& buff) const;
+    void validate_player_buff(const BuffDefinition& definition) const;
 };
 Actor make_player(const ClassRanks& ranks,std::string name="Player");
 }

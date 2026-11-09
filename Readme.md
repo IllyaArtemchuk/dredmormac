@@ -182,7 +182,8 @@ validation during save loading.
 
 Spell execution now supports basic damage, healing, player mana effects,
 immediate and delayed trigger chains, damage over time and template area effects.
-Pending spells, template rules and facing persist through saves. Buff gates,
+Active player stat buffs support refresh, stack caps, expiry and mana upkeep.
+Pending spells, buffs, template rules and facing persist through saves. Buff gates,
 remaining spell families and the complete original action queue are still
 incomplete; this does not establish full-game parity.
 
@@ -193,6 +194,7 @@ and the analysis Python environment. Keep the JSON reports outside the repositor
 | --- | --- |
 | Immediate trigger chains | `verify_triggers.py ORIGINAL_BINARY build/dredmor-trigger --out PRIVATE_REPORT.json` |
 | Scheduled spell creation and updates | `verify_scheduled.py ORIGINAL_BINARY build/dredmor-scheduled --out PRIVATE_REPORT.json` |
+| Player stat buffs and mana upkeep | `verify_buff_session.py ORIGINAL_BINARY build/dredmor-buff-session --out PRIVATE_REPORT.json` |
 | Buff metadata and timer decisions | `verify_buffs.py ORIGINAL_BINARY build/dredmor-buffs --content DATA_ROOT --out PRIVATE_REPORT.json` |
 | Mana arithmetic and mixed casts | `verify_spellpoints.py ORIGINAL_BINARY build/dredmor-spells build/dredmor-spell-cast --out PRIVATE_REPORT.json` |
 | Template targeting and base ingestion | `verify_maneuvers.py ORIGINAL_BINARY build/dredmor-maneuver --content DATA_ROOT --out PRIVATE_REPORT.json` |
