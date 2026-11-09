@@ -50,3 +50,8 @@
   rendering and original load/menu UI remain incomplete.
 - Embedded startup patch version is 1.1.4; additional suffix/mod state and
   expansion parity are unresolved. No parity claim.
+
+- Trap runtime primitives now have1024 original sequence comparisons, including
+  placement origin, detection, avoidance, charge/trigger/disarm state and spell
+  requests. Spell execution and Session/native trap ownership remain unfinished;
+  these primitives do not yet establish playable trap behavior.

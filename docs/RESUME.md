@@ -637,3 +637,29 @@ Run42634769177 passed all37 Mac checks including prior named-monster integration
 and packaging, superseding the missing-sstream failure. Current random-spawn
 source awaits MacCI. Full horde/trap/element population, complete constructor
 sprite/effect semantics, scripts/spells/AI and whole-floor gameplay remain unfinished.
+
+Random monster integration run42635717291 passed all37 Mac checks and packaging.
+New traps.hpp/cpp models Trap/Item/GameObj construction, origin scans, sticky
+Draw detection/reveal, player/monster step avoidance, spell requests, charge/
+destruction changes and repeat disarm outcomes. verify_trap_runtime.py matches1024
+full original sequences through Trap ctor10888a, TeleportTo1079f2, Draw1078a2,
+SteppedOn1077ca, MonsterSteppedOn10753c, BlowUpTrap1081c4 and DisarmTrap107f62.
+Sprites, base placement, blocker/safeTeleport, dynamic-cast wizard flag, spell
+lookup/execution, player-idle/UI/XP/achievement and library inputs are boundaries.
+Compared state after every call, requested origin and spell caster/target/mode/
+death description, outcomes and next8MT. Cases include both caster modes, missing
+spells, wrapping charges, origin scans across tile3/4, disabled/wizard/playerplaced
+flags and two disarms to verify one-time XP. No original code/assets copied.
+Ceiling traps use target position as spell origin; wall/floor traps request a
+separate origin blocker. Floor scans consume MTbounded3. Player avoidance halves
+the wrapping sum of secondary17/12/16; monster avoidance uses the full sum. Draw
+uses Manhattan sight (secondary17), remembers discovery, and reveals sprite when
+trap level<secondary16. A missing player spell leaves charges unchanged; monster
+missing-spell path still consumes charges. Disarm XP is scale*(level+1) once,
+except playerplaced; successful ceiling-affinity disarm draws MTbounded2. The
+original "trap is destroyed" text branch does not actually enqueue destruction;
+port exposes that outcome separately and preserves the observed state.
+TrapMap rejects unchecked original out-of-map reads and fails atomically after
+any tentative RNG draws. Twenty-one local groups pass, with lifecycle/rollback
+checks. Current trap runtime awaits MacCI and Session/save/native ownership;
+spell execution, full level queues and trap UI/audio remain unimplemented.
