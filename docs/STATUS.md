@@ -31,7 +31,7 @@ Verified:
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
 - Twenty-six local CTest groups pass, including buff metadata, scheduled spells, deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42697451427 passed all forty-four checks, including
+- Actual macos-15 arm64 CI run 42704964742 passed all forty-five checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -679,3 +679,25 @@ All26 local groups pass. Buff application/stat rebuilding, stacking identity,
 upkeep, gates and native buff display remain unfinished; typed or XML buff casts
 still reject atomically, so metadata is not silently treated as active gameplay.
 Current order/metadata source awaits MacCI.
+
+
+Buff metadata/order source10777d5 passed actual macos-15 arm64 run42704964742,
+job129459245528: all45 checks, native scheduled effects/save-reload, and relocated
+packaged-app smoke. All26 local groups and the original buff comparisons pass.
+The comparison script now includes an explicitly original-only expiry/rebuild
+probe: actual Player::ApplyBuff11a880, Hittable::UpdateBuffs44fc0,
+Player::DeapplyBuff1233cc and Player::RebuildAttributes1218de execute with no
+skills/abilities/equipment. A time0 buff contributes7 slashing damage and3 toxic
+resistance; expiry removes/deletes the buff, but those values remain7/3 until
+an explicit subsequent attribute rebuild resets them0/0. This follows rebuilding
+while the expired buff is still present in the vector. The destructor is a
+recording boundary. This is observed legacy behavior, not port buff execution
+or a generalized comparison of all stat/death/upkeep paths. BuffSort115a90 orders
+by buff name. Retain this distinction when implementing active buff state.
+
+Next implementation: active player/monster buff application and removal, ordered
+stacking/icon identities, upkeep and trigger gates with matching saves, followed
+by additional spell dispatch/effect families and complete generated-floor play.
+The overall reimplementation is still incomplete; no completion percentage has
+been inferred from kernel tests or code line counts. Archive/tools and actual
+native compilation are available, rather than external blockers.

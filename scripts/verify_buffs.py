@@ -58,6 +58,30 @@ class Buffs(Effects):
         if (self.read(actor+0xf8)[0]==array)!=bool(self.destroyed):raise AssertionError('buff erase/destructor disagreement')
         return [self.read(buff+0x27c)[0],self.deapplied,self.destroyed]
 
+    def expiry_rebuild_probe(self):
+        # This is an original-only observation, not a C++ application comparison.
+        # Actual ApplyBuff, DeapplyBuff and Player::RebuildAttributes execute.
+        self.metadata(ET.fromstring('<buff time="0"><damagebuff slashing="7"/><resistbuff toxic="3"/></buff>'))
+        buff=self.read(self.original.address('_curBuff'))[0]
+        actor=self.allocate(0x1000);vtable=self.allocate(0x100);storage=self.allocate(256);buff_vtable=self.allocate(16)
+        self.write(actor,vtable);self.write(vtable+0xd4,self.original.address('__ZN6Player17RebuildAttributesEv'))
+        self.write(vtable+0xe0,self.original.address('__ZN6Player11DeapplyBuffEP4Buff'))
+        self.write(actor+0xf4,storage,storage,storage+256);self.write(actor+0x100,actor+0x100,actor+0x100)
+        self.write(self.original.address('_curPlayer'),actor);self.write(self.original.address('_skillsDB'),0,0,0);self.write(self.original.address('_abilityDB'),0,0,0)
+        self.write(actor+0x274,*([50]*6));self.write(actor+0x304,*([100]*6));self.write(actor+0x2a4,*([100]*24))
+        self.write(actor+0x190,1000,1000);self.write(actor+0x108,500,100)
+        self.original.call('__ZN6Player17RebuildAttributesEv',actor)
+        self.original.call('__ZN6Player9ApplyBuffEP4Buff',actor,buff)
+        applied=[self.read(actor+0x78)[0],self.read(actor+0xd0)[0]]
+        self.write(buff,buff_vtable);self.write(buff_vtable+4,self.destroy);self.deapplied=self.destroyed=0
+        self.original.call('__ZN8Hittable11UpdateBuffsEv',actor)
+        expired=[self.read(actor+0x78)[0],self.read(actor+0xd0)[0]]
+        if self.read(actor+0xf8)[0]!=storage or self.destroyed!=1:raise AssertionError('expiry probe did not erase its buff')
+        self.original.call('__ZN6Player17RebuildAttributesEv',actor)
+        rebuilt=[self.read(actor+0x78)[0],self.read(actor+0xd0)[0]]
+        if [applied,expired,rebuilt]!=[[7,3],[7,3],[0,0]]:raise AssertionError('original expiry/rebuild observation changed')
+        return dict(applied=applied,expired=expired,next_rebuild=rebuilt,scope='original-only controlled player; empty skills/abilities/equipment; virtual destructor supplied')
+
 
 def verify(binary,port,root):
     oracle=Buffs(binary);rng=random.Random(0x44fc0);nodes=[]
@@ -97,6 +121,7 @@ def verify(binary,port,root):
     actual=[[int(n)&0xffffffff for n in line.split()] for line in result.stdout.splitlines()]
     if actual!=expected:raise AssertionError('buff timing mismatch')
     return dict(binary_sha256=hashlib.sha256(oracle.original.data).hexdigest(),synthetic_metadata=1024,supplied_metadata=supplied,timing_cases=len(cases),mismatches=0,
+                expiry_rebuild_observation=oracle.expiry_rebuild_probe(),
                 scope='actual Buff constructor and XML callbacks for modeled fields/stat children, actual Hittable::UpdateBuffs decrement/expiry/erase; string/allocation/ASCII/atof, SpriteMgr identity, virtual deapplication and destruction supplied; stat application, upkeep, gates, stacking identity, VFX, unmodeled children and full-session execution excluded')
 
 
