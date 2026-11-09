@@ -30,8 +30,8 @@ Verified:
 - Room-placement collision: 69,632 original executions match.
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
-- Twenty-nine local CTest groups pass, including buff metadata, scheduled spells, deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42721134617 passed all forty-seven checks, including
+- Thirty local CTest groups pass, including buff metadata, scheduled spells, deterministic session and save/load tests.
+- Actual macos-15 arm64 CI run 42722079171 passed all forty-eight checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -822,3 +822,46 @@ Current generic-gate source awaits MacCI. Next major gap: owned monster buffs
 need retained constructor/stat profiles and persistence before safe rebuilding;
 remaining statuses/upkeep, more spell families and complete generated-floor play
 also remain. The overall game is not finished.
+
+
+Generic-gate sourcee24f24d passed actual arm64 macos-15 run42722079171,
+job129518259367: all48 checks and relocated packaged-app smoke, including first
+application, saved buff state and suppression of a repeated conditional effect.
+
+Owned monster stat buffs now execute with retained MonsterStatInput profiles.
+GameContent retains actual adjusted class ranks, definition/flat/percentage
+fields, current constructor depth and HP tweak values for each created monster.
+Hittable apply/deapply updates flats, HP/MP, damage and resistance, followed by
+full monster rebuilding. Monster self application appends without player
+refresh/cap/sorting policies; target application honors the original icon-based
+nonstacking precheck and self redirection. Monster updates run triggers, then
+buff timers, then provisional AI. The generic icon and trigger name conditions
+now inspect owned monster buffs. Hittable monster updates do not charge player
+mana upkeep; the copied upkeep clock stays unchanged. Expiry removes the owning
+parent's scheduled triggers. Monster damage/resistance removal is immediate,
+where player rebuilding preserves the separately measured residue quirk.
+verify_monster_buffs.py matches1024 actual original full sequences with varied
+ranks/definitions/flats/percentages/depth/HP tweaks. It executes Hittable apply,
+deapply and UpdateBuffs, Buff copy, and full Monster::RebuildAttributes. Every
+operation compares primary6/secondary24/damage16/resistance16/HP/MP/dead flag plus
+ordered buff identities/lifetime/upkeep fields, with port save/resume interleaved.
+128 fixtures inject HP0/dead1 in the original and use a fatal port cast, then
+compare dead-owner expiry. Tweak/string/allocation/destructor and the initial
+controlled death transition are boundaries; full original damage delivery, AI,
+status/VFX and complete spell-buff targeting remain excluded.
+Save12 retains monster profiles and owned buff state; prior saves without such
+profiles remain usable but cannot reconstruct unknown randomized constructor
+inputs for owned buff rebuilding. Nonfinite profiles and missing/mismatched buff
+rules reject before replacement. Save13 retains positive-HP corpse flags: the
+original Hittable deapplication floor can leave HP1 while the monster's dead flag
+remains set. The port preserves that flag through saves and skips corpse AI;
+Monster::Update's following pass resets corpse HP to0. Ordinary HP0 dead actors
+migrate without changing older canonical save forms. Lethal buff application and
+pathological maxHP0 transitions are still explicitly unsupported.
+The2048 trigger-condition and2048 generic-condition comparisons now include
+independently present player and monster buffs, including saved owned states.
+All30 local groups pass. Native room-monster smoke now applies a targeted owned
+buff, checks nonstacking, executes a gated child, saves/reloads the owned state,
+and verifies full stat/resource removal while preserving actor images/profiles.
+Current monster-buff source awaits MacCI. Complete floor transitions/population,
+remaining spells/status/upkeep, AI and original UI/audio are still unfinished.

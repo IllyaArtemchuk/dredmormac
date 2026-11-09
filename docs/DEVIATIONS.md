@@ -103,3 +103,9 @@
   now match2048 original casts. Actual buff application is a boundary in this
   comparison, with separate active-buff sequence comparisons. Owned monster buffs
   and complete spell/turn/UI execution remain unfinished.
+
+- Monster-owned stat buffs now match1024 original full sequences,128 with a
+  controlled dead-owner transition. Retained constructor profiles persist in
+  save12; positive-HP corpse flags persist in save13. Full original death
+  delivery/AI/status/visual behavior remains outside these comparisons. Older
+  monster saves lacking constructor profiles cannot infer randomized inputs.

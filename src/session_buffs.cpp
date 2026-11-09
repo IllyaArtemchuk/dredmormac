@@ -10,8 +10,8 @@ bool same(Position a,Position b) {return a.x==b.x && a.y==b.y;}
 std::string lower(std::string value) {for (auto& c:value) if (c>='A' && c<='Z') c+=32;return value;}
 }
 bool Session::actor_has_buff(const Actor& actor,const std::string& name) const {
-    if (actor.id!=player_.id) return false; // Monster-owned buffs are not yet supported.
-    for (const auto& buff:player_buffs_) if (spells_->at(buff.spell).name==name) return true;
+    const auto& buffs=actor.id==player_.id?player_buffs_:actor.buffs;
+    for (const auto& buff:buffs) if (spells_->at(buff.spell).name==name) return true;
     return false;
 }
 bool Session::effect_buff_gate(const SpellDefinition& spell,Position target) const {
@@ -20,9 +20,10 @@ bool Session::effect_buff_gate(const SpellDefinition& spell,Position target) con
             bool present=false;for (const auto& buff:player_buffs_) if (buff_icon(buff)==definition.icon) {present=true;break;}
             if (!present) return true;
         } else {
-            // Owned monster buffs are unavailable in the current session;
-            // the modeled monster buff vector is empty.
-            for (const auto& enemy:enemies_) if (enemy.alive() && same(enemy.position,target)) return true;
+            for (const auto& enemy:enemies_) if (enemy.alive() && same(enemy.position,target)) {
+                bool present=false;for (const auto& buff:enemy.buffs) if (buff_icon(buff)==definition.icon) {present=true;break;}
+                if (!present) return true;
+            }
         }
     }
     return false;
@@ -54,16 +55,13 @@ void Session::apply_spell_buffs(const SpellDefinition& spell,Position target,std
         const auto& buff=spell.buffs[i];
         if (buff_signature(buff)!=buff_signature(spells_->at(index).buffs[i])) throw std::invalid_argument("cast buff differs from registered rules");
         if (self) {
-            if (actor_by_id(caster).id!=player_.id) throw std::invalid_argument("monster buff rebuilding is not implemented");
-            apply_player_buff(index,i);continue;
+            apply_owned_buff(actor_by_id(caster),index,i);continue;
         }
         if (!buff.apply_to_player) continue;
         if (same(target,player_.position)) apply_player_buff(index,i);
-        for (const auto& enemy:enemies_) if (same(target,enemy.position)) {
-            if (!buff.self || actor_by_id(caster).id!=player_.id) throw std::invalid_argument("monster buff rebuilding is not implemented");
-            // Nonstacking monster-target icon checks are not needed here: the
-            // supported path redirects to the player (buff self default true).
-            apply_player_buff(index,i);
+        for (auto& enemy:enemies_) if (same(target,enemy.position)) {
+            if (!buff.allow_stacking) for (const auto& present:enemy.buffs) if (buff_icon(present)==buff.icon) return;
+            apply_owned_buff(buff.self?actor_by_id(caster):enemy,index,i);
         }
     }
 }
@@ -76,6 +74,56 @@ void Session::validate_player_buff(const BuffDefinition& definition) const {
         if (tag!="primarybuff" && tag!="highbuff" && tag!="secondarybuff" && tag!="damagebuff" && tag!="resistbuff" && tag!="sightbuff" && tag!="halo" && tag!="description")
             throw std::invalid_argument("buff child execution is not implemented: "+node.tag);
     }
+}
+void Session::validate_monster_buff(const Actor& owner,const BuffDefinition& definition) const {
+    if (!owner.stat_profile) throw std::invalid_argument("monster buffs require a retained stat profile");
+    if (definition.destroy_on_move || definition.brittle || definition.attacks || definition.invisible || definition.mute || definition.diggle_god)
+        throw std::invalid_argument("monster buff status execution is not implemented");
+    for (const auto& node:definition.source.children) {
+        const auto tag=lower(node.tag);
+        if (tag!="primarybuff" && tag!="highbuff" && tag!="secondarybuff" && tag!="damagebuff" && tag!="resistbuff" && tag!="sightbuff" && tag!="halo" && tag!="description")
+            throw std::invalid_argument("monster buff child execution is not implemented: "+node.tag);
+    }
+}
+void Session::rebuild_monster(Actor& owner) {
+    if (!owner.stat_profile) throw std::invalid_argument("monster stat profile unavailable");
+    const auto stats=derive_monster(*owner.stat_profile);owner.primary=stats.primary;owner.secondary=stats.secondary;
+    owner.health=std::min(owner.health,owner.secondary[0]);owner.mana=std::min(owner.mana,owner.secondary[1]);
+}
+void Session::apply_owned_buff(Actor& owner,std::size_t spell,std::size_t buff) {
+    if (owner.id==player_.id) {apply_player_buff(spell,buff);return;}
+    ActiveBuff active{spell,buff};const auto& definition=buff_definition(active);validate_monster_buff(owner,definition);
+    if (!owner.alive()) throw std::invalid_argument("dead monster buff transitions are not implemented");
+    if (owner.buffs.size()>=4096) throw std::runtime_error("monster buff capacity exhausted");
+    active.remaining=definition.time;active.upkeep_remaining=definition.mana_upkeep;owner.buffs.push_back(active);
+    auto& input=*owner.stat_profile;
+    for (std::size_t i=0;i<6;++i) input.primary_flat[i]=add(input.primary_flat[i],definition.modifiers.primary[i]);
+    for (std::size_t i=0;i<24;++i) input.secondary_flat[i]=add(input.secondary_flat[i],definition.modifiers.secondary[i]);
+    for (std::size_t i=0;i<16;++i) {owner.damage[i]=add(owner.damage[i],definition.modifiers.damage[i]);owner.resistance[i]=add(owner.resistance[i],definition.modifiers.resistance[i]);}
+    owner.health=add(owner.health,definition.modifiers.secondary[0]);owner.mana=add(owner.mana,definition.modifiers.secondary[1]);
+    rebuild_monster(owner);
+    if (!owner.alive() || owner.secondary[0]<1 || owner.secondary[1]<0) throw std::runtime_error("monster buff lethal stat transition is not implemented");
+    owner.mana=std::max(0,owner.mana);
+}
+void Session::update_monster_buffs_impl(Actor& owner) {
+    for (auto& buff:owner.buffs) {
+        const auto& definition=buff_definition(buff);
+        const auto tick=tick_buff({buff.remaining,false,definition.use_timer,false});buff.remaining=tick.clock.remaining;
+        if (!tick.deapply) continue;
+        const bool was_dead=!owner.alive();
+        auto& input=*owner.stat_profile;
+        for (std::size_t i=0;i<6;++i) input.primary_flat[i]=add(input.primary_flat[i],add(~definition.modifiers.primary[i],1));
+        for (std::size_t i=0;i<24;++i) input.secondary_flat[i]=add(input.secondary_flat[i],add(~definition.modifiers.secondary[i],1));
+        for (std::size_t i=0;i<16;++i) {owner.damage[i]=add(owner.damage[i],add(~definition.modifiers.damage[i],1));owner.resistance[i]=add(owner.resistance[i],add(~definition.modifiers.resistance[i],1));}
+        owner.health=add(owner.health,add(~definition.modifiers.secondary[0],1));owner.mana=add(owner.mana,add(~definition.modifiers.secondary[1],1));
+        const auto& name=spells_->at(buff.spell).name;
+        owner.triggers.erase(std::remove_if(owner.triggers.begin(),owner.triggers.end(),[&](const auto& trigger){return trigger.parent==name;}),owner.triggers.end());
+        rebuild_monster(owner);owner.health=std::max(1,owner.health);owner.mana=std::max(0,owner.mana);
+        if (was_dead) owner.corpse=true;
+        if (owner.health>owner.secondary[0] || owner.mana>owner.secondary[1]) throw std::runtime_error("monster buff removal exceeds stat invariants");
+        buff.deapplied=true;
+    }
+    owner.buffs.erase(std::remove_if(owner.buffs.begin(),owner.buffs.end(),[](const auto& buff){return buff.deapplied;}),owner.buffs.end());
 }
 void Session::apply_player_buff(std::size_t spell,std::size_t buff) {
     ActiveBuff active{spell,buff};const auto& definition=buff_definition(active);validate_player_buff(definition);
@@ -95,7 +143,12 @@ void Session::apply_player_buff(std::size_t spell,std::size_t buff) {
     sort_player_buffs();
 }
 void Session::update_player_buffs() {
-    auto next=*this;next.events_.clear();next.update_player_buffs_impl();*this=std::move(next);
+    update_buffs(player_.id);
+}
+void Session::update_buffs(std::uint64_t actor) {
+    auto next=*this;next.events_.clear();auto& owner=next.actor_by_id(actor);
+    if (owner.id==next.player_.id) next.update_player_buffs_impl();else next.update_monster_buffs_impl(owner);
+    *this=std::move(next);
 }
 void Session::update_player_buffs_impl() {
     // Player::UpdateBuffs handles every upkeep payment before the shared
@@ -113,6 +166,7 @@ void Session::update_player_buffs_impl() {
         auto& buff=player_buffs_[index];const auto& definition=buff_definition(buff);
         const auto tick=tick_buff({buff.remaining,false,definition.use_timer,buff.pending});buff.remaining=tick.clock.remaining;
         if (tick.deapply) {
+            const bool was_dead=!player_.alive();
             buff.deapplied=true;
             for (std::size_t i=0;i<6;++i) buff_primary_flat_[i]=add(buff_primary_flat_[i],add(~definition.modifiers.primary[i],1));
             for (std::size_t i=0;i<24;++i) buff_secondary_flat_[i]=add(buff_secondary_flat_[i],add(~definition.modifiers.secondary[i],1));
@@ -124,6 +178,7 @@ void Session::update_player_buffs_impl() {
             // expired entry. Damage/resistance therefore survive until a later
             // rebuild; flat primary/secondary modifiers are already removed.
             rebuild_equipment();player_.health=std::max(1,player_.health);player_.mana=std::max(0,player_.mana);
+            if (was_dead) player_.corpse=true;
             if (player_.health>player_.secondary[0] || player_.mana>player_.secondary[1]) throw std::runtime_error("buff removal exceeds current stat invariants");
             // Player::DeapplyBuff sorts before Hittable resumes traversal.
             // A moved entry can be visited again or skipped in this same pass.

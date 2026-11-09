@@ -19,10 +19,11 @@ std::optional<int> legacy_attribute(const XmlNode& node,std::string_view key) {
     for (const auto& attribute:node.attributes) if (ascii_lower(attribute.first)==key) return legacy_integer(attribute.second);
     return std::nullopt;
 }
-Actor monster_actor(const MonsterDefinition& definition,Position position,const MonsterStats& stats) {
+Actor monster_actor(const MonsterDefinition& definition,Position position,const MonsterStatInput& input) {
+    const auto stats=derive_monster(input);
     Actor actor;actor.name=definition.name;actor.position=position;actor.primary=stats.primary;actor.secondary=stats.secondary;
     actor.health=stats.secondary[0];actor.mana=stats.secondary[1];actor.damage=definition.damage;actor.resistance=definition.resistance;
-    actor.experience_reward=definition.experience;actor.sprite=definition.idle_sprites[3];actor.monster_terrain=definition.terrain;return actor;
+    actor.experience_reward=definition.experience;actor.sprite=definition.idle_sprites[3];actor.monster_terrain=definition.terrain;actor.stat_profile=input;return actor;
 }
 }
 std::vector<RoomElementDefinition> RoomDefinition::elements() const {
@@ -259,15 +260,14 @@ const MonsterDefinition& GameContent::monster(std::string_view name) const {
 }
 Actor GameContent::make_monster(std::string_view name,Position position,Difficulty difficulty,int dungeon_level) const {
     const auto& definition=monster(name);
-    auto stats=derive_monster(tweaks_.monster_input(definition,difficulty,dungeon_level));
-    return monster_actor(definition,position,stats);
+    return monster_actor(definition,position,tweaks_.monster_input(definition,difficulty,dungeon_level));
 }
 Actor GameContent::create_monster(std::string_view name,Position position,Difficulty difficulty,int dungeon_level,DarwinRandom& random) const {
     const auto index=find_registered_monster(monster_tables(),monsters_,name);
     if (!index) throw std::invalid_argument("registered monster not found: "+std::string(name));
     const auto& definition=monsters_.at(*index);auto input=tweaks_.monster_input(definition,difficulty,dungeon_level);
     input.ranks=monster_creation_ranks(input.ranks,tweaks_.integer(difficulty,"monster level adder"),random);
-    return monster_actor(definition,position,derive_monster(input));
+    return monster_actor(definition,position,input);
 }
 Actor GameContent::create_room_monster(const RoomPopulationPlan& plan,MonsterSpawnContext context,Difficulty difficulty,
     GameRandom& random,MonsterSpawnState& state) const {
@@ -278,7 +278,7 @@ Actor GameContent::create_room_monster(const RoomPopulationPlan& plan,MonsterSpa
     if (!index) throw std::runtime_error("room monster level has no registered candidates");
     const auto& definition=monsters_.at(*index);auto input=tweaks_.monster_input(definition,difficulty,context.depth.depth);
     input.ranks=monster_creation_ranks(input.ranks,tweaks_.integer(difficulty,"monster level adder"),candidate.libc);
-    auto actor=monster_actor(definition,plan.position,derive_monster(input));actor.monster_flags=finish_random_monster_spawn(definition,next,candidate.mt);
+    auto actor=monster_actor(definition,plan.position,input);actor.monster_flags=finish_random_monster_spawn(definition,next,candidate.mt);
     random=std::move(candidate);state=std::move(next);return actor;
 }
 ClassRanks GameContent::starting_ranks(const std::vector<int>& skill_ids) const {

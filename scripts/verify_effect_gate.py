@@ -26,8 +26,9 @@ class EffectGate(Triggers):
         count,eligible,present,percent=self.context
         self.write(self.player+0x10c,0);self.write(self.player+0x1f4,2000)
         level=self.read(self.original.address('_curLevel'))[0];monsters=self.allocate(4);self.write(monsters,self.monster);self.write(level+0xd4,monsters,monsters+4,monsters+4)
-        if present:
-            buff=self.allocate(0x300);self.string(buff+0x284,'fixture');array=self.allocate(4);self.write(array,buff);self.write(self.player+0xf4,array,array+4,array+4)
+        for actor,mask in [(self.player,1),(self.monster,2)]:
+            if present&mask:
+                buff=self.allocate(0x300);self.string(buff+0x284,'fixture');array=self.allocate(4);self.write(array,buff);self.write(actor+0xf4,array,array+4,array+4)
         array=self.allocate(max(4,count*0x29c))
         for i in range(count):self.write(array+i*0x29c+0x170,eligible);self.string(array+i*0x29c+0x284,'other' if i else 'fixture')
         self.write(spell+0x110,array,array+count*0x29c,array+count*0x29c)
@@ -44,7 +45,7 @@ class EffectGate(Triggers):
 def verify(binary,port):
     oracle=EffectGate(binary);rng=random.Random(0x90fb5);cases=[];expected=[]
     for i in range(2048):
-        case=[rng.getrandbits(32),rng.choice(['self','adjacent','target','targetfloor']),*rng.choice([(4,4),(4,5),(4,6)]),*rng.choice([(4,4),(4,5),(3,3),(-1,4),(9,4)]),rng.randrange(3),rng.choice([0,1,-1]),rng.randrange(2),rng.choice([-1,0,1,50,99,100,101])]
+        case=[rng.getrandbits(32),rng.choice(['self','adjacent','target','targetfloor']),*rng.choice([(4,4),(4,5),(4,6)]),*rng.choice([(4,4),(4,5),(3,3),(-1,4),(9,4)]),rng.randrange(3),rng.choice([0,1,-1]),rng.randrange(4),rng.choice([-1,0,1,50,99,100,101])]
         cases.append(case);expected.append(oracle.run_gate(case))
     payload='\n'.join(' '.join(json.dumps(n) if isinstance(n,str) else str(n) for n in case) for case in cases)+'\n'
     result=subprocess.run([str(port.resolve())],input=payload,text=True,capture_output=True)
@@ -54,7 +55,7 @@ def verify(binary,port):
     for i,(a,b) in enumerate(zip(actual,expected)):
         if a!=b:raise AssertionError(f'effect gate {i}: {cases[i]}, port {a}, original {b}')
     return dict(binary_sha256=hashlib.sha256(oracle.original.data).hexdigest(),cases=len(cases),mismatches=0,
-                scope='actual ApplyEffectAt common requirebuff9c branch, chance, whole-loop return, and spellpoints through self/adjacent/target/targetfloor dispatch; zero/one/two buff templates, applytoplayer flags, present/missing player icons, live unbuffed monster and empty/outside targets; accepted/MP/libc compared; actual buff application is a recording/no-op boundary and original buff icons/identity are supplied; full buff application, monster-owned buffs and VFX excluded')
+                scope='actual ApplyEffectAt common requirebuff9c branch, chance, whole-loop return, and spellpoints through self/adjacent/target/targetfloor dispatch; zero/one/two buff templates, applytoplayer flags, present/missing player and live monster icons and empty/outside targets; accepted/MP/libc compared; actual buff application is a recording/no-op boundary and original buff icons/identity are supplied; full original buff application and VFX excluded')
 
 
 if __name__=='__main__':

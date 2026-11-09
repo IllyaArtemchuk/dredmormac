@@ -18,8 +18,10 @@ int main() {
             const auto profile=std::make_shared<const std::vector<SpellDefinition>>(std::vector<SpellDefinition>{active,root});const auto items=std::make_shared<const std::vector<ItemDefinition>>();
             auto player=make_player({20,20,20});player.mana=0;std::istringstream map("#########\n#.......#\n#.......#\n#.......#\n#...@...#\n#.......#\n#.......#\n#.......#\n#########\n");
             Session session(World::read(map),player,seed);session.equipment_profile({20,20,20},items);session.spell_profile(profile);
-            Actor enemy;enemy.position={4,5};enemy.health=enemy.secondary[0]=1000;session.spawn_enemy(enemy);
-            if (present) session.cast_spell(active,{4,4},{4,4});
+            MonsterStatInput monsterInput;monsterInput.ranks={20,20,20};monsterInput.definition_secondary[0]=1000;const auto stats=derive_monster(monsterInput);
+            Actor enemy;enemy.position={4,5};enemy.health=1000;enemy.primary=stats.primary;enemy.secondary=stats.secondary;enemy.stat_profile=monsterInput;session.spawn_enemy(enemy);
+            if (present&1) session.cast_spell(active,{4,4},{4,4});
+            if (present&2) session.cast_spell(active,{4,5},{4,5},2);
             const auto accepted=session.cast_spell(root,origin,target);std::ostringstream out;session.save(out);
             std::cout<<accepted<<' '<<session.player().mana<<' '<<parse_xml(out.str()).first("random")->attribute("libc")<<'\n';
         }

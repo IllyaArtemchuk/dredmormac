@@ -553,12 +553,28 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
         primary==_session->player().primary && secondary==_session->player().secondary;
 }
 - (BOOL)smokeRoomMonsters {
+    try {
     if (_session->enemies().size()!=2 || _enemyImages.count!=2) return NO;
     const auto& named=_session->enemies()[0];const auto& random=_session->enemies()[1];
     const auto count=_session->monster_spawn_state().counts.find("Fixture variant");
-    return named.room_spawned && named.room_local_id=="fixture-monster" && named.can_push==0 && !named.sprite.empty() &&
+    if (!(named.room_spawned && named.room_local_id=="fixture-monster" && named.can_push==0 && !named.sprite.empty() &&
         random.room_spawned && random.room_local_id=="fixture-random" && random.can_push==255 && !random.sprite.empty() &&
-        !(random.monster_flags&~10U) && count!=_session->monster_spawn_state().counts.end() && count->second==1;
+        !(random.monster_flags&~10U) && count!=_session->monster_spawn_state().counts.end() && count->second==1)) return NO;
+    const auto initial=named;const auto mana=_session->player().mana;
+    auto cast=[&](const std::string& name) {
+        const auto* spell=_content->find_spell(name);return spell && _session->cast_spell(*spell,_session->player().position,_session->enemies()[0].position);
+    };
+    if (!initial.stat_profile || !cast("Fixture owned buff") || !cast("Fixture owned buff")) return NO;
+    const auto& owner=_session->enemies()[0];
+    if (owner.buffs.size()!=1 || owner.primary[0]!=initial.primary[0]+1 || owner.health!=initial.health+2 || owner.resistance[7]!=initial.resistance[7]+3) return NO;
+    if (!cast("Fixture owned condition")) return NO;
+    _session->update_triggers(initial.id);_session->update_buffs(initial.id);
+    if (_session->player().mana!=mana-1 || _session->enemies()[0].buffs[0].remaining!=0 || ![self smokeSaveLoad]) return NO;
+    _session->update_buffs(initial.id);
+    const auto& expired=_session->enemies()[0];
+    return expired.buffs.empty() && expired.primary==initial.primary && expired.secondary==initial.secondary && expired.damage==initial.damage &&
+        expired.resistance==initial.resistance && expired.health==initial.health && expired.mana==initial.mana && expired.triggers.empty();
+    } catch(const std::exception& error) {fprintf(stderr,"native monster buffs: %s\n",error.what());return NO;}
 }
 - (BOOL)smokeTraps {
     NSURL *url=[NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:

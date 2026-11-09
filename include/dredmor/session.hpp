@@ -43,7 +43,10 @@ struct Actor {
     std::uint32_t monster_flags=0;
     int monster_terrain=0;
     std::vector<ScheduledSpell> triggers;
-    bool alive() const { return health>0; }
+    std::optional<MonsterStatInput> stat_profile;
+    std::vector<ActiveBuff> buffs;
+    bool corpse=false;
+    bool alive() const { return health>0 && !corpse; }
 };
 struct GroundItem { InventoryItem item;Position position; };
 struct RoomLootCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
@@ -101,6 +104,7 @@ public:
     void update_triggers(std::uint64_t actor);
     const std::vector<ActiveBuff>& player_buffs() const {return player_buffs_;}
     void update_player_buffs();
+    void update_buffs(std::uint64_t actor);
     int player_facing() const {return player_facing_;}
     void player_facing(int direction);
     void spell_profile(std::shared_ptr<const std::vector<SpellDefinition>> definitions);
@@ -178,6 +182,10 @@ private:
     bool effect_buff_gate(const SpellDefinition& spell,Position target) const;
     bool has_player_buff_state() const;
     void sort_player_buffs();
+    void apply_owned_buff(Actor& owner,std::size_t spell,std::size_t buff);
+    void validate_monster_buff(const Actor& owner,const BuffDefinition& definition) const;
+    void update_monster_buffs_impl(Actor& owner);
+    void rebuild_monster(Actor& owner);
     void validate_player_buff(const BuffDefinition& definition) const;
 };
 Actor make_player(const ClassRanks& ranks,std::string name="Player");

@@ -16,8 +16,10 @@ int main() {
             auto profile=std::make_shared<const std::vector<SpellDefinition>>(std::vector<SpellDefinition>{active,child});
             auto player=make_player({20,20,20});player.mana=0;std::istringstream map("#########\n#.......#\n#.......#\n#.......#\n#...@...#\n#.......#\n#.......#\n#.......#\n#########\n");
             Session session(World::read(map),player,seed);session.equipment_profile({20,20,20},items);session.spell_profile(profile);
-            Actor enemy;enemy.position={4,5};enemy.health=enemy.secondary[0]=1000;session.spawn_enemy(enemy);
-            if (present) session.cast_spell(active,{4,4},{4,4});
+            MonsterStatInput monsterInput;monsterInput.ranks={20,20,20};monsterInput.definition_secondary[0]=1000;const auto stats=derive_monster(monsterInput);
+            Actor enemy;enemy.position={4,5};enemy.health=1000;enemy.primary=stats.primary;enemy.secondary=stats.secondary;enemy.stat_profile=monsterInput;session.spawn_enemy(enemy);
+            if (present&1) session.cast_spell(active,{4,4},{4,4});
+            if (present&2) session.cast_spell(active,{4,5},{4,5},2);
             SpellDefinition root;root.name="Root";root.type="target";SpellEffectDefinition effect;effect.type="trigger";effect.spell="Child";effect.amount=delayed?2:0;effect.percent=percent;
             effect.source.tag="effect";effect.source.attributes={{"requirebuffontrigger",std::to_string(require_gate)},{"requirebuffonnottrigger",std::to_string(forbid_gate)},{"requirebuffontriggername",required},{"requirebuffonnottriggername",forbidden}};root.effects.push_back(effect);
             session.cast_spell(root,{4,4},owner==1?Position{4,4}:Position{4,5},caster);

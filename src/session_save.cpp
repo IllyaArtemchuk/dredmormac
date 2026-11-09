@@ -153,12 +153,28 @@ void write_actor(std::ostream& out,std::string_view tag,const Actor& actor) {
         out<<" room-id=\""<<escape(actor.room_local_id)<<"\" push=\""<<unsigned(actor.can_push)<<"\" room-spawned=\""<<actor.room_spawned<<"\"";
     if (actor.monster_flags) out<<" monster-flags=\""<<actor.monster_flags<<"\"";
     if (actor.monster_terrain) out<<" monster-terrain=\""<<actor.monster_terrain<<"\"";
+    if (actor.corpse && actor.health>0) out<<" corpse=\"1\"";
     out<<">\n";
     write_array(out,"primary",actor.primary);write_array(out,"secondary",actor.secondary);
     write_array(out,"damage",actor.damage);write_array(out,"resistance",actor.resistance);
+    if (actor.stat_profile) {
+        const auto& profile=*actor.stat_profile;std::uint32_t scale,percent;std::memcpy(&scale,&profile.health_scale,4);std::memcpy(&percent,&profile.health_percent_per_level,4);
+        if (!std::isfinite(profile.health_scale) || !std::isfinite(profile.health_percent_per_level)) throw std::runtime_error("nonfinite monster stat profile");
+        out<<"<monster-profile depth=\""<<profile.dungeon_level<<"\" hp-level=\""<<profile.health_per_level<<"\" hp-scale=\""<<scale<<"\" hp-percent=\""<<percent<<"\">\n";
+        write_array(out,"class-ranks",profile.ranks);write_array(out,"definition-primary",profile.definition_primary);write_array(out,"primary-flat",profile.primary_flat);write_array(out,"primary-percent",profile.primary_percent);
+        write_array(out,"definition-secondary",profile.definition_secondary);write_array(out,"secondary-flat",profile.secondary_flat);write_array(out,"secondary-percent",profile.secondary_percent);out<<"</monster-profile>\n";
+    }
+    if (!actor.buffs.empty()) {
+        out<<"<owned-buffs>\n";
+        for (const auto& buff:actor.buffs) {
+            if (buff.deapplied || buff.pending) throw std::runtime_error("cannot save transient owned buff");
+            out<<"<buff spell=\""<<buff.spell<<"\" definition=\""<<buff.buff<<"\" remaining=\""<<buff.remaining<<"\" upkeep=\""<<buff.upkeep_remaining<<"\"/>\n";
+        }
+        out<<"</owned-buffs>\n";
+    }
     out<<"</"<<tag<<">\n";
 }
-Actor read_actor(const XmlNode& node,bool currency_fields,bool room_fields) {
+Actor read_actor(const XmlNode& node,bool currency_fields,bool room_fields,bool profiles=false,bool corpse_fields=false) {
     Actor actor;actor.id=attribute_number<std::uint64_t>(node,"id");actor.name=attribute(node,"name");actor.sprite=attribute(node,"sprite");
     const bool has_room=node.attributes.count("room-id") || node.attributes.count("push") || node.attributes.count("room-spawned");
     if (has_room && !room_fields) throw std::runtime_error("actor room metadata requires save version seven");
@@ -176,9 +192,31 @@ Actor read_actor(const XmlNode& node,bool currency_fields,bool room_fields) {
     actor.position={attribute_number<int>(node,"x"),attribute_number<int>(node,"y")};
     actor.health=attribute_number<std::int32_t>(node,"hp");actor.mana=attribute_number<std::int32_t>(node,"mana");
     actor.experience_reward=attribute_number<std::int32_t>(node,"reward");
+    actor.corpse=actor.health<=0;
+    if (node.attributes.count("corpse")) {
+        if (!corpse_fields) throw std::runtime_error("positive-HP corpse state requires version thirteen");
+        actor.corpse=flag(node,"corpse");
+    }
     if (currency_fields) actor.zorkmids=attribute_number<std::int32_t>(node,"zorkmids");
     actor.primary=array<std::int32_t,6>(child(node,"primary"));actor.secondary=array<std::int32_t,24>(child(node,"secondary"));
     actor.damage=array<std::int32_t,16>(child(node,"damage"));actor.resistance=array<std::int32_t,16>(child(node,"resistance"));
+    if (node.first("monster-profile")) {
+        if (!profiles) throw std::runtime_error("monster profiles require version twelve");
+        const auto& saved=child(node,"monster-profile");MonsterStatInput profile;
+        profile.dungeon_level=attribute_number<std::int32_t>(saved,"depth");profile.health_per_level=attribute_number<std::int32_t>(saved,"hp-level");
+        const auto scale=attribute_number<std::uint32_t>(saved,"hp-scale"),percent=attribute_number<std::uint32_t>(saved,"hp-percent");std::memcpy(&profile.health_scale,&scale,4);std::memcpy(&profile.health_percent_per_level,&percent,4);
+        if (!std::isfinite(profile.health_scale) || !std::isfinite(profile.health_percent_per_level)) throw std::runtime_error("nonfinite saved monster profile");
+        profile.ranks=array<std::int32_t,3>(child(saved,"class-ranks"));profile.definition_primary=array<std::int32_t,6>(child(saved,"definition-primary"));
+        profile.primary_flat=array<std::int32_t,6>(child(saved,"primary-flat"));profile.primary_percent=array<std::int32_t,6>(child(saved,"primary-percent"));
+        profile.definition_secondary=array<std::int32_t,24>(child(saved,"definition-secondary"));profile.secondary_flat=array<std::int32_t,24>(child(saved,"secondary-flat"));profile.secondary_percent=array<std::int32_t,24>(child(saved,"secondary-percent"));actor.stat_profile=profile;
+    }
+    if (node.first("owned-buffs")) {
+        if (!profiles || !actor.stat_profile) throw std::runtime_error("owned buffs require a retained monster profile");
+        for (const auto& saved:child(node,"owned-buffs").children) {
+            if (saved.tag!="buff" || !saved.children.empty() || actor.buffs.size()>=4096) throw std::runtime_error("invalid owned buff list");
+            ActiveBuff buff;buff.spell=attribute_number<std::size_t>(saved,"spell");buff.buff=attribute_number<std::size_t>(saved,"definition");buff.remaining=attribute_number<std::int32_t>(saved,"remaining");buff.upkeep_remaining=attribute_number<std::int32_t>(saved,"upkeep");actor.buffs.push_back(buff);
+        }
+    }
     if (!actor.id || actor.id==std::numeric_limits<std::uint64_t>::max() || actor.health<0 || actor.health>actor.secondary[0] || actor.mana<0 || actor.mana>actor.secondary[1])
         throw std::runtime_error("invalid saved actor");
     return actor;
@@ -263,7 +301,12 @@ void Session::save(std::ostream& out) const {
     bool gated=false;auto gates=[&](const Actor& actor){for (const auto& trigger:actor.triggers) gated=gated || trigger.requires_buff || trigger.forbids_buff || !trigger.required_buff.empty() || !trigger.forbidden_buff.empty();};
     gates(player_);for (const auto& actor:enemies_) gates(actor);
     const bool buff_state=has_player_buff_state();
-    out<<"<dredmor-session version=\""<<(buff_state?11:gated?10:scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
+    bool monster_state=false;for (const auto& enemy:enemies_) {
+        monster_state=monster_state || bool(enemy.stat_profile) || !enemy.buffs.empty();
+        for (const auto& buff:enemy.buffs) validate_monster_buff(enemy,buff_definition(buff));
+    }
+    bool corpse_state=player_.corpse && player_.health>0;for (const auto& enemy:enemies_) corpse_state=corpse_state || (enemy.corpse && enemy.health>0);
+    out<<"<dredmor-session version=\""<<(corpse_state?13:monster_state?12:buff_state?11:gated?10:scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
        <<"\" content=\""<<signature(definitions_)<<"\"";
     if (player_facing_!=2) out<<" facing=\""<<player_facing_<<"\"";
     out<<">\n<room>"<<escape(world_.room_text())<<"</room>\n";
@@ -363,7 +406,8 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     if (input.bad()) throw std::runtime_error("cannot read session save");
     const auto root=parse_xml(content,"session save");
     const auto version=attribute(root,"version");
-    const bool modern=version=="7" || version=="8" || version=="9" || version=="10" || version=="11";
+    const bool modern=version=="7" || version=="8" || version=="9" || version=="10" || version=="11" || version=="12" || version=="13";
+    const bool monster_fields=version=="12" || version=="13";
     if (version=="11" && !root.first("player-buffs")) throw std::runtime_error("version eleven requires buff state");
     if (version=="10" && !root.first("scheduled-spells")) throw std::runtime_error("version ten requires gated spell state");
     if (version=="8" && !root.first("scheduled-spells")) throw std::runtime_error("version eight requires scheduled spell state");
@@ -381,7 +425,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     }
     const auto turn=attribute_number<std::uint64_t>(root,"turn");
     if (turn==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("saved turn counter exhausted");
-    std::istringstream rows(child(root,"room").text);auto world=World::restore(rows,turn);auto player=read_actor(child(root,"player"),version=="6" || modern,modern);
+    std::istringstream rows(child(root,"room").text);auto world=World::restore(rows,turn);auto player=read_actor(child(root,"player"),version=="6" || modern,modern,monster_fields,version=="13");
     if (player.position.x!=world.player().x || player.position.y!=world.player().y) throw std::runtime_error("saved player/room position mismatch");
     Session session(std::move(world),player,0,attribute_number<int>(root,"experience-n"));
     if (root.attributes.count("facing")) {
@@ -392,7 +436,11 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     std::set<std::uint64_t> actors={player.id},items;
     for (const auto& node:child(root,"enemies").children) {
         if (node.tag!="enemy" || session.enemies_.size()>=512) throw std::runtime_error("invalid saved enemy list");
-        auto actor=read_actor(node,version=="6" || modern,modern);
+        auto actor=read_actor(node,version=="6" || modern,modern,monster_fields,version=="13");
+        if (!actor.buffs.empty()) {
+            if (!session.spells_ || !root.first("spell-rules") || !child(root,"spell-rules").attributes.count("buffs")) throw std::runtime_error("monster buffs require matching spell rules");
+            for (const auto& buff:actor.buffs) session.validate_monster_buff(actor,session.buff_definition(buff));
+        }
         if (!actors.insert(actor.id).second || !session.world_.passable(actor.position)) throw std::runtime_error("invalid saved enemy identity/position");
         if (actor.alive()) {
             if ((actor.position.x==player.position.x && actor.position.y==player.position.y) || session.enemy_at(actor.position)) throw std::runtime_error("saved actors overlap");
@@ -401,7 +449,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     }
     if (!session.next_actor_ || session.next_actor_<=*actors.rbegin()) throw std::runtime_error("invalid saved actor sequence");
     if (root.first("scheduled-spells")) {
-        if ((version!="8" && version!="9" && version!="10" && version!="11") || !session.spells_ || !root.first("spell-rules")) throw std::runtime_error("scheduled spells require matching rules and a supported version");
+        if ((version!="8" && version!="9" && version!="10" && version!="11" && !monster_fields) || !session.spells_ || !root.first("spell-rules")) throw std::runtime_error("scheduled spells require matching rules and a supported version");
         std::size_t count=0;
         for (const auto& node:child(root,"scheduled-spells").children) {
             if (node.tag!="trigger" || !node.children.empty() || ++count>4096*513) throw std::runtime_error("invalid scheduled spell list");
@@ -409,7 +457,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
             ScheduledSpell trigger;trigger.caster=attribute_number<std::uint64_t>(node,"caster");
             trigger.spell=attribute_number<std::size_t>(node,"spell");trigger.remaining=attribute_number<std::int32_t>(node,"remaining");
             trigger.percent=attribute_number<std::int32_t>(node,"percent");trigger.repeat=flag(node,"repeat");trigger.parent=attribute(node,"parent");
-            if (version=="10" || (version=="11" && node.attributes.count("requires"))) {trigger.requires_buff=flag(node,"requires");trigger.forbids_buff=flag(node,"forbids");trigger.required_buff=attribute(node,"required-name");trigger.forbidden_buff=attribute(node,"forbidden-name");}
+            if (version=="10" || ((version=="11" || monster_fields) && node.attributes.count("requires"))) {trigger.requires_buff=flag(node,"requires");trigger.forbids_buff=flag(node,"forbids");trigger.required_buff=attribute(node,"required-name");trigger.forbidden_buff=attribute(node,"forbidden-name");}
             else if (node.attributes.count("requires") || node.attributes.count("forbids") || node.attributes.count("required-name") || node.attributes.count("forbidden-name")) throw std::runtime_error("trigger buff gates require version ten");
             if (!actors.count(owner) || (trigger.caster && !actors.count(trigger.caster)) || trigger.spell>=session.spells_->size()) throw std::runtime_error("invalid scheduled spell identity");
             auto& actor=session.actor_by_id(owner);
@@ -418,7 +466,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
         }
     }
     if (root.first("player-buffs")) {
-        if ((version!="9" && version!="10" && version!="11") || !session.spells_ || !root.first("spell-rules") || !child(root,"spell-rules").attributes.count("buffs")) throw std::runtime_error("active buffs require matching rules and a supported version");
+        if ((version!="9" && version!="10" && version!="11" && !monster_fields) || !session.spells_ || !root.first("spell-rules") || !child(root,"spell-rules").attributes.count("buffs")) throw std::runtime_error("active buffs require matching rules and a supported version");
         for (const auto& node:child(root,"player-buffs").children) {
             if (node.tag!="buff" || !node.children.empty() || session.player_buffs_.size()>=4096) throw std::runtime_error("invalid saved buff list");
             ActiveBuff buff;buff.spell=attribute_number<std::size_t>(node,"spell");buff.buff=attribute_number<std::size_t>(node,"definition");buff.remaining=attribute_number<std::int32_t>(node,"remaining");
@@ -429,7 +477,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
             session.player_buffs_.push_back(buff);
         }
     }
-    if (version=="11") {
+    if (version=="11" || (monster_fields && root.first("player-buffs"))) {
         session.buff_primary_flat_=array<std::int32_t,6>(child(root,"buff-primary-flat"));
         session.buff_secondary_flat_=array<std::int32_t,24>(child(root,"buff-secondary-flat"));
     } else {

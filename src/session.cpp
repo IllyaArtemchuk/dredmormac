@@ -50,6 +50,7 @@ Session::Session(World world,Actor player,std::uint32_t seed,int experience_n)
     :world_(std::move(world)),player_(std::move(player)),experience_n_(experience_n) {
     if (!player_.id || player_.id==std::numeric_limits<std::uint64_t>::max() || player_.health<0 || player_.health>player_.secondary[0])
         throw std::invalid_argument("invalid player");
+    if (player_.stat_profile || !player_.buffs.empty()) throw std::invalid_argument("player has monster-only state");
     player_.position=world_.player();next_actor_=player_.id+1;random_.seed(seed);
     intrinsic_damage_=player_.damage;intrinsic_resistance_=player_.resistance;
 }
@@ -111,6 +112,7 @@ bool Session::strike_breakable(std::size_t index) {
     next.world_.step(Action::wait);next.enemy_turns();*this=std::move(next);return true;
 }
 std::uint64_t Session::spawn_enemy(Actor enemy) {
+    if (!enemy.buffs.empty()) throw std::invalid_argument("spawn buffs through spell application");
     if (!passable(enemy.position) || same(enemy.position,player_.position) || enemy_at(enemy.position) ||
         !enemy.alive() || enemy.health>enemy.secondary[0]) throw std::invalid_argument("invalid enemy spawn");
     if (enemies_.size()>=512) throw std::runtime_error("session enemy limit exceeded");
@@ -238,6 +240,7 @@ void Session::spell_profile(std::shared_ptr<const std::vector<SpellDefinition>> 
         if (has_player_buff_state()) throw std::invalid_argument("cannot replace rules with active buff state");
         if (!player_.triggers.empty()) throw std::invalid_argument("cannot replace rules with pending spells");
         for (const auto& actor:enemies_) if (!actor.triggers.empty()) throw std::invalid_argument("cannot replace rules with pending spells");
+        for (const auto& actor:enemies_) if (!actor.buffs.empty()) throw std::invalid_argument("cannot replace rules with monster buffs");
     }
     spells_=std::move(definitions);
 }
@@ -367,6 +370,7 @@ void Session::apply_spell_effects(const SpellDefinition& spell,Position target,s
         events_.push_back({EventKind::spell_damage,source->id,victim->id,result.total,result.haywire,result.resisted});
         if (result.total>0) victim->health=std::max(0,victim->health-result.total);
         if (!victim->alive()) {
+            victim->corpse=true;
             events_.push_back({EventKind::death,victim->id,source->id});
             if (source->id==player_.id && victim->id!=player_.id && progression_.gain(victim->experience_reward,experience_n_)) {
                 player_.health=player_.secondary[0];player_.mana=player_.secondary[1];events_.push_back({EventKind::level_up,player_.id,0,progression_.level});
@@ -451,6 +455,7 @@ void Session::attack(Actor& attacker,Actor& defender) {
         events_.push_back({EventKind::attack,source->id,victim->id,result.total,result.critical,result.blocked});
         if (result.total>0) victim->health=std::max(0,victim->health-result.total);
         if (!victim->alive()) {
+            victim->corpse=true;
             events_.push_back({EventKind::death,victim->id,source->id});
             if (source->id==player_.id && victim->id!=player_.id && progression_.gain(victim->experience_reward,experience_n_)) {
                 player_.health=player_.secondary[0];player_.mana=player_.secondary[1];
@@ -491,7 +496,9 @@ void Session::enemy_turns() {
     std::size_t remaining=4096;
     for (auto& enemy:enemies_) {
         if (!player_.alive()) break;
+        if (enemy.corpse) enemy.health=0;
         update_triggers_impl(enemy,remaining);
+        update_monster_buffs_impl(enemy);
         if (enemy.alive() && player_.alive()) {
             const auto dx=std::abs(enemy.position.x-player_.position.x),dy=std::abs(enemy.position.y-player_.position.y);
             if (dx+dy==1) attack(enemy,player_);
