@@ -1,5 +1,6 @@
 #include "dredmor/content.hpp"
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #define check(value) do { if (!(value)) throw std::runtime_error("content assertion at line "+std::to_string(__LINE__)); } while(false)
 int main(int argc,char** argv) {
