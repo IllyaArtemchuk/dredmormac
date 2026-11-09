@@ -61,7 +61,7 @@ int main(int argc,char** argv) {
         check(mismatch);
         auto sword=read_item(parse_xml("<item name='Fixture sword' type='0'><weapon crushing='3'/></item>"));
         auto profile_items=std::make_shared<const std::vector<ItemDefinition>>(std::vector<ItemDefinition>{definition,sword});
-        auto passive=read_ability(parse_xml("<ability name='Fixture unarmed' skill='0'><primarybuff id='0' amount='3'/><damagebuff crushing='2'/></ability>"));
+        auto passive=read_ability(parse_xml("<ability name='Fixture unarmed' skill='6'><primarybuff id='0' amount='3'/><damagebuff crushing='2'/></ability>"));
         passive.skill_name="Unarmed Combat";
         auto abilities=std::make_shared<const std::vector<AbilityDefinition>>(std::vector<AbilityDefinition>{passive});
         std::vector<SkillRank> selected;for (int id=0;id<7;++id) selected.push_back({id,1});

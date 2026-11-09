@@ -16,5 +16,6 @@ fi
 "$GHIDRA_INSTALL_DIR/support/analyzeHeadless" "$report_root/ghidra-project" dredmor \
   "${args[@]}" -scriptPath "$project_scripts;$GAMEFRAME_ROOT/tools/ghidra" \
   -postScript RepairAllocatorReturns.java \
+  -postScript RepairWeaponSwitch.java \
   -postScript ExportAddressBatch.java "$report_root/recovered-functions.txt" \
-  0xf0360 0x190800 0x190870 0x190a00 0x1218de 0xc93d0 0xc9490 0xcea00
+  0xf0360 0x190800 0x190870 0x190a00 0x1218de 0xc93d0 0xc9490 0xcea00 0x1397c0

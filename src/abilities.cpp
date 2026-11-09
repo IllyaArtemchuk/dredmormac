@@ -52,6 +52,25 @@ bool is_melee_ability(std::string_view name) {
         if (name==melee) return true;
     return false;
 }
+int weapon_skill_id(int weapon_type) {
+    static constexpr int identifiers[]={0,1,2,3,4,5,4,45,46};
+    return weapon_type>=0 && weapon_type<9?identifiers[weapon_type]:2;
+}
+ItemModifiers weapon_ability_modifiers(int weapon_type,const std::vector<SkillRank>& skills,
+                                      const std::vector<AbilityDefinition>& abilities) {
+    const auto identifier=weapon_skill_id(weapon_type);int rank=0;
+    for (auto skill:skills) if (skill.id==identifier) {rank=skill.rank;break;}
+    ItemModifiers result;
+    for (const auto& ability:abilities) if (ability.skill_id==identifier && ability.level<rank) {
+        for (std::size_t i=0;i<6;++i) result.primary[i]=add(result.primary[i],ability.modifiers.primary[i]);
+        for (std::size_t i=0;i<24;++i) result.secondary[i]=add(result.secondary[i],ability.modifiers.secondary[i]);
+        for (std::size_t i=0;i<16;++i) {
+            result.damage[i]=add(result.damage[i],ability.modifiers.damage[i]);
+            result.resistance[i]=add(result.resistance[i],ability.modifiers.resistance[i]);
+        }
+    }
+    return result;
+}
 bool player_passive_applies(const AbilityDefinition& ability,const std::vector<SkillRank>& skills,const AbilityContext& context) {
     if (ability.polymorphed_only) {
         if (!context.polymorph || *context.polymorph!=ability.polymorph_tag) return false;

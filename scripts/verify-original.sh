@@ -23,5 +23,6 @@ python_cmd=python3
 "$python_cmd" scripts/verify_loadout.py "$data_root/dredmor" build/dredmor-loadout --out "$report_root/starting-loadout.json"
 "$python_cmd" scripts/verify_passives.py "$data_root/dredmor" build/dredmor-passives --out "$report_root/passive-stats.json"
 "$python_cmd" scripts/verify_wands.py "$data_root/dredmor" build/dredmor-wand --out "$report_root/wand-charges.json"
+"$python_cmd" scripts/verify_equipped_passives.py "$data_root/dredmor" build/dredmor-equipped-passives --out "$report_root/equipped-passive-stats.json"
 "$python_cmd" scripts/verify_catalog.py "$data_root" build/dredmor-data --out "$report_root/catalog-base.json"
 "$python_cmd" scripts/verify_catalog.py "$data_root" build/dredmor-data --expansions --out "$report_root/catalog-all.json"

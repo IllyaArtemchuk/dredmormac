@@ -144,3 +144,16 @@ initial inventory/clothing paths and save/load. Pending native CI.
 Next fidelity work: weapon/armour ability buffs and full starting-creation trace.
 Private equipment-ability-buffs.txt exports Weapon::FixBuffs (0x13ba4e) and
 Armour::FixBuffs (0x38340); their headless log is work/equipment-ability-buffs.log.
+
+Native starting-loadout run 42594615983 passed nineteen checks + package smoke.
+Equipped weapon training is added to abilities/equipment rebuilding. Original
+verify_equipped_passives.py executes Weapon::EquipOnPlayer + its actual virtual
+Player::RebuildAttributes, matching 1,024 / 63,488 fields, including 235 melee+
+bow cases. ASCII string compare supplied; UpdateSpellsForEquipment skipped.
+Bow modifiers no longer augment melee damage. Dual melee still disabled.
+RepairWeaponSwitch.java restores two computed-jump overrides (plain references
+alone did not suffice) and is integrated into analyze-original.sh. Export is
+weapon-equip-repaired.txt privately. New source awaits native CI.
+Next investigation: numeric_template currently reads shop/zoo at room root but
+original parser reads child flags. Correct that before using generated rooms;
+verify_templates.py shares the root assumption and must be corrected too.

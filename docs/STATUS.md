@@ -31,7 +31,7 @@ Verified:
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
 - Ten local CTest groups pass, including deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42592841136 passed all eighteen checks, including
+- Actual macos-15 arm64 CI run 42594615983 passed all nineteen checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -103,4 +103,11 @@ Starting character integration now grants base loadouts, default clothing and
 four random consumables, including automatic gear and wand charges. 256 supplied-
 content initializations cover all 36 skill IDs with no failures; ten local groups
 pass. This is not full original BuildPlayerFromSkills or equipped weapon-ability
-parity. Normal native startup is wired to these grants; its new run is pending.
+parity. Normal native startup is wired to these grants and passes Mac CI.
+
+Equipped weapon training now enters the correct pre-scaling flat-stat stage.
+1,024 original equip+rebuild executions / 63,488 fields match, including 235
+melee-plus-bow cases. Bow damage bonuses no longer leak into melee damage.
+Updated local checks and 256 original-content initializations pass; this new
+weapon-training integration awaits native CI. Dual wield/spells/triggers remain
+incomplete.

@@ -29,14 +29,30 @@ EquippedStats Equipment::rebuild(const ClassRanks& ranks,const std::vector<ItemD
                                const std::vector<SkillRank>& skills,const std::vector<AbilityDefinition>& abilities) const {
     auto pflat=primary_flat;auto sflat=secondary_flat;
     EquippedStats result;int armour=0;
-    for (const auto& slot:slots_) if (slot) {
+    for (std::size_t index=0;index<slots_.size();++index) if (const auto& slot=slots_[index]) {
         const auto& definition=definitions.at(slot->definition);
         for (std::size_t i=0;i<6;++i) pflat[i]=add(pflat[i],definition.modifiers.primary[i]);
         for (std::size_t i=0;i<24;++i) sflat[i]=add(sflat[i],definition.modifiers.secondary[i]);
         if (definition.kind==ItemKind::armour) armour=add(armour,definition.armour_ac);
         for (std::size_t i=0;i<16;++i) {
-            result.damage_bonus[i]=add(result.damage_bonus[i],definition.modifiers.damage[i]);
+            if (definition.kind!=ItemKind::weapon || index!=8)
+                result.damage_bonus[i]=add(result.damage_bonus[i],definition.modifiers.damage[i]);
             result.resistance[i]=add(result.resistance[i],definition.modifiers.resistance[i]);
+        }
+        if (definition.kind==ItemKind::weapon) {
+            const auto training=weapon_ability_modifiers(definition.weapon_type,skills,abilities);
+            // The supported session path has at most one melee weapon. For
+            // static two-hand rebuilding use canonical left-then-right order;
+            // complete original dual-wield transition behavior remains pending.
+            int divisor=1;
+            if (index==2 && slots_[1] && slots_[1]->kind==ItemKind::weapon &&
+                weapon_skill_id(definitions.at(slots_[1]->definition).weapon_type)==weapon_skill_id(definition.weapon_type)) divisor=2;
+            for (std::size_t i=0;i<6;++i) pflat[i]=add(pflat[i],training.primary[i]/divisor);
+            for (std::size_t i=0;i<24;++i) sflat[i]=add(sflat[i],training.secondary[i]/divisor);
+            for (std::size_t i=0;i<16;++i) {
+                if (index!=8) result.damage_bonus[i]=add(result.damage_bonus[i],training.damage[i]/divisor);
+                result.resistance[i]=add(result.resistance[i],training.resistance[i]/divisor);
+            }
         }
     }
     AbilityContext context;

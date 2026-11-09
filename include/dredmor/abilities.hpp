@@ -17,6 +17,9 @@ struct AbilityContext {
 };
 AbilityDefinition read_ability(const XmlNode& node);
 bool is_melee_ability(std::string_view skill_name);
+int weapon_skill_id(int weapon_type);
+ItemModifiers weapon_ability_modifiers(int weapon_type,const std::vector<SkillRank>& skills,
+                                      const std::vector<AbilityDefinition>& abilities);
 // Base player passive gate. Melee/archery/thrown weapon rebuilding and effect
 // triggers are separate; this is not all of an ability's behavior.
 bool player_passive_applies(const AbilityDefinition& ability,const std::vector<SkillRank>& skills,

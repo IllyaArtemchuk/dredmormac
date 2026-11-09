@@ -460,3 +460,33 @@ starting-character-integration.json privately. CLI supports explicit --skills an
 streams with elapsed application milliseconds before skill selection; the exact
 original external startup timing is not claimed. Developer scenes retain fixed
 seed/default-empty loadouts unless explicitly configured.
+
+Run 42594615983 (801b4b8) passed all nineteen checks and relocated app smoke,
+including direct installation startup with selected starting inventory/equipment.
+
+## Equipped weapon training
+
+Ghidra missed two computed-jump tables in Weapon::EquipOnPlayer. Explicit computed
+jump references alone were insufficient; JumpTable.writeOverride for both switches
+restores the visible cases. RepairWeaponSwitch.java validates all destinations,
+updates analysis only, and is integrated into analyze-original.sh. Original bytes
+remain unchanged. Weapon type to skill-ID mapping is 0,1,2,3,4,5,4,45,46 for
+weapon types zero through eight, with fallback skill ID two.
+
+Weapon training primary/secondary modifiers enter flat buffers before base
+primary/secondary scaling and clamping. General passive primary modifiers enter
+later. Melee weapon-family damage joins the melee skill matrix; bow-family damage
+belongs to the ranged matrix and must not leak into melee. Resistances combine
+for equipped melee/ranged weapons. Corrected the earlier unconditional addition
+of bow item damage bonuses to the melee integration profile.
+
+Actual original Weapon::EquipOnPlayer (0x1397c0), including its virtual call to
+actual Player::RebuildAttributes (0x1218de), matches 1,024 cases / 63,488 fields.
+This includes 235 melee-plus-bow cases, 4,528 ability records and 1,259 equip calls.
+Only ASCII library string comparison is supplied and UpdateSpellsForEquipment is
+skipped at its boundary; no buffs/artifacts/dual wield/polymorph. Compare primary,
+secondary, effective melee bonus damage and resistance. Tests verify bonus order
+and that bow damage cannot augment melee. Session still permits at most one melee
+weapon; complete dual-wield transitions and spell/trigger updates remain pending.
+Re-run verify_equipped_passives.py for equipped-passive-stats.json privately.
+The 256 supplied-content character initializations pass again after this change.
