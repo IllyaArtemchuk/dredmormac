@@ -1,4 +1,5 @@
 #include "dredmor/random.hpp"
+#include <cmath>
 #include <algorithm>
 #include <stdexcept>
 
@@ -66,5 +67,24 @@ std::int32_t DarwinRandom::next() {
 std::uint32_t DarwinRandom::bounded(std::uint32_t count) {
     if (count-1U>=0x7ffffffeU) return 0;
     return static_cast<std::uint32_t>(next())/(0x7fffffffU/count+1U);
+}
+float NormalRandom::sample(float mean,float deviation,Random& random,std::size_t max_pairs) {
+    float value;
+    if (state_.available) {
+        value=state_.spare;state_.available=false;
+    } else {
+        auto candidate=random;float x=0,y=0,radius=0;bool found=false;
+        for (std::size_t pair=0;pair<max_pairs;++pair) {
+            const auto first=candidate.real_closed(),second=candidate.real_closed();
+            x=float(first+first-1.0);y=float(second+second-1.0);
+            const float x_squared=x*x,y_squared=y*y;radius=y_squared+x_squared;
+            if (radius<1.0f) {found=true;break;}
+        }
+        if (!found) throw std::runtime_error("normal sample pair budget exceeded");
+        const double squared=radius;
+        const float factor=float(std::sqrt((std::log(squared)*-2.0)/squared));
+        state_.spare=y*factor;state_.available=true;value=x*factor;random=std::move(candidate);
+    }
+    const float scaled=value*deviation;return scaled+mean;
 }
 }

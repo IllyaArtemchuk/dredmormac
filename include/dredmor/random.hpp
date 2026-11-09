@@ -43,9 +43,22 @@ public:
 private:
     std::uint32_t state_;
 };
+class NormalRandom {
+public:
+    struct State {bool available=false;float spare=0;};
+    // Original box_muller(float,float), including float rounding and cached
+    // unscaled second sample. Reseeding the MT does not reset this cache.
+    float sample(float mean,float deviation,Random& random,std::size_t max_pairs=1000000);
+    State state() const {return state_;}
+    void restore(State state) {state_=state;}
+private:
+    State state_{};
+};
 struct GameRandom {
     Random mt;
     DarwinRandom libc;
+    NormalRandom normal;
+    // The original seed routines leave box_muller's static cache unchanged.
     void seed(std::uint32_t value) { libc.seed(value);mt.seed(value); }
     void wizard_seed(std::uint32_t value) { if (value) { mt.seed(value);libc.seed(value); } }
 };

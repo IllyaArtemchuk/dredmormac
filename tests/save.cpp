@@ -33,15 +33,25 @@ int main(int argc,char** argv) {
             original.step(action);loaded.step(action);
             check(original.snapshot()==loaded.snapshot() && saved(original)==saved(loaded));
         }
-        auto invalid=text;auto p=invalid.find("version=\"4\"");invalid.replace(p,11,"version=\"5\"");reject(invalid);
-        auto legacy=text;legacy.replace(legacy.find("version=\"4\""),11,"version=\"1\"");
+        auto invalid=text;auto p=invalid.find("version=\"5\"");invalid.replace(p,11,"version=\"6\"");reject(invalid);
+        auto legacy=text;legacy.replace(legacy.find("version=\"5\""),11,"version=\"1\"");
         p=legacy.find("<skills ");const auto end=legacy.find("</skills>\n",p);check(p!=std::string::npos && end!=std::string::npos);
         legacy.erase(p,end+10-p);std::istringstream legacy_input(legacy);auto legacy_loaded=Session::load(legacy_input);
         check(saved(legacy_loaded)==text);
-        auto version_three=text;version_three.replace(version_three.find("version=\"4\""),11,"version=\"3\"");
+        auto version_three=text;version_three.replace(version_three.find("version=\"5\""),11,"version=\"3\"");
         p=version_three.find("<custom-objects>");const auto objects_end=version_three.find("</custom-objects>\n",p);
         check(p!=std::string::npos && objects_end!=std::string::npos);version_three.erase(p,objects_end+18-p);
         std::istringstream version_three_input(version_three);check(saved(Session::load(version_three_input))==text);
+        auto version_four=text;version_four.replace(version_four.find("version=\"5\""),11,"version=\"4\"");
+        p=version_four.find(" normal-available=");const auto normal_end=version_four.find('>',p);
+        check(p!=std::string::npos && normal_end!=std::string::npos);version_four.erase(p,normal_end-p);
+        std::istringstream version_four_input(version_four);check(saved(Session::load(version_four_input))==text);
+        const std::string empty_normal="normal-available=\"0\" normal-spare=\"0\"";
+        auto cached=text;p=cached.find(empty_normal);
+        check(p!=std::string::npos);cached.replace(p,empty_normal.size(),"normal-available=\"1\" normal-spare=\"1067450368\"");
+        std::istringstream cache_input(cached);check(saved(Session::load(cache_input))==cached);
+        invalid=text;p=invalid.find("normal-available=\"0\"");invalid.replace(p,20,"normal-available=\"2\"");reject(invalid);
+        invalid=text;p=invalid.find("normal-spare=\"0\"");invalid.replace(p,16,"normal-spare=\"4294967295\"");reject(invalid);
         invalid=text;p=invalid.find("index=\"624\"");check(p!=std::string::npos);invalid.replace(p,11,"index=\"626\"");reject(invalid);
         invalid=text;p=invalid.find("<enemy id=\"2\"");check(p!=std::string::npos);invalid.replace(p,13,"<enemy id=\"1\"");reject(invalid);
         reject("<!DOCTYPE d [<!ENTITY x 'bad'>]>"+text);reject("<dredmor-session/>");

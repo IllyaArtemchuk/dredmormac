@@ -6,6 +6,8 @@
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <cstring>
+#include <cmath>
 
 namespace dredmor {
 namespace {
@@ -135,12 +137,15 @@ InventoryItem read_item_instance(const XmlNode& node) {
 }
 }
 void Session::save(std::ostream& out) const {
-    out<<"<dredmor-session version=\"4\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
+    out<<"<dredmor-session version=\"5\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
        <<"\" content=\""<<signature(definitions_)<<"\">\n<room>"<<escape(world_.room_text())<<"</room>\n";
     write_actor(out,"player",player_);out<<"<enemies>\n";for (const auto& enemy:enemies_) write_actor(out,"enemy",enemy);out<<"</enemies>\n";
     out<<"<progress level=\""<<progression_.level<<"\" xp=\""<<progression_.experience<<"\" lifetime=\""<<progression_.lifetime_experience
        <<"\" score=\""<<progression_.score_experience<<"\" points=\""<<progression_.unspent_points<<"\"/>\n";
-    auto mt=random_.mt.state();out<<"<random libc=\""<<random_.libc.state()<<"\" index=\""<<mt.index<<"\">\n";
+    auto mt=random_.mt.state();const auto normal=random_.normal.state();std::uint32_t normal_bits;
+    std::memcpy(&normal_bits,&normal.spare,sizeof(normal_bits));
+    out<<"<random libc=\""<<random_.libc.state()<<"\" index=\""<<mt.index<<"\" normal-available=\""<<normal.available
+       <<"\" normal-spare=\""<<normal_bits<<"\">\n";
     for (auto word:mt.words) out<<word<<' ';
     out<<"</random>\n";
     out<<"<inventory><bag>\n";
@@ -174,7 +179,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     if (input.bad()) throw std::runtime_error("cannot read session save");
     const auto root=parse_xml(content,"session save");
     const auto version=attribute(root,"version");
-    if (root.tag!="dredmor-session" || (version!="1" && version!="2" && version!="3" && version!="4")) throw std::runtime_error("unsupported session save version");
+    if (root.tag!="dredmor-session" || (version!="1" && version!="2" && version!="3" && version!="4" && version!="5")) throw std::runtime_error("unsupported session save version");
     const bool legacy_types=version=="1" || version=="2";
     if (attribute_number<std::uint64_t>(root,"content")!=signature(definitions,legacy_types)) throw std::runtime_error("save item content does not match loaded definitions");
     const auto turn=attribute_number<std::uint64_t>(root,"turn");
@@ -201,7 +206,13 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     const auto& random=child(root,"random");
     session.random_.libc.seed(attribute_number<std::uint32_t>(random,"libc"));
     session.random_.mt.restore({array<std::uint32_t,624>(random),attribute_number<std::size_t>(random,"index")});
-    if (version=="4") for (const auto& node:child(root,"custom-objects").children) {
+    if (version=="5") {
+        const auto bits=attribute_number<std::uint32_t>(random,"normal-spare");float spare;
+        std::memcpy(&spare,&bits,sizeof(spare));
+        if (!std::isfinite(spare)) throw std::runtime_error("invalid saved normal cache");
+        session.random_.normal.restore({flag(random,"normal-available"),spare});
+    }
+    if (version=="4" || version=="5") for (const auto& node:child(root,"custom-objects").children) {
         if (node.tag!="object" || session.custom_objects_.size()>=10000) throw std::runtime_error("invalid saved custom object list");
         const auto kind=attribute_number<unsigned>(node,"kind"),push=attribute_number<unsigned>(node,"push");
         if (kind>1 || push>255) throw std::runtime_error("invalid saved custom object type/push");

@@ -81,3 +81,13 @@ class OriginalI386:
         if floating:
             return struct.unpack('<Q',self.machine.mem_read(self.scratch,8))[0]
         return self.machine.reg_read(UC_X86_REG_EAX)
+
+    def call_float32(self,symbol,*args,budget=200000):
+        """Call with raw cdecl words, then store returned ST0 to float bits."""
+        self.call(symbol,*args,budget=budget)
+        thunk=self.sentinel+0xf00;destination=self.scratch+0xff00
+        if not getattr(self,'float32_store',False):
+            self.machine.mem_write(thunk,b'\xd9\x1d'+struct.pack('<I',destination))
+            self.float32_store=True
+        self.machine.emu_start(thunk,thunk+6,count=1)
+        return struct.unpack('<I',self.machine.mem_read(destination,4))[0]

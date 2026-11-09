@@ -308,3 +308,19 @@ Private population-record-properties.txt confirms loot subtype=random/amount1/
 artifact0, horde min/additional=-1. custom-room-records.txt holds all four Create
 functions. Next: actual factories and ordered full room content execution, then
 full-level integration; do not present request plans as populated/playable levels.
+
+Population run42610022836 passed MacCI. NormalRandom now implements original
+box_muller0x85d70; verify_normal.py matches8,384 result/cache states and11,790 mixed
+output lines, with host double-log import boundary. MT/sqrt/float instructions
+execute original. Cache stores unscaled float spare; MT seed does not reset it.
+GameRandom owns normal; savev5 persists validity/spare bits, migratesv1..4 with
+empty cache, and retains v4custom objects. Fourteen local groups and original
+28,550 random outputs pass. New normal/save source awaits MacCI.
+Private box-muller.txt and loot-factory.txt export sampler/GetRandomTrap/full
+CreateItemFromTypeAndSubtypeStrings/SpawnMonster/SpawnHorde. Next: random trap
+selection and target-depth wrapper. Original GetRandomTrap always samples normal
+at mean float(depth)+1 before alternate-depth branching; alternate<0 overwrites
+target with libc bucket0..19; alternate>=0 samples again at that mean without+1.
+Clamp1..20, discard one unconditional pool pick, then up to101 picks: accept
+!special && level==target or unconditional attempt101. Debug is not checked.
+Then actual loot/factory/population integration; full level remains incomplete.

@@ -183,3 +183,9 @@ Population request planning now matches2,132 original record executions with
 constructor/spawn/finalizer boundaries. Independent ingestion matches830 monster,
 trap, loot and horde records across346 rooms. Thirteen local groups pass. Actual
 population factories/ordering and complete gameplay remain unfinished.
+
+Population-record run42610022836 passed native validation and packaging. Cached
+normal sampling now matches8,384 original calls/cache states and mixed MT draws
+with a host log boundary. Savev5 retains the Gaussian cache; v1..4 migrate. All
+14 local groups and28,550 existing RNG outputs pass. New sampler/save Mac CI is
+pending. Random content selection and complete gameplay remain unfinished.

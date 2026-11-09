@@ -778,3 +778,31 @@ Independent ingestion matches all830 supplied population records in346 rooms:
 165 monster,102 trap,514 loot and49 horde. Thirteen local groups pass with defaults,
 coordinate wrapping, appearance draws, malformed metadata and cross-class order
 coverage. Factory implementations/session integration remain next.
+
+Population-record run42610022836 (d56c8c4) passed native validation/package smoke.
+
+## Cached normal sampling and save v5
+
+NormalRandom reproduces box_muller(float,float), original0x85d70. It uses two MT
+closed-interval doubles per polar candidate, float-rounded x/y/squared radius,
+double log/sqrt, float factor/products and separate float multiply/add at output.
+The normalized second value is cached as float; subsequent mean/deviation changes
+apply to that cached value. MT seeding does not reset the cache. GameRandom now
+owns it alongside MT/libc, keeping independent sessions reproducible.
+
+verify_normal.py matches8,384 original result/cache states (4,192 cached calls)
+and11,790 mixed output lines across varied finite float parameters, interleaved
+raw draws and reseeding. Original rejection, MT, sqrt and float instructions run;
+the imported double log is supplied by the host library. This does not compare
+Darwin libSystem's log implementation or nondefault rounding modes. Original
+28,550 mixed RNG outputs still match after extending the harness. The harness
+adds an immutable post-call float-store thunk for cdecl float arguments/returns.
+
+Savev5 persists cache validity and exact spare float bits, including when not
+currently available. v1..v4 migrate with the untouched/empty cache. v4 custom
+objects still load; legacy item-ID translation remains v1/v2 only. Nonfinite
+cache values and invalid validity flags reject before replacing session state.
+Tests cover exact cache roundtrip, old-v4 normalization, malformed fields,
+original sampler goldens and reseeding/restore/atomic resource guard behavior.
+Fourteen local groups pass. Random content selectors will consume this state;
+the normal implementation alone does not populate a level.
