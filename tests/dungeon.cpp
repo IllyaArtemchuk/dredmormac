@@ -110,6 +110,16 @@ int main() {
         check(rejected && active.open);
         rejected=false;try {toggle_door(doors,active,0,[](Position)->bool{throw std::runtime_error("occupancy unavailable");});} catch(const std::runtime_error&) {rejected=true;}
         check(rejected && active.open && (doors.at(3,7).door_flags&4));
+        DungeonLayout punched(7,5,std::vector<DungeonCell>(35,{0,77,8,0x1000}));
+        punched.floor_count(321);punched.at(2,2).kind=punched.at(3,2).kind=6;
+        punched.at(1,1).kind=13;punch_out_dungeon_content(punched);
+        check(punched.at(2,2).kind==6 && punched.at(3,2).kind==1 && punched.at(1,1).kind==1);
+        check(punched.at(2,0).kind==2 && punched.at(2,4).kind==0 && punched.at(4,1).kind==0);
+        check(punched.floor_count()==321 && punched.at(1,1).room_id==77 && punched.at(1,1).door_flags==8 && punched.at(1,1).flags==0x1000);
+        DungeonLayout bad_punch(7,5,std::vector<DungeonCell>(35));
+        bad_punch.at(2,2).kind=bad_punch.at(6,4).kind=6;rejected=false;
+        try {punch_out_dungeon_content(bad_punch);} catch(const std::out_of_range&) {rejected=true;}
+        check(rejected && bad_punch.at(1,1).kind==0 && bad_punch.at(2,2).kind==6);
         std::cout<<"original geometry goldens, retry flags, graph constraints and atomic guard failures passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

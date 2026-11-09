@@ -3,7 +3,9 @@
 - No complete game exists yet. Combat decisions, inventory placement, equipment
   eligibility, character/monster stat calculations and XP thresholds have original
   comparisons. An integration session includes enemy turns, HP/death, pickup,
-  equipment and saves. Full combat triggers, skills/effects, dungeon generation,
+  equipment and saves. Seeded numeric geometry and door kernels are compared;
+  their full-level session/native integration remains absent. Full combat triggers,
+  skills/effects, dungeon population,
   original save compatibility, audio and original UI remain incomplete.
 - Movement is a harness policy: four cardinal directions; successful movement
   and waiting consume a turn, blocked moves do not. No original comparison yet.

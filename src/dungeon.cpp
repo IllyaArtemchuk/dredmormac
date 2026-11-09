@@ -137,4 +137,15 @@ DoorTransition activate_remote_door(DungeonLayout& layout,DoorAssembly& door,std
     if (door.locked) return {DoorOutcome::locked,false};
     return toggle_door(layout,door,selected_part,obstructed);
 }
+void punch_out_dungeon_content(DungeonLayout& layout) {
+    auto candidate=layout;
+    constexpr Position offsets[]={{-1,-1},{1,-1},{0,-1},{0,1},{-1,1},{1,1},{-1,0},{1,0}};
+    for (int x=0;x<layout.width();++x) for (int y=0;y<layout.height();++y) {
+        if (candidate.at(x,y).kind!=6) continue;
+        for (auto offset:offsets) candidate.at(x+offset.x,y+offset.y).kind=1;
+    }
+    for (int x=0;x<layout.width();++x) for (int y=0;y<layout.height()-1;++y)
+        if (candidate.at(x,y).kind==0 && candidate.at(x,y+1).kind==1) candidate.at(x,y).kind=2;
+    layout=std::move(candidate);
+}
 }

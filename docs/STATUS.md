@@ -142,3 +142,8 @@ remote activation now match 1,408 original executions with controlled occupancy
 and UI boundaries. Cell bits, part state, handled result and occupancy order match.
 Lockpick/kicking, animation state and session/native door integration remain
 unfinished. Twelve local groups pass; new transition code awaits native CI.
+
+Content-pass punch-out now matches 2,048 original executions / 404,862 cells with
+no imported routines supplied. Ordered neighbor clearing and above-floor walls
+are preserved. Twelve local groups pass. Object placement and full-level native
+integration remain unfinished.

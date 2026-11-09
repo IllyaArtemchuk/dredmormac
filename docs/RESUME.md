@@ -217,3 +217,14 @@ animation/render state remain absent. New transition code awaits native CI.
 Private room-content-flow.txt exports WriteDungeonContentFromRoomRecords0x193682,
 RoomElementRecord CreateInLevel0x1a1d30/UpdateInLevel0x1a22e0 and RoomScript
 condition/success loops. Next: content placement and scripts plus native integration.
+
+punch_out_dungeon_content now reproduces original0x19263c with 2,048 fixtures /
+404,862 cells and no imports; report content-punch-out.json privately. It clears
+8 neighbors around each remaining door (observing earlier mutations), then void
+above regular floor becomes wall. Floor count, IDs and flags are retained.
+Twelve local groups pass. New punch-out native validation pending.
+Room-record-finalize.txt privately exports PunchOutDungeonContent, base object
+FinalizeInLevel, RoomElementRecord ctor and XML property registrations. Common
+percent defaults100, can_push defaults1, id isroomlocal; Finalize places entity,
+assigns roomID string and can_push. Point/factory export currently running to
+room-point-and-factory.txt. Next: resolve at/x/y, appearance gate and element types.

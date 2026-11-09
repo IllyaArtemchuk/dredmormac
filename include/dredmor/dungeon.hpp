@@ -55,4 +55,8 @@ DoorTransition toggle_door(DungeonLayout& layout,DoorAssembly& door,std::size_t 
                            const std::function<bool(Position)>& obstructed);
 DoorTransition activate_remote_door(DungeonLayout& layout,DoorAssembly& door,std::size_t selected_part,
                                     const std::function<bool(Position)>& obstructed);
+// Original content-pass preparation: clear eight cells around each remaining
+// door marker, then add a wall above ordinary floor where that cell is void.
+// Traversal observes earlier writes; recorded floor count is not recomputed.
+void punch_out_dungeon_content(DungeonLayout& layout);
 }

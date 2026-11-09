@@ -615,3 +615,17 @@ outcome/handled values; their integration with turn scheduling remains pending.
 Closed/open transitions clear/set bit four on all three cells, retaining other
 bits and lock state. Animation/render fields and Clicked's lockpick/kick paths
 are excluded. Local tests cover these distinctions and atomic invalid queries.
+
+## Content punch-out geometry
+
+PunchOutDungeonContent (0x19263c) matches 2,048 full original executions /
+404,862 cells without imports or stubs. Traversal is x-major/y-major and changes
+the eight neighbors of each remaining door marker to ordinary floor, even when
+the neighbor was another door or special tile. Earlier writes affect which later
+markers are processed. A second x-major pass changes void immediately above
+ordinary floor to wall. Room IDs, flags and recorded floor count are unchanged.
+Boundary door markers would access outside the original allocation; the port
+rejects these malformed inputs atomically. Generated geometry has margins.
+The function is separate from object placement and does not change Session World.
+Local coverage checks overwritten adjacent markers, above-floor walls, retained
+metadata/floor count and atomic boundary rejection. Twelve local groups pass.
