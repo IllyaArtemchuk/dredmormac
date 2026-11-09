@@ -6,7 +6,7 @@
 @end
 
 @interface DredmorInventoryController : NSWindowController<NSTableViewDataSource>
-@property(weak) id<DredmorInventoryOwner> owner;
+@property(weak) id<DredmorInventoryOwner> inventoryOwner;
 @property(strong,readonly) NSTableView *tableView;
 - (instancetype)initWithOwner:(id<DredmorInventoryOwner>)owner;
 - (void)refresh;

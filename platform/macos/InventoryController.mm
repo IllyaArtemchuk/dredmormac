@@ -12,7 +12,7 @@
     window.title=@"Inventory and Equipment";window.releasedWhenClosed=NO;window.contentMinSize=NSMakeSize(480,300);
     self=[super initWithWindow:window];
     if (self) {
-        _owner=owner;
+        _inventoryOwner=owner;
         NSView *content=window.contentView;
         NSScrollView *scroll=[[NSScrollView alloc] initWithFrame:NSMakeRect(16,72,508,332)];
         scroll.autoresizingMask=NSViewWidthSizable|NSViewHeightSizable;scroll.hasVerticalScroller=YES;
@@ -36,7 +36,7 @@
     }
     return self;
 }
-- (void)refresh { _rows=[self.owner inventoryRows];[_tableView reloadData]; }
+- (void)refresh { _rows=[self.inventoryOwner inventoryRows];[_tableView reloadData]; }
 - (NSInteger)numberOfRowsInTableView:(NSTableView*)tableView { return _rows.count; }
 - (id)tableView:(NSTableView*)tableView objectValueForTableColumn:(NSTableColumn*)column row:(NSInteger)row {
     return row>=0 && row<(NSInteger)_rows.count?_rows[row][column.identifier]:nil;
@@ -44,13 +44,13 @@
 - (void)equipSelection:(id)sender {
     const NSInteger row=_tableView.selectedRow;
     if (row<0 || row>=(NSInteger)_rows.count || [_rows[row][@"equipped"] boolValue] ||
-        ![self.owner equipInventoryInstance:[_rows[row][@"instance"] unsignedLongLongValue] slot:_slot.indexOfSelectedItem]) NSBeep();
+        ![self.inventoryOwner equipInventoryInstance:[_rows[row][@"instance"] unsignedLongLongValue] slot:_slot.indexOfSelectedItem]) NSBeep();
     [self refresh];
 }
 - (void)unequipSelection:(id)sender {
     const NSInteger row=_tableView.selectedRow;
     if (row<0 || row>=(NSInteger)_rows.count || ![_rows[row][@"equipped"] boolValue] ||
-        ![self.owner unequipInventorySlot:[_rows[row][@"slot"] integerValue]]) NSBeep();
+        ![self.inventoryOwner unequipInventorySlot:[_rows[row][@"slot"] integerValue]]) NSBeep();
     [self refresh];
 }
 @end
