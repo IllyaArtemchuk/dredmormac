@@ -136,3 +136,9 @@ Geometry run 42601954130 passed all twenty-one native checks and packaging.
 Door assembly plans now match 1,024 original executions / 32,244 assemblies / 521
 repairs. Constructors, placement and Open are recording boundaries; actual
 entities, sprites and interactions remain pending. Twelve local groups pass.
+
+Door-plan native run 42602496973 passed validation/package smoke. Door toggle and
+remote activation now match 1,408 original executions with controlled occupancy
+and UI boundaries. Cell bits, part state, handled result and occupancy order match.
+Lockpick/kicking, animation state and session/native door integration remain
+unfinished. Twelve local groups pass; new transition code awaits native CI.

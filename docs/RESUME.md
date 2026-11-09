@@ -206,3 +206,14 @@ sprite side effects are not included. Private door-behavior.txt and
 door-interaction.txt export constructor, Build, Open, Close, ToggleDoor, Clicked,
 RemoteActivation and GameObj constructor/save. Next: verified toggle/lock/obstruction
 transitions, then room scripts/content. New door planning awaits native CI.
+
+Door-plan native run 42602496973 passed. toggle_door/activate_remote_door are now
+added in dungeon.cpp; verify_door_actions.py matches 1,408 full ToggleDoor and
+RemoteActivation executions with controlled occupancy/UI boundaries. Includes
+exhaustive384 + random1024. The raw toggle ignores locks, remote checks first;
+an open center cannot close. End-cap closing checks only itself/immediate neighbor,
+not far end, and obstructed requests return handled=true. Lockpick/kick and
+animation/render state remain absent. New transition code awaits native CI.
+Private room-content-flow.txt exports WriteDungeonContentFromRoomRecords0x193682,
+RoomElementRecord CreateInLevel0x1a1d30/UpdateInLevel0x1a22e0 and RoomScript
+condition/success loops. Next: content placement and scripts plus native integration.

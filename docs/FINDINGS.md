@@ -593,3 +593,25 @@ Actual constructor/sprite/place/open side effects and player interactions are
 excluded. Malformed port layouts reject invalid part positions atomically; the
 original assumes generator margins. Twelve local groups pass with repair, ignored
 boundary rows, orientation, lock/open and atomic-failure coverage.
+
+Run 42602496973 (582b200) passed native validation and package smoke.
+
+## Door toggle and remote activation
+
+ToggleDoor (0x109d1e) and RemoteActivation (0x108e7e) match 1,408 full original
+executions with supplied occupancy, string, sound and ticker boundaries. Includes
+the exhaustive 384 combinations of orientation/open/lock/selected part/remote/
+obstruction mask, plus 1,024 random cases and independent flag bytes. Compared
+handled returns, all three parts' open/collision state, all cell door flag bits,
+effect kind and ordered occupancy queries. Outcomes: 549 opened, 89 closed,
+265 obstructed, 155 ignored center requests, 350 locked remote activations.
+
+The raw toggle ignores locks; RemoteActivation checks the lock before toggling.
+An open center part returns zero without closing or checking obstructions.
+End-cap closing checks only the selected part and its immediate neighbor, not
+the far end; preserving this is required to match the original. Obstructed close
+returns one and emits a ticker message without changing state. The port exposes
+outcome/handled values; their integration with turn scheduling remains pending.
+Closed/open transitions clear/set bit four on all three cells, retaining other
+bits and lock state. Animation/render fields and Clicked's lockpick/kick paths
+are excluded. Local tests cover these distinctions and atomic invalid queries.

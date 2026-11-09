@@ -86,6 +86,30 @@ int main() {
         malformed.at(9,4).kind=6;malformed.at(9,4).door_flags=1;rejected=false;
         try {build_door_plan(malformed);} catch(const std::invalid_argument&) {rejected=true;}
         check(rejected && malformed.at(3,4).kind==6);
+        auto& active=plan.doors[0];unsigned queries=0;
+        auto no_obstruction=[&](Position) {++queries;return false;};
+        auto transition=toggle_door(doors,active,1,no_obstruction);
+        check(transition.outcome==DoorOutcome::opened && transition.handled && active.open && queries==0);
+        for (auto p:active.parts) check((doors.at(p.x,p.y).door_flags&4)!=0);
+        transition=activate_remote_door(doors,active,0,no_obstruction);
+        check(transition.outcome==DoorOutcome::locked && !transition.handled && active.open && queries==0);
+        transition=toggle_door(doors,active,1,no_obstruction);
+        check(transition.outcome==DoorOutcome::center_ignored && !transition.handled && active.open && queries==0);
+        // Original end-cap closing checks only itself and its immediate neighbor,
+        // so an obstruction at the far end does not prevent the close.
+        transition=toggle_door(doors,active,0,[&](Position p){++queries;return p.y==8;});
+        check(transition.outcome==DoorOutcome::closed && transition.handled && !active.open && queries==2);
+        for (auto p:active.parts) check((doors.at(p.x,p.y).door_flags&4)==0);
+        active.locked=false;transition=activate_remote_door(doors,active,2,no_obstruction);
+        check(transition.outcome==DoorOutcome::opened && transition.handled && active.open);
+        std::vector<int> queried_y;
+        transition=toggle_door(doors,active,2,[&](Position p){queried_y.push_back(p.y);return p.y==7;});
+        check(transition.outcome==DoorOutcome::obstructed && transition.handled && active.open);
+        check(queried_y==std::vector<int>({8,7}));
+        rejected=false;try {toggle_door(doors,active,99,no_obstruction);} catch(const std::invalid_argument&) {rejected=true;}
+        check(rejected && active.open);
+        rejected=false;try {toggle_door(doors,active,0,[](Position)->bool{throw std::runtime_error("occupancy unavailable");});} catch(const std::runtime_error&) {rejected=true;}
+        check(rejected && active.open && (doors.at(3,7).door_flags&4));
         std::cout<<"original geometry goldens, retry flags, graph constraints and atomic guard failures passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

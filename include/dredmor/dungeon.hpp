@@ -3,6 +3,7 @@
 #include "dredmor/names.hpp"
 #include <optional>
 #include <array>
+#include <functional>
 
 namespace dredmor {
 struct GeometryOptions {
@@ -46,4 +47,12 @@ struct DoorBuildPlan {
 // Entity construction, sprites and PlaceInLevel/Open side effects are separate.
 // Malformed layouts fail before mutation; generated layouts have valid margins.
 DoorBuildPlan build_door_plan(DungeonLayout& layout);
+enum class DoorOutcome { opened,closed,obstructed,center_ignored,locked };
+struct DoorTransition { DoorOutcome outcome;bool handled; };
+// The raw toggle does not test locks. Remote activation checks the selected
+// door's lock first. Click/lockpick/kicking and action scheduling are separate.
+DoorTransition toggle_door(DungeonLayout& layout,DoorAssembly& door,std::size_t selected_part,
+                           const std::function<bool(Position)>& obstructed);
+DoorTransition activate_remote_door(DungeonLayout& layout,DoorAssembly& door,std::size_t selected_part,
+                                    const std::function<bool(Position)>& obstructed);
 }

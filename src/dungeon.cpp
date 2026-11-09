@@ -115,4 +115,26 @@ DoorBuildPlan build_door_plan(DungeonLayout& layout) {
     }
     layout=std::move(candidate);return result;
 }
+DoorTransition toggle_door(DungeonLayout& layout,DoorAssembly& door,std::size_t selected_part,
+                           const std::function<bool(Position)>& obstructed) {
+    if (selected_part>=door.parts.size()) throw std::invalid_argument("invalid selected door part");
+    for (auto position:door.parts) (void)layout.at(position.x,position.y);
+    if (door.open) {
+        if (selected_part==1) return {DoorOutcome::center_ignored,false};
+        if (obstructed(door.parts[selected_part]) ||
+            (selected_part>0 && obstructed(door.parts[selected_part-1])) ||
+            (selected_part+1<door.parts.size() && obstructed(door.parts[selected_part+1])))
+            return {DoorOutcome::obstructed,true};
+        for (auto position:door.parts) layout.at(position.x,position.y).door_flags&=std::uint8_t(~4U);
+        door.open=false;return {DoorOutcome::closed,true};
+    }
+    for (auto position:door.parts) layout.at(position.x,position.y).door_flags|=4;
+    door.open=true;return {DoorOutcome::opened,true};
+}
+DoorTransition activate_remote_door(DungeonLayout& layout,DoorAssembly& door,std::size_t selected_part,
+                                    const std::function<bool(Position)>& obstructed) {
+    if (selected_part>=door.parts.size()) throw std::invalid_argument("invalid selected door part");
+    if (door.locked) return {DoorOutcome::locked,false};
+    return toggle_door(layout,door,selected_part,obstructed);
+}
 }
