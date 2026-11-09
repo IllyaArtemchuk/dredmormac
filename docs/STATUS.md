@@ -531,3 +531,20 @@ side effects and original whole-game scheduling remain incomplete.
 Native trap run42645003384 failed an opaque smoke assertion despite the equivalent
 portable movement probe passing. d2930ad adds stage/state diagnostics; rerun
 42646040605 is inprogress. This is being fixed; no native-trap success is claimed.
+
+Native trap/healing validation is now complete for this scope: actual macos-15
+arm64 run42646389690 on4857128 passed all41 checks and development-app packaging.
+The failed second activation was a synthetic input bug: the fixture sent arrow
+characters with keyCode0, but keyDown dispatches arrow keyCodes123/124. Diagnostic
+run42646040605 showed unchanged turn2/HP15/charges1. Correct keyCodes replay both
+moves; damage, depletion, save/load, bad spell/resource rollback and persistent
+origin collision now pass onMac. No gameplay workaround was introduced.
+Original spell damage4096 edge fixtures, healing4096 and mixed damage/heal cast4096
+comparisons pass; all22 local groups pass. Original assets remain private; source
+is pushed only to implementation/native-foundation, with no main merge/release.
+Overall game remains incomplete. Remaining major work: complete spell families,
+buffs and recursive/delayed effects; full combat/AI and turn scheduling; horde/
+element/script population; full generated-floor session/camera/doors/transitions;
+original UI/audio and original-asset/full-game visual and gameplay comparison.
+There is no current archive-transfer or native-build blocker. Continued work is
+implementation and validation, not awaiting further user permission or assets.
