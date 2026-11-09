@@ -28,8 +28,10 @@ Verified:
 - Monster scaling: 2,048 original full-function fixtures / 61,440 fields match.
 - XP table: all 350 original thresholds in seven input configurations match.
 - Room-placement collision: 69,632 original executions match.
+- Room-writing cell loop: 1,024 original executions / 20,825 cells match.
+- Numeric templates: all 346 supplied rooms match independent ingestion.
 - Nine local CTest groups pass, including deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42585141286 passed all thirteen checks, including
+- Actual macos-15 arm64 CI run 42585590201 passed all fourteen checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -55,7 +57,9 @@ Current work: native scene renderer is connected to the turn session and origina
 content definitions. Combat-window CI and portable development app packaging pass.
 Direct SPR animation passes Mac CI. Native save/load controls and atomic reload
 checks pass on actual Mac CI. Room-placement collision now matches 69,632
-original executions; template writing and full seeded generation remain pending.
+original executions. Cell stamping matches 1,024 original loop executions; all
+346 numeric room templates match independent ingestion. Full seeded generation,
+room records, naming and content/script population remain pending.
 DoRandomize and seed flow are identified; decision/arithmetic combat rules are
 compared, while complete DoCombat/triggers and original HP/death side-effect
 comparisons remain unfinished. Session HP/death behavior exists but is not yet

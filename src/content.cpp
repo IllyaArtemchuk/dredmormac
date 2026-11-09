@@ -7,6 +7,38 @@
 #include <stdexcept>
 
 namespace dredmor {
+RoomStamp RoomDefinition::numeric_template() const {
+    const auto width=source.integer("width"),height=source.integer("height");
+    if (!width || !height || *width<1 || *height<1 || *width>512 || *height>512 || rows.size()>std::size_t(*height))
+        throw std::runtime_error("invalid declared room dimensions: "+name);
+    RoomStamp result;result.width=*width;result.height=*height;
+    result.shop=source.integer("shop").value_or(0)!=0;result.zoo=source.integer("zoo").value_or(0)!=0;
+    result.cells.resize(std::size_t(*width)*(*height));
+    for (std::size_t y=0;y<rows.size();++y) for (std::size_t x=0;x<std::min(rows[y].size(),std::size_t(*width));++x) {
+        auto& cell=result.cells[y*(*width)+x];
+        switch (const auto symbol=rows[y][x]) {
+        case ' ': break;
+        case '#':cell.kind=2;break;
+        case '!':cell.kind=2;cell.wall_marker=4;break;
+        case '.':case 'S':case 'i':case 's':cell.kind=1;break;
+        case '@':cell.kind=1;cell.wall_marker=2;break;
+        case '^':cell.kind=1;cell.wall_marker=3;break;
+        case 'P':cell.kind=2;cell.wall_marker=1;break;
+        case 'D':cell.kind=6;break;
+        case 'd':cell.kind=6;cell.door_orientation=1;break;
+        case 'W':cell.kind=7;break;
+        case 'L':cell.kind=8;break;
+        case 'G':cell.kind=9;break;
+        case 'I':cell.kind=10;break;
+        case 'X':cell.kind=15;break;
+        default:
+            // The original records digit coordinates without changing the
+            // zero-initialized cell. Later scripts/content establish that tile.
+            if (symbol<'1' || symbol>'9') throw std::runtime_error("unknown numeric room symbol: "+name);
+        }
+    }
+    return result;
+}
 World RoomDefinition::instantiate() const {
     if (rows.empty() || rows.size()>512 || rows[0].empty() || rows[0].size()>512) throw std::runtime_error("invalid room size");
     std::set<char> floor={'.','^','@','s'},blocked={'#','!','X','P','W','L','I','G','d','D','S','i',' '};

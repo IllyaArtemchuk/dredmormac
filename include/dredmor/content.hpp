@@ -1,6 +1,7 @@
 #pragma once
 #include "dredmor/monsters.hpp"
 #include "dredmor/session.hpp"
+#include "dredmor/generation.hpp"
 
 namespace dredmor {
 struct SkillDefinition { int id;std::string name;int category;XmlNode source; };
@@ -11,6 +12,8 @@ struct RoomDefinition {
     // Conservative developer-room collision import. Liquids/doors/blockers stay
     // blocked until their interactions are implemented; unknown symbols fail.
     World instantiate() const;
+    // Original numeric cell/door/wall arrays, before scripts and population.
+    RoomStamp numeric_template() const;
 };
 class GameContent {
 public:

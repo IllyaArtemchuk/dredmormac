@@ -53,7 +53,7 @@ Modern macOS cannot run the original i386 game, so native port testing and
 original gameplay capture may require different machines.
 
 `.github/workflows/native-macos.yml` runs on implementation-branch pushes and
-workflow_dispatch. Actual run 42585141286 passed all thirteen checks on standard
+workflow_dispatch. Actual run 42585590201 passed all fourteen checks on standard
 macos-15 arm64, including native combat and relocated/ad-hoc-signed package smoke.
 The development app artifact contains no original assets. Direct animated SPR
 loading now has local decoder tests and 698-file/3,633-frame palette comparisons;
@@ -65,3 +65,9 @@ visual comparison and full original gameplay parity remain pending.
 
 Continue from the ordered tasks. Source has no selected distribution license;
 do not import GPL code or publish releases without resolving project licensing.
+
+Room-stamping loop comparison: scripts/verify_stamp.py, 1,024 matches. Private
+room-constructor.txt confirms arrays initially zero; digit script positions stay
+zero until later population. Numeric RoomDefinition::numeric_template is distinct
+from provisional instantiate collision. scripts/verify_templates.py compares all
+346 templates independently. Full generation remains pending.

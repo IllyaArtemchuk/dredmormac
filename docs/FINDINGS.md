@@ -282,3 +282,24 @@ door 6. Tests include asymmetric footprints and extreme port coordinates.
 This establishes the collision kernel only, not template parsing, writing,
 selection, RNG consumption or seeded full-level generation. Original report:
 room-placement.json, retained privately; scripts/verify_generation.py reproduces.
+
+WriteTemplate cell loop [0x193cc0,0x194022) matches 1,024 original executions,
+20,825 template cells and 1,650 appended doors. No imported calls are replaced;
+original MT draws run and the next eight draws are compared per fixture. All
+cell fields touched by the loop plus untouched bytes are checked. Fixtures vary
+branch IDs, incoming/existing types, room IDs, flags, shops/zoos and wrapping
+floor counts. This excludes subsequent strings/names, placed-room records and
+room counters. scripts/verify_stamp.py reproduces room-stamping.json privately.
+
+Numeric room ingestion now respects declared dimensions and clips rows to width.
+It retains separate kind/orientation/wall-marker arrays. Constructor at 0x19cedc
+zeroes all arrays. The original row callback records digit locations without
+changing that zero cell; later room scripts/content establish those positions.
+This differs from the conservative developer collision preview. All 346 supplied
+base/expansion templates match an independent XML-to-numeric expansion. That is
+an ingestion check of statically recovered mapping, not original parser execution
+or full script/population parity. Source trees preserve remaining annotations.
+
+Run 42585590201 (fa64f9d) passed all fourteen native/portable checks plus relocated
+package smoke. UTType file filtering compiles without the earlier deprecation
+warnings. Original assets remain outside GitHub and test artifacts.
