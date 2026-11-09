@@ -39,6 +39,17 @@ EquippedStats Equipment::rebuild(const ClassRanks& ranks,const std::vector<ItemD
                 result.damage_bonus[i]=add(result.damage_bonus[i],definition.modifiers.damage[i]);
             result.resistance[i]=add(result.resistance[i],definition.modifiers.resistance[i]);
         }
+        if (slot->artifact) {
+            const auto& artifact=*slot->artifact;
+            for (std::size_t i=0;i<6;++i) pflat[i]=add(pflat[i],artifact.modifiers.primary[i]);
+            for (std::size_t i=0;i<24;++i) sflat[i]=add(sflat[i],artifact.modifiers.secondary[i]);
+            for (std::size_t i=0;i<16;++i) {
+                // Weapon-owned buff damage is excluded by original Rebuild;
+                // its extra damage lives on the weapon used for an attack.
+                if (definition.kind==ItemKind::armour) result.damage_bonus[i]=add(result.damage_bonus[i],artifact.modifiers.damage[i]);
+                result.resistance[i]=add(result.resistance[i],artifact.modifiers.resistance[i]);
+            }
+        }
         if (definition.kind==ItemKind::weapon) {
             const auto training=weapon_ability_modifiers(definition.weapon_type,skills,abilities);
             // The supported session path has at most one melee weapon. For

@@ -14,6 +14,7 @@ struct ArtifactRequest {
     std::optional<std::string> fixed_name;
     std::string base_description;
 };
+ArtifactRequest artifact_request(const ItemDefinition& definition,int quality);
 struct Artifact {
     std::string name,description,buff_description;
     int quality=1;

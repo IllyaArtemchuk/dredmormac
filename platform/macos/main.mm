@@ -111,6 +111,7 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
 - (void)showInventory:(id)sender;
 - (void)pickUpItems:(id)sender;
 - (BOOL)smokeInventory;
+- (BOOL)smokeArtifact;
 - (BOOL)smokeSkillSelection;
 - (BOOL)smokeCustomObjects;
 @end
@@ -214,6 +215,20 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
                 quantity=[value[@"quantity"] intValue];
             }
             dredmor::ItemFactoryContext context;
+            if (value[@"artifact_quality"]) {
+                if (![value[@"artifact_quality"] isKindOfClass:NSNumber.class]) throw std::runtime_error("invalid artifact quality");
+                const auto quality=[value[@"artifact_quality"] longLongValue];
+                if (quality<INT32_MIN || quality>INT32_MAX || [value[@"artifact_quality"] doubleValue]!=quality)
+                    throw std::runtime_error("invalid artifact quality");
+                std::optional<std::uint32_t> definition;
+                for (const auto& pool:_content->item_factory_tables().named) {
+                    for (const auto index:pool) if (_content->items()[index].name==name) {definition=index;break;}
+                    if (definition) break;
+                }
+                if (!definition || quantity!=1) throw std::runtime_error("invalid artifact fixture item");
+                _session->create_ground_artifact(*definition,static_cast<int>(quality),_content->artifact_words(),
+                    {[value[@"x"] intValue],[value[@"y"] intValue]});continue;
+            }
             if (name=="zorkmids") context.gold_per_level=_content->tweaks().integer(dredmor::Difficulty::medium,"gold drop per level");
             if (!_session->create_ground_loot(_content->item_factory_tables(),context,"named",name,quantity,false,
                 {[value[@"x"] intValue],[value[@"y"] intValue]})) throw std::runtime_error("developer ground item not found");
@@ -357,7 +372,7 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
 - (NSArray<NSDictionary*>*)inventoryRows {
     NSMutableArray<NSDictionary*> *rows=[NSMutableArray array];
     auto append=[&](const dredmor::InventoryItem& item,NSString *location,BOOL equipped,NSUInteger slot) {
-        NSString *name=_content && item.definition<_content->items().size()?
+        NSString *name=item.artifact?[NSString stringWithUTF8String:item.artifact->name.c_str()]:_content && item.definition<_content->items().size()?
             [NSString stringWithUTF8String:_content->items()[item.definition].name.c_str()]:
             [NSString stringWithFormat:@"Item %u",item.definition];
         if (item.charges) name=[NSString stringWithFormat:@"%@ (%d charges)",name,*item.charges];
@@ -408,6 +423,12 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
     if (!_content) return YES;
     DredmorSkillSelectionController *controller=[[DredmorSkillSelectionController alloc] initWithSkills:_content->skills()];
     return [controller smokeTest];
+}
+- (BOOL)smokeArtifact {
+    const auto& item=_session->inventory().bag()[0];
+    if (!item || !item->artifact || item->artifact->quality!=10 || item->artifact->name.empty()) return NO;
+    NSArray<NSDictionary*> *rows=[self inventoryRows];
+    return rows.count==1 && [rows[0][@"name"] isEqualToString:[NSString stringWithUTF8String:item->artifact->name.c_str()]];
 }
 - (void)keyDown:(NSEvent*)event {
     using dredmor::Action;
@@ -606,6 +627,7 @@ int main(int argc,const char**argv) {
                 if (![[view snapshot] isEqualToString:expectedSnapshot] || ([scene[@"smoke_combat"] boolValue] && [view hasLivingEnemies]) ||
                     ([scene[@"smoke_animation"] boolValue] && ![view hasAnimatedHero]) ||
                     ([scene[@"smoke_inventory"] boolValue] && ![view smokeInventory]) ||
+                    ([scene[@"smoke_artifact"] boolValue] && ![view smokeArtifact]) ||
                     ([scene[@"smoke_objects"] boolValue] && ![view smokeCustomObjects]) ||
                     ![view smokeSaveLoad] || ![view smokeSkillSelection]) {
                     fprintf(stderr,"native smoke failed: %s\n",[[view snapshot] UTF8String]); std::exit(1);

@@ -453,3 +453,32 @@ Next: optional Artifact instance payload, original factory quality/RNG behavior,
 unique state, equipment aggregation and save migration; full room population still
 pending. Private artifact-creation.txt/artifact-name-and-buff.txt exports. Source
 awaits next MacCI. Do not stop at CI milestones.
+
+Artifact core run42621347955 passed Mac validation/package. InventoryItem now has
+optional Artifact; Session::create_ground_artifact(def,quality,words,pos) constructs
+basic item then artifact atomically. artifact_request reads rootartifact and child
+quality for fixed-name overrides. Ground/bag/equipment ownership/pickup retain data.
+Factory still rejects artifacts; explicit artifact construction is the current API.
+Equipment applies artifact primary/secondary/resist; armour generic damage, weapon
+extra damage once in Session attack stats (weapon Buff damage excluded). HP/MP
+flat changes apply on equip, subtract on removal with original HP>=1 removal clamp.
+verify_artifact_equip.py matches1,024 full equip/FixBuffs/Player+HittableApplyBuff/
+Rebuild paths /65,536 stats+resources, string/allocation boundaries, spellupdate
+skipped; no passive abilities/dual wield/replacement/unequip execution comparison.
+Private artifact-equip-buff.txt/hittable-apply-buff.txt/artifact-resource-removal.txt.
+Savev7 nested artifact text/modifier/weapon arrays; v1..6 load. New synthetic
+port-v6-wallet.xml was emitted by actual7aa0860 v6 serializer using legacy_profile
+plus125 wallet/23groundcash; verifies objects/cache/wallet/ability-hash migration.
+Native --inventory --artifact fixture generates synthetic text words and q10 cap,
+checks displayed name after pickup/equip/unequip then atomic save/load. Eighteen
+local groups pass; new native artifact source awaits CI.
+Next: complete artifact factory and unique state. Private artifact-factory-
+disassembly.txt confirms original artifact-type weapon branch constructs/discards
+one weapon then selects/constructs another. Type5 infinite loop is real but normal
+GetRandomWeapon excludes5/6. Depth quality multiplier231888=double0.25; quality
+range is floor(depth/4), +1 afterlibc pick, or1 if nonpositive. Explicit weapon/
+armour artifact=true rolls1..3 (rand multiply6>>32), not1..6. Named subtype ignores
+passed artifact flag; named definitionartifact calls depth-based quality draw then
+CreateArtifact overrides todefinition quality, preserving that discarded draw.
+Artifact type uses Level argument depth; named uses curLevel. All this factory
+integration still pending; preserve raw original inputs/outputs outside tracked git.

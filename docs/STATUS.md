@@ -260,3 +260,15 @@ loading matches2,048 original callbacks including missing/empty/case variations;
 all900 supplied base word entries agree independently. Eighteen local groups pass.
 This standalone artifact core awaits MacCI; item ownership, factory integration,
 equipment aggregation, uniqueness and save persistence are still pending.
+
+Artifact core run42621347955 passed native validation/package. Session now creates
+and owns artifact payloads through ground/inventory/equipment; native inventory
+shows generated names. Savev7 retains all generated text/modifiers/weapon damage
+and accepts v1..6; an actual previous-v6 synthetic wallet fixture verifies migration.
+Artifact-equipped rebuild matches1,024 original full equip/ApplyBuff/Rebuild runs /
+65,536 fields, including HP/MP. Weapon-owned buff damage is excluded from generic
+player damage and added once from weapon damage; armour adds its buff damage.
+Direct HP/MP bonuses update on equip; removal clamps HP to1 as original DeapplyBuff.
+Eighteen local groups pass. New native artifact pickup/equip/save smoke awaits MacCI.
+Complete artifact factory selection/quality and unique-state persistence are next;
+ordered full room population and full gameplay remain incomplete.

@@ -61,6 +61,8 @@ add_executable(dredmor-gear-buckets src/gear_buckets_cli.cpp)
 target_link_libraries(dredmor-gear-buckets PRIVATE dredmor_core)
 add_executable(dredmor-artifact src/artifact_cli.cpp)
 target_link_libraries(dredmor-artifact PRIVATE dredmor_core)
+add_executable(dredmor-artifact-equip src/artifact_equip_cli.cpp)
+target_link_libraries(dredmor-artifact-equip PRIVATE dredmor_core)
 add_executable(dredmor-loadout src/loadout_cli.cpp)
 target_link_libraries(dredmor-loadout PRIVATE dredmor_core)
 add_executable(dredmor-passives src/passives_cli.cpp)
@@ -135,7 +137,7 @@ if(BUILD_TESTING)
   add_test(NAME turn-session COMMAND session-tests)
   add_executable(save-tests tests/save.cpp)
   target_link_libraries(save-tests PRIVATE dredmor_core)
-  add_test(NAME save-load COMMAND save-tests ${CMAKE_SOURCE_DIR}/tests/fixtures/port-v2-item-types.xml ${CMAKE_SOURCE_DIR}/tests/fixtures/port-v5-rng-objects.xml)
+  add_test(NAME save-load COMMAND save-tests ${CMAKE_SOURCE_DIR}/tests/fixtures/port-v2-item-types.xml ${CMAKE_SOURCE_DIR}/tests/fixtures/port-v5-rng-objects.xml ${CMAKE_SOURCE_DIR}/tests/fixtures/port-v6-wallet.xml)
   add_executable(content-tests tests/content.cpp)
   target_link_libraries(content-tests PRIVATE dredmor_core)
   add_test(NAME content-session COMMAND content-tests ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root)
@@ -182,6 +184,13 @@ if(APPLE)
     add_test(NAME native-inventory-window COMMAND $<TARGET_FILE:DredmorMac>
       ${CMAKE_BINARY_DIR}/native-inventory/scene.json --smoke-test)
     set_tests_properties(native-inventory-window PROPERTIES FIXTURES_REQUIRED native-inventory TIMEOUT 15)
+    add_test(NAME native-artifact-fixture COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-artifact
+      --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --inventory --artifact)
+    set_tests_properties(native-artifact-fixture PROPERTIES FIXTURES_SETUP native-artifact)
+    add_test(NAME native-artifact-window COMMAND $<TARGET_FILE:DredmorMac>
+      ${CMAKE_BINARY_DIR}/native-artifact/scene.json --smoke-test)
+    set_tests_properties(native-artifact-window PROPERTIES FIXTURES_REQUIRED native-artifact TIMEOUT 15)
     add_test(NAME native-objects-fixture COMMAND ${Python3_EXECUTABLE}
       ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-objects
       --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --objects)

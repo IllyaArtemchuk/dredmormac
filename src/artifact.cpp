@@ -1,5 +1,6 @@
 #include "dredmor/artifact.hpp"
 #include <stdexcept>
+#include "dredmor/legacy_number.hpp"
 
 namespace dredmor {
 namespace {
@@ -27,6 +28,17 @@ ArtifactWords read_artifact_words(const XmlNode& root) {
         else if (tag=="decor") words.decor.push_back(text);
     }
     return words;
+}
+ArtifactRequest artifact_request(const ItemDefinition& definition,int quality) {
+    ArtifactRequest request;request.kind=definition.kind;request.quality=quality;request.base_description=definition.description;
+    const auto flag=attribute(definition.source,"artifact");
+    if (!flag.empty() && legacy_integer(flag)!=0) {
+        request.fixed_name=definition.name;request.quality=0;
+        for (const auto& node:definition.source.children) if (lower(node.tag)=="artifact") {
+            const auto value=attribute(node,"quality");if (!value.empty()) request.quality=legacy_integer(value);
+        }
+    }
+    return request;
 }
 std::string generate_artifact_name(const ArtifactWords& words,GameRandom& random) {
     if (words.nouns.size()!=words.plurals.size()) throw std::invalid_argument("artifact noun/plural pools differ");

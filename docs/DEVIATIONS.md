@@ -44,7 +44,7 @@
   are not supported. Malformed item integer strings are rejected more strictly
   than original atoi. These edge policies are not original parity claims.
 - Session XML saves are port-specific and not compatible with original saves.
-  Version6 preserves custom objects, currency and RNG caches and accepts earlier port versions.
+  Version7 preserves custom objects, artifact instances, currency and RNG caches and accepts earlier port versions.
   Native Save/Load controls operate on the current prepared room. Cross-room
   rendering and original load/menu UI remain incomplete.
 - Embedded startup patch version is 1.1.4; additional suffix/mod state and

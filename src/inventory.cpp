@@ -41,6 +41,7 @@ const InventoryItem* Inventory::find(std::uint64_t instance) const {
 void Inventory::validate_new(const InventoryItem& item) const {
     if (!item.instance || item.quantity<1) throw std::invalid_argument("invalid inventory instance/quantity");
     if (item.charges && (item.kind!=ItemKind::wand || *item.charges<0)) throw std::invalid_argument("invalid item charges");
+    if (item.artifact && item.kind!=ItemKind::weapon && item.kind!=ItemKind::armour) throw std::invalid_argument("invalid artifact item kind");
     if (find(item.instance)) throw std::invalid_argument("inventory instance already owned");
 }
 Inventory Inventory::restore(const Bag& bag,const Belt& belt) {

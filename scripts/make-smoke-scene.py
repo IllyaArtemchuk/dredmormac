@@ -27,6 +27,7 @@ if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('output',type=Path);p.add_argument('--combat',action='store_true')
     p.add_argument('--content-source',type=Path,help='Synthetic XML fixtures for direct installation loading')
     p.add_argument('--inventory',action='store_true',help='Explicit synthetic cap pickup/equipment fixture')
+    p.add_argument('--artifact',action='store_true',help='Artifact instance in the inventory fixture')
     p.add_argument('--objects',action='store_true',help='Synthetic persisted SPR/PNG-series room objects')
     args=p.parse_args();out=args.output.resolve();out.mkdir(parents=True,exist_ok=True)
     (out/'atlas.png').write_bytes(png(384,640,(70,80,95,255)))
@@ -41,6 +42,7 @@ if __name__=='__main__':
         scene['smoke_expected']='{"turn":2,"x":1,"y":1}'
         scene['smoke_combat']=True
     if args.inventory and (not args.content_source or args.combat): p.error('--inventory requires --content-source and excludes --combat')
+    if args.artifact and not args.inventory:p.error('--artifact requires --inventory')
     if args.objects and (not args.content_source or args.inventory or args.combat):p.error('--objects requires --content-source and excludes inventory/combat')
     if args.content_source:
         root=out/'installation';shutil.copytree(args.content_source,root,dirs_exist_ok=True)
@@ -53,6 +55,11 @@ if __name__=='__main__':
             scene['ground_items']=[dict(name='Fixture cap',x=2,y=1)]
             scene['ground_currency']=[dict(amount=17,x=2,y=1)]
             scene['smoke_inventory']=True
+            if args.artifact:
+                (root/'game/text.xml').write_text('''<text><startPhoneme text="A"/><phoneme text="b"/><title text="Keeper"/>
+<noun text="Thing" plural="Things"/><adjective text="Bright"/><quality text="polished"/><material text="tin"/><decor text="dots"/></text>''')
+                scene['ground_items'][0]['artifact_quality']=10
+                scene['smoke_artifact']=True
         if args.objects:
             (root/'game/rooms.xml').write_text('''<roomdb><room name="Starting Room" width="5" height="4">
 <row text="#####"/><row text="#.1.#"/><row text="#2..#"/><row text="#####"/>

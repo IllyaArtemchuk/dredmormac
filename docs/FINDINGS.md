@@ -995,3 +995,37 @@ All900 base word entries independently agree:49 starts,40 phonemes,58 titles,
 192 nouns/192 plurals,180 adjectives,65 qualities,63 materials,61 decor. GameContent
 retains these words. Eighteen local groups pass; artifact core MacCI pending.
 Gear run42620199153 passed all28 native checks and relocated packaged-app smoke.
+
+## Artifact item ownership and equipment
+
+InventoryItem carries the generated Artifact, and explicit Session artifact
+construction commits RNG/ID/ground changes atomically. Pickup, bag transfer and
+equipment retain text and all modifiers. Native inventory displays the instance
+name. Savev7 uses nested artifact arrays/text and rejects invalid types, dimensions,
+integer overflow and weapon damage on armour. Earlier1..6 port saves still read;
+synthetic port-v6-wallet.xml is actual prior7aa0860 serializer output with wallet,
+ground money, objects, skills and normal cache. It contains no original game data.
+
+verify_artifact_equip.py matches1,024 original weapon/armour EquipOnPlayer/FixBuffs,
+Player/HittableApplyBuff and PlayerRebuild paths /65,536 fields with actual buff
+registration. Controlled single item/base metadata and artifact Buff are inputs;
+string/allocation boundaries supplied, spell updates skipped. Primary/secondary,
+damage/resist and current HP/MP compare, including bow artifact modifiers. Original
+Rebuild excludes a weapon-owned Buff's damage; its weapon damage array is added
+for melee attack calculations. Armour-owned Buff damage applies generically.
+Artifact direct flat HP/MP updates occur at ApplyBuff; DeapplyBuff44dc6 subtracts
+those and clamps HP>=1/MP>=0. Session models these direct changes; original full
+unequip/replacement/trigger scheduling is not claimed. Synthetic core tests cover
+injured removal at1HP, save/reload/future rolls, equipment restoration and atomic
+failure. Eighteen local groups pass; native artifact fixture awaits MacCI.
+
+Artifact-type factory machine code18ac9d..18ad06 confirms the first weapon is
+constructed, tested for type5 (infinite loop if reached), destroyed and selected
+again. Default selector excludes5/6, so the pathological branch is normally
+unreachable. This duplicate creation must be preserved when connecting factory.
+Constant231888 is0.25; depth-based artifact quality uses floor(depth*0.25) and libc
+bounded+1, or1 without a draw when range invalid. Explicit random weapon/armour
+artifact flag uses(rand*6>>32)+1, yielding1..3 over Darwin rand's positive range.
+Named artifact construction consumes a depth-based quality roll before definition
+quality overrides it inside CreateArtifact. Full factory integration remains next.
+Artifact core run42621347955 passed actual Mac validation and packaged-app smoke.

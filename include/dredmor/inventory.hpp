@@ -2,6 +2,7 @@
 #include "dredmor/items.hpp"
 #include "dredmor/random.hpp"
 #include <optional>
+#include "dredmor/artifact.hpp"
 
 namespace dredmor {
 struct InventoryItem {
@@ -13,6 +14,7 @@ struct InventoryItem {
     bool stackable=false;
     std::optional<std::int32_t> charges=std::nullopt;
     std::optional<std::int32_t> currency_value=std::nullopt;
+    std::optional<Artifact> artifact=std::nullopt;
 };
 // Basic instance construction. Artifact/encrustment generation and rendering
 // are separate. Wand maxcharge is exclusive in the original constructor.

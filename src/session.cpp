@@ -13,6 +13,14 @@ bool same(Position a,Position b) { return a.x==b.x && a.y==b.y; }
 std::int32_t add(std::int32_t a,std::int32_t b) {
     const std::uint32_t bits=std::uint32_t(a)+std::uint32_t(b);std::int32_t value;std::memcpy(&value,&bits,4);return value;
 }
+void artifact_resources(Actor& actor,const Artifact& artifact,bool remove) {
+    auto change=[&](std::int32_t value,std::int32_t amount) {
+        const auto bits=remove?std::uint32_t(value)-std::uint32_t(amount):std::uint32_t(value)+std::uint32_t(amount);
+        std::int32_t result;std::memcpy(&result,&bits,4);return result;
+    };
+    actor.health=std::max(remove?1:0,change(actor.health,artifact.modifiers.secondary[0]));
+    actor.mana=std::max(0,change(actor.mana,artifact.modifiers.secondary[1]));
+}
 Position target(Position p,Action action) {
     switch (action) {
         case Action::north:--p.y;break;case Action::south:++p.y;break;
@@ -81,7 +89,8 @@ std::uint64_t Session::spawn_enemy(Actor enemy) {
 void Session::drop(InventoryItem item,Position position) {
     if (!world_.passable(position) || !item.instance || item.quantity<1 || inventory_.find(item.instance) || ground_.size()>=10000 ||
         (item.charges && (item.kind!=ItemKind::wand || *item.charges<0)) ||
-        (item.currency_value.has_value()!=(item.kind==ItemKind::currency)))
+        (item.currency_value.has_value()!=(item.kind==ItemKind::currency)) ||
+        (item.artifact && item.kind!=ItemKind::weapon && item.kind!=ItemKind::armour))
         throw std::invalid_argument("invalid ground item");
     if (definitions_ && (item.definition>=definitions_->size() || definitions_->at(item.definition).kind!=item.kind))
         throw std::invalid_argument("ground item definition mismatch");
@@ -121,6 +130,14 @@ std::uint64_t Session::create_ground_currency(std::int32_t amount,Position posit
     const auto identifier=next_item_instance();static const std::vector<AbilityDefinition> empty;
     const auto item=make_currency_item(*definition,std::uint32_t(definition-definitions_->begin()),identifier,amount,skills_,abilities_?*abilities_:empty);
     drop(item,position);return identifier;
+}
+std::uint64_t Session::create_ground_artifact(std::uint32_t definition,int quality,const ArtifactWords& words,Position position) {
+    if (!definitions_ || definition>=definitions_->size()) throw std::invalid_argument("invalid artifact definition");
+    const auto& entry=definitions_->at(definition);
+    if (entry.kind!=ItemKind::weapon && entry.kind!=ItemKind::armour) throw std::invalid_argument("artifact requires weapon or armour");
+    auto next=*this;const auto identifier=next_item_instance();auto item=make_inventory_item(entry,definition,identifier,next.random_.libc);
+    item.artifact=create_artifact(words,artifact_request(entry,quality),next.random_);
+    next.drop(std::move(item),position);*this=std::move(next);return identifier;
 }
 void Session::currency_transfer_impl(std::int32_t amount,CurrencyOperation operation) {
     const auto result=transfer_currency(player_.zorkmids,amount,operation);
@@ -249,7 +266,10 @@ void Session::rebuild_equipment() {
     for (const auto& slot:equipment_.slots()) if (slot && slot->kind==ItemKind::weapon) {
         const auto& definition=definitions_->at(slot->definition);
         if (definition.weapon_type==4) continue;
-        for (std::size_t i=0;i<16;++i) player_.damage[i]=add(player_.damage[i],definition.weapon_damage[i]);
+        for (std::size_t i=0;i<16;++i) {
+            player_.damage[i]=add(player_.damage[i],definition.weapon_damage[i]);
+            if (slot->artifact) player_.damage[i]=add(player_.damage[i],slot->artifact->weapon_damage[i]);
+        }
     }
 }
 void Session::character_profile(ClassRanks ranks,std::shared_ptr<const std::vector<ItemDefinition>> definitions,
@@ -280,12 +300,17 @@ bool Session::equip(std::uint64_t instance,EquipmentSlot slot) {
         if (equipment_.slots()[other] && equipment_.slots()[other]->kind==ItemKind::weapon) return false;
     }
     if (!equip_from_inventory(next.inventory_,next.equipment_,instance,slot,*definitions_)) return false;
+    const auto index=static_cast<std::size_t>(slot);
+    if (equipment_.slots()[index] && equipment_.slots()[index]->artifact) artifact_resources(next.player_,*equipment_.slots()[index]->artifact,true);
+    if (next.equipment_.slots()[index]->artifact) artifact_resources(next.player_,*next.equipment_.slots()[index]->artifact,false);
     next.rebuild_equipment();*this=std::move(next);return true;
 }
 bool Session::unequip(EquipmentSlot slot) {
     if (!definitions_ || !player_.alive()) return false;
     auto next=*this;
     if (!unequip_to_inventory(next.inventory_,next.equipment_,slot)) return false;
+    const auto& previous=equipment_.slots()[static_cast<std::size_t>(slot)];
+    if (previous && previous->artifact) artifact_resources(next.player_,*previous->artifact,true);
     next.rebuild_equipment();*this=std::move(next);return true;
 }
 std::string Session::snapshot() const {

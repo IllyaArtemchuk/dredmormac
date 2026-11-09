@@ -86,7 +86,7 @@ Arrow keys move or attack; `.` waits; G picks up and I opens inventory.
 Select an item and target slot, then Equip; select equipped gear to Unequip.
 Command-S saves the current port session;
 Command-O loads a port save for the same prepared room. Selected skills and
-passive abilities, custom room objects, currency and RNG caches persist in version-six port saves; earlier port saves still load with item-type migration. Malformed saves fail
+passive abilities, custom room objects, artifact instances, currency and RNG caches persist in version-seven port saves; earlier port saves still load with item-type migration. Malformed saves fail
 before replacing the current state. These saves are not original .sav files.
 Closing the window quits. Normal installation startup grants the selected skills’ starting items and
 class clothes. Prepared developer scenes keep empty loadouts unless configured.
@@ -160,5 +160,5 @@ Artifact construction primitives are checked with `verify_artifact.py ORIGINAL_B
 build/dredmor-artifact --out PRIVATE_REPORT.json`; metadata uses
 `verify_artifact_words.py ORIGINAL_BINARY build/dredmor-artifact --content DATA_ROOT
 --out PRIVATE_REPORT.json`. These compare names, descriptions, stat rolls and RNG
-with explicit Buff-constructor/item-text boundaries. Artifact item ownership,
-equipment, save persistence and complete factory integration are still pending.
+with explicit Buff-constructor/item-text boundaries. Artifact instances support ground/inventory/equipment ownership and save persistence;
+complete artifact factory integration and unique-artifact state remain pending.

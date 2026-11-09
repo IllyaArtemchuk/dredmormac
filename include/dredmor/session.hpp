@@ -50,6 +50,7 @@ public:
     void drop(InventoryItem item,Position position);
     std::uint64_t create_ground_item(std::uint32_t definition,Position position,std::int32_t quantity=1);
     std::uint64_t create_ground_currency(std::int32_t amount,Position position);
+    std::uint64_t create_ground_artifact(std::uint32_t definition,int quality,const ArtifactWords& words,Position position);
     std::optional<std::uint64_t> create_ground_loot(const ItemFactoryTables& tables,const ItemFactoryContext& context,
         std::string_view type,std::string_view subtype,int quantity,bool artifact,Position position);
     void give_currency(std::int32_t amount);
