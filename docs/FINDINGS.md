@@ -402,3 +402,26 @@ An entirely synthetic v2 save was generated with the pre-correction serializer
 and retained as tests/fixtures/port-v2-item-types.xml; tests load/migrate it and
 roundtrip the resulting v3 state. No original save files or original assets are
 in that fixture. Actual native validation of this migration awaits the next run.
+
+Run 42591221995 (76381cd) passed all eighteen checks and relocated package smoke,
+including old-v2 item type migration, current skill/passive saves and native UI.
+
+## Basic item instances and wand charges
+
+Constructor recovery establishes stackable food/potions/gems/mushrooms/reagents/
+toolkits/traps, nonstackable armour/wands, and stackable weapon types five/six.
+Trap::Build (0x10854e) sets stackability after Trap's constructor calls it; it must
+not be inferred from the constructor's initial base flag alone. Basic factory
+creates these instance properties separately from rendering/artifacts/effects.
+Misc types zero/one are built-in Lockpick/Spores with known original icon paths.
+GameContent appends two engine definitions after external items, preserving IDs;
+external-content fingerprint excludes engine builtins so earlier saves still load.
+The original 751 supplied definitions remain distinct from those two additions.
+
+Wand charge loop [0x7af5,0x7b43) matches 1,045 original calculations and final
+Darwin RNG states with the imported rand boundary supplied. maxcharge is exclusive;
+equal bounds consume no draw, while a one-wide interval still consumes a draw.
+Normal ordered nonnegative ranges plus boundary cases up to INT_MAX are covered.
+Optional per-instance charges persist in port saves, including zero/depleted wands;
+older saves without this attribute retain an unspecified charge state. Native
+inventory displays known charges. This does not implement wand casting or effects.

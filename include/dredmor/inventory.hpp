@@ -1,5 +1,6 @@
 #pragma once
 #include "dredmor/items.hpp"
+#include "dredmor/random.hpp"
 #include <optional>
 
 namespace dredmor {
@@ -10,7 +11,12 @@ struct InventoryItem {
     int weapon_type=-1;
     std::int32_t quantity=1;
     bool stackable=false;
+    std::optional<std::int32_t> charges=std::nullopt;
 };
+// Basic instance construction. Artifact/encrustment generation and rendering
+// are separate. Wand maxcharge is exclusive in the original constructor.
+InventoryItem make_inventory_item(const ItemDefinition& definition,std::uint32_t index,
+                                 std::uint64_t instance,DarwinRandom& random);
 enum class InventoryLocation { bag,belt };
 struct InventoryPosition { InventoryLocation location;std::size_t slot; };
 enum class InsertOutcome { placed,stacked,full };

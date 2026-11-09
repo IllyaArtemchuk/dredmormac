@@ -104,6 +104,11 @@ GameContent GameContent::load(const std::filesystem::path& root,bool expansions)
     for (auto& ability:content.abilities_) if (ability.skill_name.empty()) {
         for (const auto& skill:content.skills_) if (skill.id==ability.skill_id) {ability.skill_name=skill.name;break;}
     }
+    for (int subtype=0;subtype<2;++subtype) {
+        ItemDefinition item;item.kind=ItemKind::misc;item.builtin_subtype=subtype;
+        item.name=subtype==0?"Lockpick":"Spores";item.icon=subtype==0?"items/lockpick.png":"items/fungus_spores.png";
+        content.items_.push_back(std::move(item));
+    }
     if (!found_tweaks) throw std::runtime_error("base tweakDB.xml is required");
     content.monsters_=load_monsters(content.catalog_);return content;
 }

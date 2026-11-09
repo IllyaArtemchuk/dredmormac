@@ -3,6 +3,28 @@
 #include <stdexcept>
 
 namespace dredmor {
+InventoryItem make_inventory_item(const ItemDefinition& definition,std::uint32_t index,
+                                 std::uint64_t instance,DarwinRandom& random) {
+    if (!instance) throw std::invalid_argument("item instance must be nonzero");
+    InventoryItem item;item.instance=instance;item.definition=index;item.kind=definition.kind;item.weapon_type=definition.weapon_type;
+    switch (definition.kind) {
+    case ItemKind::weapon:item.stackable=definition.weapon_type==5 || definition.weapon_type==6;break;
+    case ItemKind::armour:break;
+    case ItemKind::potion:case ItemKind::food:case ItemKind::gem:case ItemKind::mushroom:
+    case ItemKind::reagent:case ItemKind::toolkit:case ItemKind::trap:item.stackable=true;break;
+    case ItemKind::misc:
+        if (definition.builtin_subtype<0 || definition.builtin_subtype>1) throw std::invalid_argument("unsupported builtin item");
+        item.stackable=true;break;
+    case ItemKind::wand: {
+        const auto minimum=definition.wand_min_charge,maximum=definition.wand_max_charge;
+        if (minimum<0 || maximum<minimum) throw std::invalid_argument("invalid wand charge range");
+        item.charges=minimum+static_cast<std::int32_t>(random.bounded(static_cast<std::uint32_t>(maximum-minimum)));
+        break;
+    }
+    default:throw std::invalid_argument("unsupported item kind");
+    }
+    return item;
+}
 namespace {
 bool belt_eligible(const InventoryItem& item) {
     return item.kind==ItemKind::food || item.kind==ItemKind::potion || item.kind==ItemKind::wand ||
@@ -17,6 +39,7 @@ const InventoryItem* Inventory::find(std::uint64_t instance) const {
 }
 void Inventory::validate_new(const InventoryItem& item) const {
     if (!item.instance || item.quantity<1) throw std::invalid_argument("invalid inventory instance/quantity");
+    if (item.charges && (item.kind!=ItemKind::wand || *item.charges<0)) throw std::invalid_argument("invalid item charges");
     if (find(item.instance)) throw std::invalid_argument("inventory instance already owned");
 }
 Inventory Inventory::restore(const Bag& bag,const Belt& belt) {

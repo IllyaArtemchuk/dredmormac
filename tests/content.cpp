@@ -5,7 +5,8 @@
 int main(int argc,char** argv) {
     try {
         check(argc==2);auto content=dredmor::GameContent::load(argv[1]);
-        check(content.items().size()==1 && content.monsters().size()==2 && content.skills().size()==7);
+        check(content.items().size()==3 && content.monsters().size()==2 && content.skills().size()==7);
+        check(content.items()[1].builtin_subtype==0 && content.items()[2].builtin_subtype==1);
         check(content.abilities().size()==1 && content.abilities()[0].skill_name=="Fixture 0");
         auto world=content.room("Starting Room").instantiate();
         check(world.width()==7 && world.height()==5 && !world.passable({3,2}));

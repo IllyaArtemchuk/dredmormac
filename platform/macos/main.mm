@@ -271,6 +271,7 @@
         NSString *name=_content && item.definition<_content->items().size()?
             [NSString stringWithUTF8String:_content->items()[item.definition].name.c_str()]:
             [NSString stringWithFormat:@"Item %u",item.definition];
+        if (item.charges) name=[NSString stringWithFormat:@"%@ (%d charges)",name,*item.charges];
         [rows addObject:@{@"name":name,@"quantity":@(item.quantity),@"location":location,@"equipped":@(equipped),
             @"instance":@(item.instance),@"slot":@(slot)}];
     };

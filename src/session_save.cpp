@@ -57,6 +57,9 @@ std::uint64_t signature(const std::shared_ptr<const std::vector<ItemDefinition>>
         for (const auto& c:n.children) node(c);
     };
     for (const auto& item:*definitions) {
+        // Builtins are engine rules appended after external definitions. Keeping
+        // them out of the external-content identity preserves earlier saves.
+        if (item.builtin_subtype>=0) continue;
         auto kind=static_cast<unsigned>(item.kind);
         if (legacy_types && (kind==11 || kind==12)) kind=23-kind;
         add(item.name);add(std::to_string(kind));add(std::to_string(item.weapon_type));
@@ -110,13 +113,19 @@ Actor read_actor(const XmlNode& node) {
 }
 void write_item(std::ostream& out,const InventoryItem& item,const std::string& extra) {
     out<<"<item id=\""<<item.instance<<"\" kind=\""<<static_cast<std::uint32_t>(item.kind)<<"\" definition=\""<<item.definition
-       <<"\" weapon=\""<<item.weapon_type<<"\" quantity=\""<<item.quantity<<"\" stackable=\""<<item.stackable<<"\" "<<extra<<"/>\n";
+       <<"\" weapon=\""<<item.weapon_type<<"\" quantity=\""<<item.quantity<<"\" stackable=\""<<item.stackable<<"\"";
+    if (item.charges) out<<" charges=\""<<*item.charges<<"\"";
+    out<<' '<<extra<<"/>\n";
 }
 InventoryItem read_item_instance(const XmlNode& node) {
     InventoryItem item;item.instance=attribute_number<std::uint64_t>(node,"id");item.kind=static_cast<ItemKind>(attribute_number<std::uint32_t>(node,"kind"));
     item.definition=attribute_number<std::uint32_t>(node,"definition");item.weapon_type=attribute_number<int>(node,"weapon");
     item.quantity=attribute_number<std::int32_t>(node,"quantity");const auto stack=attribute_number<unsigned>(node,"stackable");
     if (!item.instance || item.quantity<1 || stack>1) throw std::runtime_error("invalid saved item");
+    if (node.attributes.count("charges")) {
+        item.charges=attribute_number<std::int32_t>(node,"charges");
+        if (item.kind!=ItemKind::wand || *item.charges<0) throw std::runtime_error("invalid saved wand charges");
+    }
     item.stackable=stack!=0;return item;
 }
 }

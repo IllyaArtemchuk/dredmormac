@@ -96,6 +96,21 @@ int main(int argc,char** argv) {
         check(migrated.inventory().belt()[0]->instance==801 && migrated.inventory().belt()[0]->kind==ItemKind::toolkit);
         std::istringstream migrated_input(saved(migrated));auto migrated_again=Session::load(migrated_input,migrated_definitions);
         check(saved(migrated)==saved(migrated_again));
+        auto builtin=ItemDefinition{};builtin.name="Lockpick";builtin.kind=ItemKind::misc;builtin.builtin_subtype=0;
+        auto extended=std::make_shared<const std::vector<ItemDefinition>>(std::vector<ItemDefinition>{trap,toolkit,builtin});
+        std::ifstream old_with_builtins(argv[1]);auto appended=Session::load(old_with_builtins,extended);
+        check(saved(appended)==saved(migrated));
+        DarwinRandom item_random(1);appended.inventory().insert(make_inventory_item(builtin,2,802,item_random));
+        std::istringstream appended_input(saved(appended));auto appended_loaded=Session::load(appended_input,extended);
+        check(saved(appended)==saved(appended_loaded) && appended_loaded.inventory().find(802));
+        auto wand=read_item(parse_xml("<item name='Fixture wand'><wand mincharge='2' maxcharge='3'/></item>"));
+        auto wand_definitions=std::make_shared<const std::vector<ItemDefinition>>(std::vector<ItemDefinition>{wand});
+        std::istringstream wand_room("#####\n#@..#\n#####\n");Session wands(World::read(wand_room),make_player({3,2,2}),5);
+        wands.equipment_profile({3,2,2},wand_definitions);
+        auto wand_instance=make_inventory_item(wand,0,900,item_random);wand_instance.charges=0;
+        wands.inventory().insert(wand_instance);
+        std::istringstream wand_input(saved(wands));auto wand_loaded=Session::load(wand_input,wand_definitions);
+        check(wand_loaded.inventory().find(900)->charges==0 && saved(wand_loaded)==saved(wands));
         std::cout<<"save/load: exact state, future random turns, equipment, escaping and malformed-input rejection passed\n";
     } catch (const std::exception& e) {std::cerr<<e.what()<<'\n';return 1;}
 }

@@ -55,7 +55,10 @@ ItemDefinition read_item(const XmlNode& source) {
             else if (type=="sleeve") item.armour_type=12;
         } else if (tag=="food") { item.kind=ItemKind::food;item.food_hp=integer(child,"hp");item.food_mp=integer(child,"mp"); }
         else if (tag=="potion") item.kind=ItemKind::potion;
-        else if (tag=="wand") item.kind=ItemKind::wand;
+        else if (tag=="wand") {
+            item.kind=ItemKind::wand;item.wand_min_charge=integer(child,"mincharge",item.wand_min_charge);
+            item.wand_max_charge=integer(child,"maxcharge",item.wand_max_charge);
+        }
         else if (tag=="gem") item.kind=ItemKind::gem;
         else if (tag=="mushroom") item.kind=ItemKind::mushroom;
         else if (tag=="trap") item.kind=ItemKind::trap;

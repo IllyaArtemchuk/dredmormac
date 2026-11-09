@@ -22,6 +22,7 @@ struct ItemDefinition {
     ItemKind kind=ItemKind::unknown;
     int price=0,level=0,weapon_type=-1,armour_type=-1,armour_ac=0,food_hp=0,food_mp=0;
     bool special=false,debug=false;
+    int wand_min_charge=1,wand_max_charge=10,builtin_subtype=-1;
     Damage weapon_damage{};
     ItemModifiers modifiers;
     XmlNode source; // Preserve unsupported effects; never silently discard them.

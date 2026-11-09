@@ -112,7 +112,20 @@ Trap/toolkit type correction: constructors prove toolkit=11, trap=12; old enum
 labels were reversed even though numeric inventory placement matched. Corrected
 belt eligibility name to trap and re-ran 3,840 original operations successfully.
 Save v3 loader computes legacy fingerprints and translates old IDs for v1/v2.
-Synthetic pre-correction v2 fixture verifies migration; native run pending.
+Synthetic pre-correction v2 fixture verifies migration; run 42591221995 passed.
 Private item-construction.txt has item registration, Item/Food/Misc constructors
 and CreateItem dispatch; toolkit-trap-types.txt has the type/stack constructors.
 Continue starting item creation/auto-equipping; no complete grant path exists yet.
+
+Basic instance factory make_inventory_item handles stackability and optional wand
+charges. verify_wands.py matches 1,045 original charge loops/final RNG states.
+GameContent appends built-in Lockpick/Spores definitions (external item count +2),
+excluded from external-content fingerprint to preserve old saves/indices.
+Private consumable-constructors.txt, item-visual-build.txt and trap-build.txt
+recover constructors/graphics setup. Trap::Build sets stackable true. Wand charge
+max is exclusive and one-wide intervals still draw. Casting/effects remain absent.
+Next: complete base starting loadouts and auto-equipping. Supplied base random
+loadouts use only mushroom/potion/wand/reagent/component pools; all weapon/armour
+loadouts name fixed definitions. Misc loadouts each give one lockpick (repeated
+entries produce four/eight), not an amount override. Weapon amount>1 creates that
+stack then additionally grants one weapon; preserve observed +1 behavior.

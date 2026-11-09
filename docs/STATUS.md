@@ -31,7 +31,7 @@ Verified:
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
 - Nine local CTest groups pass, including deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42590387752 passed all eighteen checks, including
+- Actual macos-15 arm64 CI run 42591221995 passed all eighteen checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -91,4 +91,10 @@ for developer replay. Synthetic picker interaction passes on actual native CI.
 Corrected swapped trap/toolkit metadata IDs from original constructors: toolkit
 11, trap 12. Numeric inventory kernel still matches all 3,840 original operations.
 Save v3 migrates v1/v2 IDs and fingerprints; a synthetic old-v2 fixture roundtrips
-through migration locally. Native migration verification is pending.
+through migration locally. Native migration verification passes.
+
+Basic item instance factory now retains original stackability and wand charges;
+1,045 original wand calculations/RNG states match. GameContent appends Lockpick
+and Spores engine definitions without changing external content fingerprints or
+existing IDs. Optional charges roundtrip, including zero. Native validation of
+these instance additions is pending; complete starting grants remain unfinished.

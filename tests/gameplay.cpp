@@ -43,6 +43,13 @@ int main() {
         Inventory tools;
         check(tools.insert({800,trap.kind,0,0,1,false}).position->location==InventoryLocation::belt);
         check(tools.insert({801,toolkit.kind,1,0,1,true}).position->location==InventoryLocation::bag);
+        auto wand=read_item(parse_xml("<item name='Fixture wand'><wand mincharge='2' maxcharge='3'/></item>"));
+        DarwinRandom creation(1);const auto charged=make_inventory_item(wand,0,900,creation);
+        check(charged.charges==2 && !charged.stackable && creation.state()==16807);
+        wand.wand_max_charge=wand.wand_min_charge;creation.seed(1);
+        check(make_inventory_item(wand,0,901,creation).charges==2 && creation.state()==1);
+        check(make_inventory_item(toolkit,1,902,creation).stackable && creation.state()==1);
+        check(make_inventory_item(trap,0,903,creation).stackable && creation.state()==1);
         DarwinRandom darwin(1);
         for (auto expected:{16807,282475249,1622650073,984943658,1144108930}) check(darwin.next()==expected);
         DarwinRandom bounded(1);check(bounded.bounded(0)==0 && bounded.state()==1);
