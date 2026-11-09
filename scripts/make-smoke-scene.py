@@ -68,7 +68,10 @@ if __name__=='__main__':
             items.getroot().append(ET.fromstring('''<item name="Fixture charges" iconFile="dungeon/trap.spr"><trap trigger="charges" charges="2" casts="Fixture trap spell"/></item>'''))
             items.getroot().append(ET.fromstring('''<item name="Fixture origin" iconFile="dungeon/trap.spr"><trap originMount="floor" originFacing="east" origin="dungeon/origin.spr" casts="Fixture trap spell"/></item>'''))
             items.write(root/'game/itemDB.xml',encoding='unicode')
-            (root/'game/spellDB.xml').write_text('''<spellDB><spell name="Fixture trap spell" type="target"><effect type="damage" slashing="8" affectsCaster="1" unblockable="1"/></spell></spellDB>''')
+            (root/'game/spellDB.xml').write_text('''<spellDB>
+<spell name="Fixture trap spell" type="target"><effect type="trigger" spell="Fixture trap damage"/></spell>
+<spell name="Fixture trap damage" type="target"><effect type="damage" slashing="8" affectsCaster="1" unblockable="1"/></spell>
+</spellDB>''')
             (root/'dungeon/trap.spr').write_bytes(sprite());(root/'dungeon/origin.spr').write_bytes(sprite())
             (root/'dungeon/trap_hidden.png').write_bytes(png(32,32,(90,90,90,255)))
             scene.update(data_root=str(root),room_objects='Starting Room',smoke_traps=True,seed=1)

@@ -548,3 +548,21 @@ element/script population; full generated-floor session/camera/doors/transitions
 original UI/audio and original-asset/full-game visual and gameplay comparison.
 There is no current archive-transfer or native-build blocker. Continued work is
 implementation and validation, not awaiting further user permission or assets.
+
+Immediate trigger effects (ApplyEffectAt case44, around941b3) now execute nested
+spell lookup/casts. Triggers consume a libc roll even at percent100; bucket0 passes
+percent0. Missing child returns from the current parent's effect loop, leaving
+prior effects intact. Child origin is the caster's current position and child
+allowHaywire is always true. First matching spell wins, including duplicate names.
+verify_triggers.py matches4096 actual nested DoActualSpellLoop/ApplyEffectAt/findSpell
+chains with mixed damage/heal, all4 supported dispatch types, missing/duplicate
+children, self-property values, ordered requests, HP and libc state. Identity/name,
+damage HP delivery, UI/animation/library remain boundaries. Deferred amount!=0,
+buff gates, other spell families and original HP/death effects remain excluded.
+Session recursion has a port safety budget of64 frames/4096 calls; budget/unsupported
+child failures roll back the entire root cast. Missing child is normal early return.
+New spell-triggers tests cover origin, order, zero chance, resumed RNG/profile saves,
+cycles and delayed/unsupported rollback; all23 local groups pass. Previous4096 mixed
+cast comparisons still pass. Native trap fixture now triggers a separate damage
+spell, exercising nested casts through movement/resources/save/load. Current source
+awaits MacCI. Continue full spell families, scheduled effects/buffs and level play.

@@ -62,8 +62,11 @@ class Cast(SpellDamage):
             self.write(effect+0xe0,primary);self.write(effect+0xdc,secondary);self.write(effect+0xe4,unblockable)
             self.write(effect+0xd0,amount,amount_scale)
         self.write(spell+0x11c,array,array+len(effects)*0x11c,array+len(effects)*0x11c)
-        accepted=self.original.call('__Z17DoActualSpellLoopP12skillDBEntryiiiiP8HittablePKci',spell,ox,oy,tx,ty,self.caster,0,allow,budget=2000000)
+        accepted=self.invoke_cast(spell,ox,oy,tx,ty,allow)
         return [accepted,self.read(self.player+0x108)[0],self.read(self.monster+0x108)[0],len(self.results),*[n for row in self.results for n in row],self.state]
+
+    def invoke_cast(self,spell,ox,oy,tx,ty,allow):
+        return self.original.call('__Z17DoActualSpellLoopP12skillDBEntryiiiiP8HittablePKci',spell,ox,oy,tx,ty,self.caster,0,allow,budget=2000000)
 
 
 def verify(binary,port):

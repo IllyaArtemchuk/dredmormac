@@ -231,6 +231,12 @@ bool Session::cast_spell(const SpellDefinition& spell,Position origin,Position t
     auto next=*this;next.events_.clear();const auto result=next.cast_spell_impl(spell,origin,target,caster,allow_haywire);*this=std::move(next);return result;
 }
 bool Session::cast_spell_impl(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire) {
+    std::size_t remaining=4096;return cast_spell_recursive(spell,origin,target,caster,allow_haywire,0,remaining);
+}
+bool Session::cast_spell_recursive(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire,
+    std::size_t depth,std::size_t& remaining) {
+    if (depth>=64 || !remaining) throw std::runtime_error("spell recursion execution budget exhausted");
+    --remaining;
     if (spell.type=="self") target=origin;
     else if (spell.type=="adjacent") {
         const auto dx=std::uint32_t(target.x)-std::uint32_t(origin.x),dy=std::uint32_t(target.y)-std::uint32_t(origin.y);
@@ -247,11 +253,22 @@ bool Session::cast_spell_impl(const SpellDefinition& spell,Position origin,Posit
     else for (auto& enemy:enemies_) if (enemy.id==caster) {source=&enemy;break;}
     if (!source) throw std::invalid_argument("spell caster not found");
     for (const auto& effect:spell.effects) {
-        if ((effect.type!="damage" && effect.type!="heal") || effect.midas || effect.burn || effect.is_sleeping || effect.regeneration_graphic || !effect.taxa.empty() || !effect.source.children.empty())
+        if ((effect.type!="damage" && effect.type!="heal" && effect.type!="trigger") || effect.midas || effect.burn || effect.is_sleeping || effect.regeneration_graphic || !effect.taxa.empty() || !effect.source.children.empty())
             throw std::invalid_argument("spell effect execution is not implemented: "+effect.type);
         for (const auto& attribute:effect.source.attributes) {
             auto key=attribute.first;for (auto& c:key) if (c>='A' && c<='Z') c+=32;
             if (key.rfind("requirebuff",0)==0 && legacy_integer(attribute.second)) throw std::invalid_argument("spell buff gate execution is not implemented");
+        }
+        if (effect.type=="trigger") {
+            const SpellDefinition* child=nullptr;
+            if (spells_) for (const auto& candidate:*spells_) if (candidate.name==effect.spell) {child=&candidate;break;}
+            // ApplyEffectAt returns immediately for a missing child, skipping
+            // later effects. Immediate triggers always consume their own roll,
+            // including percent100, and start at the caster's current position.
+            if (!child) return true;
+            if (effect.amount) throw std::invalid_argument("delayed trigger execution is not implemented");
+            if (random_.libc.next()/21474837>effect.percent) continue;
+            cast_spell_recursive(*child,source->position,target,source->id,true,depth+1,remaining);continue;
         }
         if (effect.primary_scale< -1 || effect.primary_scale>=6 || (effect.primary_scale==-1 && (effect.secondary_scale<0 || effect.secondary_scale>=24)))
             throw std::invalid_argument("spell scaling attribute outside range");

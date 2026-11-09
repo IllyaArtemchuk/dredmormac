@@ -136,6 +136,8 @@ private:
     std::optional<std::uint64_t> create_ground_loot_impl(const ItemFactoryTables& tables,const ItemFactoryContext& context,
         std::string_view type,std::string_view subtype,int quantity,bool artifact,Position position);
     bool cast_spell_impl(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire);
+    bool cast_spell_recursive(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire,
+        std::size_t depth,std::size_t& remaining);
     void activate_traps_impl(Actor& actor);
 };
 Actor make_player(const ClassRanks& ranks,std::string name="Player");
