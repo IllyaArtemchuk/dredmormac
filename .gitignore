@@ -1,0 +1,13 @@
+/build/
+/work/
+/game/
+/media/
+/analysis/
+/derived/
+/saves/
+/.env
+/.venv/
+__pycache__/
+*.zip
+*.dmg
+.DS_Store
