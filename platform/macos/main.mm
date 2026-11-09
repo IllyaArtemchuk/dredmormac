@@ -1,4 +1,5 @@
 #import <Cocoa/Cocoa.h>
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #include <dispatch/dispatch.h>
 #include <cstring>
 #include <cstdlib>
@@ -196,14 +197,16 @@
     alert.informativeText=[NSString stringWithUTF8String:error.what()];[alert runModal];
 }
 - (void)saveDocument:(id)sender {
-    NSSavePanel *panel=[NSSavePanel savePanel];panel.allowedFileTypes=@[@"dredmor-save"];
+    NSSavePanel *panel=[NSSavePanel savePanel];
+    panel.allowedContentTypes=@[[UTType typeWithFilenameExtension:@"dredmor-save" conformingToType:UTTypeXML]];
     panel.nameFieldStringValue=@"Encounter.dredmor-save";
     panel.message=@"Save this port's session. Original game saves use a different format.";
     if ([panel runModal]!=NSModalResponseOK) return;
     try { [self saveToURL:panel.URL]; } catch (const std::exception& error) { [self showFailure:error]; }
 }
 - (void)openDocument:(id)sender {
-    NSOpenPanel *panel=[NSOpenPanel openPanel];panel.allowedFileTypes=@[@"dredmor-save"];
+    NSOpenPanel *panel=[NSOpenPanel openPanel];
+    panel.allowedContentTypes=@[[UTType typeWithFilenameExtension:@"dredmor-save" conformingToType:UTTypeXML]];
     panel.allowsMultipleSelection=NO;panel.canChooseDirectories=NO;
     panel.message=@"Load a port session for the currently prepared room.";
     if ([panel runModal]!=NSModalResponseOK) return;

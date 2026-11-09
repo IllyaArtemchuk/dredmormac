@@ -265,3 +265,20 @@ validate the room plus all actor image resources before swapping loaded state.
 New native smoke saves, advances a turn, reloads, compares full serialized state,
 and checks that malformed input leaves the state unchanged. This new check
 awaits native execution; original saves and cross-room rendering remain absent.
+
+Run 42585141286 (4fd4747) passed all thirteen checks and relocated app smoke,
+including exact native save/reload restoration and malformed-save atomicity.
+The macOS 12-deprecated file extension filter is being replaced with UTType.
+
+## Dungeon room placement
+
+Level::ScanRoomForTemplate at 0x192500 runs without imported calls in the original
+binary. The C++ numeric-grid kernel matches 69,632 executions: all 65,536 byte
+pairs plus 4,096 seeded footprint/boundary cases. Positive template dimensions
+are required by the port. Every footprint cell, including void, must lie within
+the level's three-cell reserved margin. Void overlaps anything; nonzero cells
+require existing void except wall 2 may overlap wall 2 and door 6 may overlap
+door 6. Tests include asymmetric footprints and extreme port coordinates.
+This establishes the collision kernel only, not template parsing, writing,
+selection, RNG consumption or seeded full-level generation. Original report:
+room-placement.json, retained privately; scripts/verify_generation.py reproduces.
