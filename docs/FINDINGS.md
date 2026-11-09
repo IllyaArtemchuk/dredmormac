@@ -1250,3 +1250,24 @@ ordering, resumed random+appearance creation, bad maps and cross-container dupli
 IDs pass in21 local groups. Trap movement activation, owning origin blockers,
 spell effects and native presentation are still pending. Source awaits own MacCI;
 next dependency is measured spell execution rather than silently omitting effects.
+
+Room trap/session ownership run42638509915 passed Mac CI and packaging. New
+resolve_spell_damage models full DoSpellDamageca940 decisions/arithmetic. Its4096
+full original executions match, using two owned libc draws, floorf/string/library
+inputs, offscreen UI/audio and virtual TakeDamage delivery boundaries. Fixtures
+cover primary/secondary scaling attributes, negative base/resist, float rounding,
+large integers, NaN/infinity/signedzero and wraparound. Positive delivery totals
+and explicit death text are also checked; HP mutation/effect dispatch are excluded.
+Haywire always consumes its chance draw even when disabled, then suppresses spell
+resistance when successful; it does not itself multiply this function's damage.
+Resistance always consumes a second draw even when forced unresisted. Physical
+channels truncate(float(base)+scale*attribute), subtract resistance only for a
+positive channel, sum signed values then subtract armour/clamp0. Elemental channels
+add base to floorf(scale*attribute), subtract resistance only when positive and
+clamp each channel0. Resisted physical divides4, elemental divides2. These rules
+are distinct from melee, especially negative physical channels and rounding.
+New CLI dredmor-spell-damage and verify_spell_damage.py reproduce the comparison;
+private report spell-damage.json. Existing21 local groups pass with damage tests.
+Current source awaits MacCI. Full spell effect/type/target parsing and dispatch,
+HP/effects/buffs, trap movement integration and native presentation remain pending.
+Private spell-dispatch-and-parser.txt exports994e0/82abe/7c970/85924 for next work.

@@ -21,6 +21,14 @@ int main() {
         attack.critical=99;
         auto edge=resolve_combat(attack,[] {return 2147483647;});
         check(!edge.critical && edge.outcome==CombatOutcome::dodged && edge.draws==2);
+        SpellDamageInput spell;spell.damage[0]=10;spell.damage[1]=-8;spell.damage[3]=5;
+        spell.scaling_attribute=1;spell.scaling[3]=-.25f;spell.haywire=spell.resist=101;spell.allow_haywire=true;
+        auto spell_hit=resolve_spell_damage(spell,[]{return 0;});
+        check(spell_hit.haywire && !spell_hit.resisted && spell_hit.physical==2 && spell_hit.elemental==4 && spell_hit.total==6 && spell_hit.draws==2);
+        spell.allow_haywire=false;spell_hit=resolve_spell_damage(spell,[]{return 0;});
+        check(!spell_hit.haywire && spell_hit.resisted && spell_hit.physical==0 && spell_hit.elemental==2 && spell_hit.draws==2);
+        spell.force_unresisted=true;spell.resistance[0]=20;spell_hit=resolve_spell_damage(spell,[]{return 0;});
+        check(!spell_hit.resisted && spell_hit.physical==0 && spell_hit.elemental==4 && spell_hit.draws==2);
         Inventory inventory;
         InventoryItem food{1,ItemKind::food,2,-1,3,true};
         check(inventory.insert(food).position->location==InventoryLocation::belt);

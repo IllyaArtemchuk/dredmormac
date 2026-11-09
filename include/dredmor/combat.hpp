@@ -30,4 +30,17 @@ struct CombatResult {
 // values in [0, INT32_MAX], not a 0..99 uniform distribution or an MT stream.
 // Counterattacks are returned to the caller; messages/VFX/triggers are separate.
 CombatResult resolve_combat(const CombatInput& input,const std::function<std::int32_t()>& draw);
+struct SpellDamageInput {
+    std::int32_t haywire=0,resist=0,armour=0,scaling_attribute=0;
+    bool allow_haywire=false,force_unresisted=false;
+    Damage damage{},resistance{};
+    std::array<float,16> scaling{};
+};
+struct SpellDamageResult {
+    bool haywire=false,resisted=false;
+    std::int32_t physical=0,elemental=0,total=0;
+    unsigned draws=0;
+};
+// Arithmetic/decisions from DoSpellDamage; delivery, effects and UI are external.
+SpellDamageResult resolve_spell_damage(const SpellDamageInput& input,const std::function<std::int32_t()>& draw);
 }
