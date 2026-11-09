@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <fstream>
 #define check(value) do { if (!(value)) throw std::runtime_error("save assertion at line "+std::to_string(__LINE__)); } while(false)
 using namespace dredmor;
 Session fixture() {
@@ -22,7 +23,7 @@ void reject(std::string text) {
     try {std::istringstream input(text);Session::load(input);} catch (const std::exception&) {rejected=true;}
     check(rejected);
 }
-int main() {
+int main(int argc,char** argv) {
     try {
         auto original=fixture();for (int i=0;i<7;++i) original.step(Action::east);
         const auto text=saved(original);std::istringstream input(text);auto loaded=Session::load(input);
@@ -32,8 +33,8 @@ int main() {
             original.step(action);loaded.step(action);
             check(original.snapshot()==loaded.snapshot() && saved(original)==saved(loaded));
         }
-        auto invalid=text;auto p=invalid.find("version=\"2\"");invalid.replace(p,11,"version=\"3\"");reject(invalid);
-        auto legacy=text;legacy.replace(legacy.find("version=\"2\""),11,"version=\"1\"");
+        auto invalid=text;auto p=invalid.find("version=\"3\"");invalid.replace(p,11,"version=\"4\"");reject(invalid);
+        auto legacy=text;legacy.replace(legacy.find("version=\"3\""),11,"version=\"1\"");
         p=legacy.find("<skills ");const auto end=legacy.find("</skills>\n",p);check(p!=std::string::npos && end!=std::string::npos);
         legacy.erase(p,end+10-p);std::istringstream legacy_input(legacy);auto legacy_loaded=Session::load(legacy_input);
         check(saved(legacy_loaded)==text);
@@ -85,6 +86,16 @@ int main() {
         duplicate.replace(location,13,"<skill id=\"0\"");
         mismatch=false;try {std::istringstream bad(duplicate);Session::load(bad,profile_items,abilities);} catch(const std::runtime_error&) {mismatch=true;}
         check(mismatch);
+        check(argc==2);
+        auto trap=read_item(parse_xml("<item name='Fixture trap'><trap/></item>"));
+        auto toolkit=read_item(parse_xml("<item name='Fixture toolkit'><toolkit/></item>"));
+        auto migrated_definitions=std::make_shared<const std::vector<ItemDefinition>>(std::vector<ItemDefinition>{trap,toolkit});
+        std::ifstream legacy_types(argv[1]);check(legacy_types.good());
+        auto migrated=Session::load(legacy_types,migrated_definitions);
+        check(migrated.inventory().bag()[0]->instance==800 && migrated.inventory().bag()[0]->kind==ItemKind::trap);
+        check(migrated.inventory().belt()[0]->instance==801 && migrated.inventory().belt()[0]->kind==ItemKind::toolkit);
+        std::istringstream migrated_input(saved(migrated));auto migrated_again=Session::load(migrated_input,migrated_definitions);
+        check(saved(migrated)==saved(migrated_again));
         std::cout<<"save/load: exact state, future random turns, equipment, escaping and malformed-input rejection passed\n";
     } catch (const std::exception& e) {std::cerr<<e.what()<<'\n';return 1;}
 }

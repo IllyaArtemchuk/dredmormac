@@ -6,7 +6,7 @@
 namespace dredmor {
 enum class ItemKind : std::uint32_t {
     unknown=0, weapon=1, armour=2, potion=3, wand=4, food=5, misc=6, gem=7,
-    mushroom=8, reagent=9, trap=11, toolkit=12
+    mushroom=8, reagent=9, toolkit=11, trap=12
 };
 enum class EquipmentSlot : int {
     head=0, hand_left=1, hand_right=2, ring_left=3, ring_right=4, chest=5,

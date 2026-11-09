@@ -86,7 +86,7 @@ Arrow keys move or attack; `.` waits; G picks up and I opens inventory.
 Select an item and target slot, then Equip; select equipped gear to Unequip.
 Command-S saves the current port session;
 Command-O loads a port save for the same prepared room. Selected skills and
-passive abilities persist in version-two port saves; earlier port saves still load. Malformed saves fail
+passive abilities persist in version-three port saves; earlier port saves still load with item-type migration. Malformed saves fail
 before replacing the current state. These saves are not original .sav files.
 Closing the window quits. The UI remains a developer room/encounter view.
 
@@ -94,9 +94,9 @@ Direct installation startup passes its synthetic native fixture check. The curre
 and decoration.
 
 Actual standard macos-15 arm64 runs compile with AppleClang and test the native
-window, movement, combat and animated SPR loading. Run 42584845873 passed all
-13 checks and relocated, ad-hoc signed app packaging smoke:
-https://github.com/IllyaArtemchuk/dredmormac/actions/runs/42584845873
+window, movement, combat and animated SPR loading. Run 42590387752 passed all
+18 checks and relocated, ad-hoc signed app packaging smoke:
+https://github.com/IllyaArtemchuk/dredmormac/actions/runs/42590387752
 
 CI uses only synthetic assets. Its development app artifact contains no game
 files and is not a complete game release. Original-asset visual fidelity,

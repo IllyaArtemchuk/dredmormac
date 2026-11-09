@@ -381,3 +381,24 @@ session profile. Deprecated entries are retained in content but hidden by the
 picker. Prepared JSON keeps its explicit/default developer profile. New synthetic
 native checks click skill checkboxes and verify selection count/order plus Begin
 button enable/disable. Native execution of that picker check is pending.
+
+Run 42590387752 (261d1fb) passed all eighteen checks and relocated package smoke,
+including actual native skill checkbox interaction and Begin enablement.
+
+## Trap/toolkit type correction and port-save migration
+
+Further constructor recovery exposed an earlier metadata error: Toolkit::Toolkit
+at 0x1847da sets runtime kind 11; Trap::Trap at 0x108936 sets kind 12. Database
+registration and CreateItem dispatch agree. The port enum labels were reversed.
+The numeric belt-placement comparison had still passed because it selected kind
+12; the correctly named eligibility rule is now trap, not toolkit. Corrected the
+metadata mapping and re-ran all 3,840 original inventory operations / 57 slots,
+with zero mismatches. Typed tests now check trap-to-belt and toolkit-to-bag.
+
+Port save version three writes corrected type IDs. Version one/two readers use
+the old item-content fingerprint and translate legacy 11/12 IDs before validating
+against current definitions, retaining instance IDs, quantities and locations.
+An entirely synthetic v2 save was generated with the pre-correction serializer
+and retained as tests/fixtures/port-v2-item-types.xml; tests load/migrate it and
+roundtrip the resulting v3 state. No original save files or original assets are
+in that fixture. Actual native validation of this migration awaits the next run.

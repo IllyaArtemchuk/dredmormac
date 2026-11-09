@@ -31,7 +31,7 @@ Verified:
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
 - Nine local CTest groups pass, including deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42589757941 passed all eighteen checks, including
+- Actual macos-15 arm64 CI run 42590387752 passed all eighteen checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -77,8 +77,8 @@ complete starting item instantiation, auto-equip and abilities remain pending.
 
 Player passive abilities: 1,024 original full-function fixtures / 63,488 fields
 match with no equipment/buffs/polymorph and supplied string comparison boundary.
-Typed abilities and character_profile now feed sessions/equipment. Save v2 stores
-seven skills and ability content identity; v1 port saves still load. Local tests
+Typed abilities and character_profile now feed sessions/equipment. Save v3 stores
+seven skills and ability content identity; v1/v2 port saves still load. Local tests
 verify passive eligibility across equip/unequip and exact save/reload. Native
 integration CI passes. Weapon-specific abilities, active spells and effects
 remain incomplete.
@@ -86,4 +86,9 @@ remain incomplete.
 Native installation startup now offers an exactly-seven-skill picker, preserving
 database order and hiding deprecated entries. The selected IDs flow to class
 ranks, passive stats and saves. Prepared scenes retain explicit/default profiles
-for developer replay. Synthetic picker interaction is pending native execution.
+for developer replay. Synthetic picker interaction passes on actual native CI.
+
+Corrected swapped trap/toolkit metadata IDs from original constructors: toolkit
+11, trap 12. Numeric inventory kernel still matches all 3,840 original operations.
+Save v3 migrates v1/v2 IDs and fingerprints; a synthetic old-v2 fixture roundtrips
+through migration locally. Native migration verification is pending.

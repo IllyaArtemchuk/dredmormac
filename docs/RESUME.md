@@ -99,11 +99,20 @@ ability-gates.txt and skill-finalize.txt hold constructors and callback details.
 Session::character_profile sets selected skills/rules on fresh sessions, fills
 resources, and equipment rebuild recalculates base unarmed/shield eligibility.
 Weapon-family/archery/thrown ability rebuilding is still separate and missing.
-Save version 2 persists selected skills and ability fingerprint; load accepts v1.
+Save version 3 persists selected skills and ability fingerprint; load accepts v1/v2.
 Native load now passes item and ability rules. Synthetic native fixture includes
 a passive to exercise this path on the next CI push.
 
 SkillSelectionController.* is added. Normal installation startup opens a skill
 picker, requiring exactly seven and hiding deprecated skills. Smoke startup
 uses the deterministic fixture profile, then separately drives the actual picker
-checkboxes and validates count/order and Begin enablement. Pending next Mac run.
+checkboxes and validates count/order and Begin enablement. Passed run 42590387752.
+
+Trap/toolkit type correction: constructors prove toolkit=11, trap=12; old enum
+labels were reversed even though numeric inventory placement matched. Corrected
+belt eligibility name to trap and re-ran 3,840 original operations successfully.
+Save v3 loader computes legacy fingerprints and translates old IDs for v1/v2.
+Synthetic pre-correction v2 fixture verifies migration; native run pending.
+Private item-construction.txt has item registration, Item/Food/Misc constructors
+and CreateItem dispatch; toolkit-trap-types.txt has the type/stack constructors.
+Continue starting item creation/auto-equipping; no complete grant path exists yet.

@@ -6,7 +6,7 @@ namespace dredmor {
 namespace {
 bool belt_eligible(const InventoryItem& item) {
     return item.kind==ItemKind::food || item.kind==ItemKind::potion || item.kind==ItemKind::wand ||
-           item.kind==ItemKind::mushroom || item.kind==ItemKind::toolkit ||
+           item.kind==ItemKind::mushroom || item.kind==ItemKind::trap ||
            (item.kind==ItemKind::weapon && (item.weapon_type==5 || item.weapon_type==6));
 }
 }

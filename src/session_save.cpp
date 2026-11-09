@@ -48,7 +48,7 @@ template<class T,std::size_t N> std::array<T,N> array(const XmlNode& node) {
 template<class T,std::size_t N> void write_array(std::ostream& out,std::string_view tag,const std::array<T,N>& values) {
     out<<'<'<<tag<<'>';for (auto value:values) out<<value<<' ';out<<"</"<<tag<<">\n";
 }
-std::uint64_t signature(const std::shared_ptr<const std::vector<ItemDefinition>>& definitions) {
+std::uint64_t signature(const std::shared_ptr<const std::vector<ItemDefinition>>& definitions,bool legacy_types=false) {
     if (!definitions) return 0;
     std::uint64_t hash=14695981039346656037ull;
     auto add=[&](const std::string& text){for (unsigned char c:text) {hash^=c;hash*=1099511628211ull;}hash^=0;hash*=1099511628211ull;};
@@ -57,7 +57,9 @@ std::uint64_t signature(const std::shared_ptr<const std::vector<ItemDefinition>>
         for (const auto& c:n.children) node(c);
     };
     for (const auto& item:*definitions) {
-        add(item.name);add(std::to_string(static_cast<unsigned>(item.kind)));add(std::to_string(item.weapon_type));
+        auto kind=static_cast<unsigned>(item.kind);
+        if (legacy_types && (kind==11 || kind==12)) kind=23-kind;
+        add(item.name);add(std::to_string(kind));add(std::to_string(item.weapon_type));
         add(std::to_string(item.armour_type));add(std::to_string(item.armour_ac));
         for (auto n:item.modifiers.primary) add(std::to_string(n));
         for (auto n:item.modifiers.secondary) add(std::to_string(n));
@@ -119,7 +121,7 @@ InventoryItem read_item_instance(const XmlNode& node) {
 }
 }
 void Session::save(std::ostream& out) const {
-    out<<"<dredmor-session version=\"2\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
+    out<<"<dredmor-session version=\"3\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
        <<"\" content=\""<<signature(definitions_)<<"\">\n<room>"<<escape(world_.room_text())<<"</room>\n";
     write_actor(out,"player",player_);out<<"<enemies>\n";for (const auto& enemy:enemies_) write_actor(out,"enemy",enemy);out<<"</enemies>\n";
     out<<"<progress level=\""<<progression_.level<<"\" xp=\""<<progression_.experience<<"\" lifetime=\""<<progression_.lifetime_experience
@@ -149,8 +151,9 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     if (input.bad()) throw std::runtime_error("cannot read session save");
     const auto root=parse_xml(content,"session save");
     const auto version=attribute(root,"version");
-    if (root.tag!="dredmor-session" || (version!="1" && version!="2")) throw std::runtime_error("unsupported session save version");
-    if (attribute_number<std::uint64_t>(root,"content")!=signature(definitions)) throw std::runtime_error("save item content does not match loaded definitions");
+    if (root.tag!="dredmor-session" || (version!="1" && version!="2" && version!="3")) throw std::runtime_error("unsupported session save version");
+    const bool legacy_types=version!="3";
+    if (attribute_number<std::uint64_t>(root,"content")!=signature(definitions,legacy_types)) throw std::runtime_error("save item content does not match loaded definitions");
     const auto turn=attribute_number<std::uint64_t>(root,"turn");
     if (turn==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("saved turn counter exhausted");
     std::istringstream rows(child(root,"room").text);auto world=World::restore(rows,turn);auto player=read_actor(child(root,"player"));
@@ -179,6 +182,11 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     auto validate_item=[&](const XmlNode& node) {
         if (node.tag!="item") throw std::runtime_error("invalid saved item node");
         auto item=read_item_instance(node);
+        if (legacy_types) {
+            const auto kind=static_cast<std::uint32_t>(item.kind);
+            if (kind==11) item.kind=ItemKind::trap;
+            else if (kind==12) item.kind=ItemKind::toolkit;
+        }
         if (!items.insert(item.instance).second) throw std::runtime_error("duplicate saved item instance");
         if (session.definitions_ && (item.definition>=session.definitions_->size() || session.definitions_->at(item.definition).kind!=item.kind))
             throw std::runtime_error("saved item definition mismatch");
@@ -204,7 +212,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     session.ranks_=array<std::int32_t,3>(child(root,"ranks"));
     session.intrinsic_damage_=array<std::int32_t,16>(child(root,"intrinsic-damage"));
     session.intrinsic_resistance_=array<std::int32_t,16>(child(root,"intrinsic-resistance"));
-    if (version=="2") {
+    if (version!="1") {
         const auto& selected=child(root,"skills");
         const auto content=attribute_number<std::uint64_t>(selected,"content");
         if (content) {

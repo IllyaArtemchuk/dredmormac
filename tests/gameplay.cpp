@@ -37,6 +37,12 @@ int main() {
         check(item.can_equip(EquipmentSlot::head) && !item.can_equip(EquipmentSlot::chest));
         const auto meal=read_item(parse_xml("<item name='Fixture meal' special='1' debug='-2' level='3'><food hp='2' mp='4'/></item>"));
         check(meal.kind==ItemKind::food && meal.special && meal.debug && meal.food_hp==2 && meal.food_mp==4 && meal.level==3);
+        const auto trap=read_item(parse_xml("<item name='Fixture trap'><trap/></item>"));
+        const auto toolkit=read_item(parse_xml("<item name='Fixture toolkit'><toolkit/></item>"));
+        check(static_cast<unsigned>(trap.kind)==12 && static_cast<unsigned>(toolkit.kind)==11);
+        Inventory tools;
+        check(tools.insert({800,trap.kind,0,0,1,false}).position->location==InventoryLocation::belt);
+        check(tools.insert({801,toolkit.kind,1,0,1,true}).position->location==InventoryLocation::bag);
         DarwinRandom darwin(1);
         for (auto expected:{16807,282475249,1622650073,984943658,1144108930}) check(darwin.next()==expected);
         DarwinRandom bounded(1);check(bounded.bounded(0)==0 && bounded.state()==1);
