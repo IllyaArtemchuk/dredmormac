@@ -6,14 +6,32 @@ from pathlib import Path
 import subprocess
 import xml.etree.ElementTree as ET
 
+NUMERIC_MAPPING={' ':(0,0,0),'#':(2,0,0),'!':(2,0,4),'.':(1,0,0),'S':(1,0,0),'s':(1,0,0),
+                 'i':(1,0,0),'@':(1,0,2),'^':(1,0,3),'P':(2,0,1),'D':(6,0,0),'d':(6,1,0),
+                 'W':(7,0,0),'L':(8,0,0),'G':(9,0,0),'I':(10,0,0),'X':(15,0,0)}
+NUMERIC_MAPPING.update({str(i):(0,0,0) for i in range(1,10)})
+
+
+def numeric_rooms(path):
+    """Independent template inputs for bounded original geometry execution."""
+    rooms=[]
+    for room in ET.parse(path).getroot().findall('room'):
+        width,height=int(room.get('width')),int(room.get('height'));cells=[(0,0,0)]*(width*height)
+        for y,row in enumerate(room.findall('row')):
+            for x,symbol in enumerate(row.get('text','')[:width]):cells[y*width+x]=NUMERIC_MAPPING[symbol]
+        flags={}
+        for child in room:
+            if child.tag.lower()=='flags':flags.update({key.lower():int(value) for key,value in child.attrib.items()})
+        rooms.append(dict(w=width,h=height,min=flags.get('minlevel',0),max=flags.get('maxlevel',25),
+                          name=room.get('usefixedname',''),shop=int(bool(flags.get('shop',0))),zoo=int(bool(flags.get('zoo',0))),
+                          quest=int(bool(flags.get('quest',0))),unique=int(bool(flags.get('special',0))),god=int(bool(flags.get('digglegod',0))),cells=cells))
+    return rooms
+
 
 def verify(root,port,expansions=False):
     folders=['game']+(['expansion/game','expansion2/game','expansion3/game'] if expansions else [])
     expected=[];total_cells=0
-    mapping={' ':(0,0,0),'#':(2,0,0),'!':(2,0,4),'.':(1,0,0),'S':(1,0,0),'s':(1,0,0),
-             'i':(1,0,0),'@':(1,0,2),'^':(1,0,3),'P':(2,0,1),'D':(6,0,0),'d':(6,1,0),
-             'W':(7,0,0),'L':(8,0,0),'G':(9,0,0),'I':(10,0,0),'X':(15,0,0)}
-    mapping.update({str(i):(0,0,0) for i in range(1,10)})
+    mapping=NUMERIC_MAPPING
     for folder in folders:
         path=root/folder/'rooms.xml'
         if not path.exists(): continue

@@ -180,3 +180,20 @@ Full generation must call random naming per written room (3 MT decisions plus
 libc word picks) unless usefixedname is nonempty. Private generation-names-and-size
 and name-word-loader exports establish this. Next: geometry/FIFO placement loop,
 then original control-flow comparison before content population.
+
+Geometry comparison is now implemented in dungeon.cpp / verify_dungeon.py, with
+an explicit active template pool and optional resolved branch starters. 256
+synthetic cases / 339 attempts and 64 base supplied cases / 68 attempts match
+GenLevelContent1 (0x195bac) through BuildDoors entry (0x192d6e). Reports privately:
+dungeon-geometry.json and dungeon-base-geometry.json. Includes full cells, graph,
+room names, initial player and both RNG streams. Twelve local groups pass.
+The original retry retains special-wall bit 0x80 even in empty/new floor cells.
+Automatic starters at depth>0 need at least three doors; the current decompiler
+output omitted the counter's significance, but disassembly 0x196300..0x196316
+and real-template execution confirm it. Named branch starters/depth0 bypass it.
+write_template's final integer is depth (Level+0x64), renamed from branch.
+Resource guards are port policy and fail atomically. Template registration and
+branch configuration remain inputs. Private room-registration-and-doors.txt has
+EndElement 0x19bf20, LoadRoomTemplates 0x199ce0, BuildDoors 0x192d6e.
+Next: door construction/plans, then content/scripts/population; full level native
+play remains absent. New geometry native validation pending push.

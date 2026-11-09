@@ -538,3 +538,37 @@ and painting/statue/floor side effects are outside that comparison. GameContent
 loads the base name pools; room fixed-name overrides are retained and independently
 checked with all 346 templates. The fixed-name path will bypass random naming in
 generation. Eleven local test groups pass. Native validation awaits the next run.
+
+Run 42599302441 (b56f322) passed twenty native checks and package smoke.
+
+## Complete geometry control flow before door objects
+
+The independent execution harness now runs original GenLevelContent1 (0x195bac)
+until BuildDoors entry (0x192d6e), including actual placement, stamp, vector-growth
+helpers and name generation. Allocation (controlled zero-filled heap), strings,
+Darwin rand, branch configuration and branch discovery are supplied boundaries.
+It compares all numeric cells/room IDs/door and wall flags, ordered room records,
+adjacency, display names, depth-zero spawn, libc state and eight subsequent MT
+outputs. 256 synthetic cases / 339 attempts (43 rerolled cases), and 64 supplied
+base-template cases / 68 attempts (four rerolled), have zero mismatches across
+depths 0,1,3,6,8,9. Both short and normal generation thresholds are exercised.
+The supplied-template run uses independent XML-to-array conversion and the base
+word tables, not original XML registration. No assets are emitted or committed.
+
+Two observations materially corrected the first model: reset clears flag bits
+0..6 but preserves special-wall bit 0x80 across attempts, and automatic depth>0
+starters require at least three numeric door cells. The latter is visible in
+instructions 0x196300..0x196316 and real-content fixtures; the current decompiler
+output discarded the door count. Named branch starters bypass that requirement.
+FIFO candidate selection counts only eligible attempts, searches candidate doors
+row-major and appends newly stamped doors x-major. Failed heads become walls.
+Room naming follows each stamp's door RNG draws. Shop/unique/zoo/god limits and
+fixed-name RNG bypasses are covered. Water/lava/ice conversion depends on depth,
+not branch ID; the earlier stamp parameter name has been corrected.
+
+Geometry is a separate numeric model, not yet a Session World. Active template
+registration/branch starter resolution remain input boundaries; subsequent door
+objects, scripts, stairs, secret doors and population are not implemented here.
+Explicit candidate/room/retry budgets are port resource policy and fail without
+committing caller RNG state. Twelve local groups include original golden layouts,
+retry persistence, reciprocal graph constraints and atomic guard failures.

@@ -107,6 +107,13 @@ needs legacy macOS for full reference gameplay.
 
 ## GameFrame
 
+`dredmor-dungeon` is a developer fixture harness for seeded numeric geometry.
+The original comparison is `scripts/verify_dungeon.py ORIGINAL_BINARY
+build/dredmor-dungeon --out PRIVATE_REPORT.json`; add `--content DATA_ROOT` to
+exercise supplied base templates and word pools. It stops before door objects
+and population and does not create a playable level. Original reference files
+and reports must remain outside tracked source.
+
 Use one separate checkout of https://github.com/tanepiper/game-frame. Read its
 setup instructions, inspect scripts before running them, and keep its home and
 analysis project outside this repository. `scripts/gameframe.sh` uses the

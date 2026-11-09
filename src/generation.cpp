@@ -2,6 +2,21 @@
 #include <stdexcept>
 
 namespace dredmor {
+namespace {
+template<class Existing,class Incoming>
+bool scan(int width,int height,int room_width,int room_height,int x,int y,Existing existing,Incoming incoming) {
+    if (x<3 || y<3 || std::int64_t(x)+room_width>width-3 || std::int64_t(y)+room_height>height-3) return false;
+    for (int column=0;column<room_width;++column) for (int row=0;row<room_height;++row) {
+        const auto source=incoming(column,row),target=existing(x+column,y+row);
+        if (source && target && !(source==2 && target==2) && !(source==6 && target==6)) return false;
+    }
+    return true;
+}
+void validate_room(const RoomStamp& room) {
+    if (room.width<1 || room.height<1 || room.width>512 || room.height>512 || room.cells.size()!=std::size_t(room.width)*room.height)
+        throw std::invalid_argument("room stamp has invalid dimensions/cell count");
+}
+}
 TileGrid::TileGrid(int width,int height,std::vector<std::uint8_t> cells)
     :width_(width),height_(height),cells_(std::move(cells)) {
     if (width<1 || height<1 || width>512 || height>512 || cells_.size()!=std::size_t(width)*height)
@@ -12,22 +27,27 @@ std::uint8_t TileGrid::at(int x,int y) const {
     return cells_[std::size_t(y)*width_+x];
 }
 bool TileGrid::accepts(const TileGrid& room,int x,int y) const {
-    // Original reserves a three-cell margin, including void template cells.
-    if (x<3 || y<3 || std::int64_t(x)+room.width_>width_-3 || std::int64_t(y)+room.height_>height_-3)
-        return false;
-    for (int column=0;column<room.width_;++column) for (int row=0;row<room.height_;++row) {
-        const auto incoming=room.at(column,row),existing=at(x+column,y+row);
-        if (incoming && existing && !(incoming==2 && existing==2) && !(incoming==6 && existing==6))
-            return false;
-    }
-    return true;
+    return scan(width_,height_,room.width_,room.height_,x,y,[&](int a,int b){return at(a,b);},[&](int a,int b){return room.at(a,b);});
+}
+DungeonCell& DungeonLayout::at(int x,int y) {
+    if (x<0 || y<0 || x>=width_ || y>=height_) throw std::out_of_range("dungeon cell coordinate");
+    return cells_[std::size_t(y)*width_+x];
+}
+const DungeonCell& DungeonLayout::at(int x,int y) const {
+    if (x<0 || y<0 || x>=width_ || y>=height_) throw std::out_of_range("dungeon cell coordinate");
+    return cells_[std::size_t(y)*width_+x];
+}
+bool DungeonLayout::accepts(const RoomStamp& room,int x,int y) const {
+    validate_room(room);
+    return scan(width_,height_,room.width,room.height,x,y,[&](int a,int b){return at(a,b).kind;},
+        [&](int a,int b){return room.cells[std::size_t(b)*room.width+a].kind;});
 }
 DungeonLayout::DungeonLayout(int width,int height,std::vector<DungeonCell> cells)
     :width_(width),height_(height),cells_(std::move(cells)) {
     if (width<1 || height<1 || width>512 || height>512 || cells_.size()!=std::size_t(width)*height)
         throw std::invalid_argument("dungeon layout requires exact bounded dimensions");
 }
-void DungeonLayout::write_template(const RoomStamp& room,int x,int y,std::uint8_t room_id,int branch,Random& random) {
+void DungeonLayout::write_template(const RoomStamp& room,int x,int y,std::uint8_t room_id,int depth,Random& random) {
     if (room.width<1 || room.height<1 || room.width>512 || room.height>512 ||
         room.cells.size()!=std::size_t(room.width)*room.height || x<0 || y<0 ||
         std::int64_t(x)+room.width>width_ || std::int64_t(y)+room.height>height_)
@@ -44,9 +64,9 @@ void DungeonLayout::write_template(const RoomStamp& room,int x,int y,std::uint8_
             if (random.bounded(2)==0) cell.door_flags|=2;
         }
         if (cell.kind>=7 && cell.kind<=10) {
-            if (branch==8 || branch==9) cell.kind=8;
-            else if (branch==6) cell.kind=10;
-            else if (branch==3) cell.kind=7;
+            if (depth==8 || depth==9) cell.kind=8;
+            else if (depth==6) cell.kind=10;
+            else if (depth==3) cell.kind=7;
         }
         if (cell.kind==2 && source.wall_marker==4) cell.flags|=0x80;
         if (cell.kind==15) {cell.kind=1;cell.flags|=1;}

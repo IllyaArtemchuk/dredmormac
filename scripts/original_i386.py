@@ -36,6 +36,27 @@ class OriginalI386:
         try:return self.addresses[symbol]
         except KeyError:raise ValueError(f'original symbol missing: {symbol}') from None
 
+    def import_stubs(self):
+        """Mach-O indirect import stubs; no binding or emulation is performed."""
+        position=28;sections=[];indirect=None
+        for _ in range(struct.unpack_from('<I',self.data,16)[0]):
+            command,size=struct.unpack_from('<II',self.data,position)
+            if command==11:indirect=struct.unpack_from('<I',self.data,position+56)[0]
+            if command==1:
+                for index in range(struct.unpack_from('<I',self.data,position+48)[0]):
+                    section=position+56+index*68
+                    if struct.unpack_from('<I',self.data,section+56)[0]&255==8:
+                        sections.append(struct.unpack_from('<II',self.data,section+32)+struct.unpack_from('<II',self.data,section+60))
+            position+=size
+        if indirect is None:return {}
+        result={}
+        for address,size,start,step in sections:
+            if not step:continue
+            for index in range(size//step):
+                symbol=struct.unpack_from('<I',self.data,indirect+4*(start+index))[0]
+                if symbol<len(self.info['symbols']):result[address+index*step]=self.info['symbols'][symbol]['name']
+        return result
+
     def call(self, symbol, *args, floating=False, budget=200000):
         from unicorn.x86_const import UC_X86_REG_ESP, UC_X86_REG_EAX, UC_X86_REG_EIP
         address=self.address(symbol)

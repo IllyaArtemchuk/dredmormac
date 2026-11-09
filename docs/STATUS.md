@@ -122,3 +122,12 @@ Generator prerequisites: 1,080 original MT range selections / 9,720 outputs,
 match. Room-name pools and fixed overrides are available; singular/plural loader
 bug is preserved. Eleven local groups pass. Full generator integration remains
 pending; these new prerequisites await native CI.
+
+Room-name/RNG run 42599302441 passed all twenty native checks and packaging.
+Level geometry now matches 256 synthetic fixtures / 339 attempts and 64 supplied-
+base-template fixtures / 68 attempts across six depths. Comparison stops at the
+original BuildDoors entry and checks cells, flags, graph, names, spawn and both
+RNG streams. Retry wall flags and the three-door automatic starter requirement
+are preserved. Twelve local groups pass; this new geometry awaits native CI.
+Branch/template registration is an explicit input boundary. Door objects, room
+scripts, stairs, population and native full-level integration remain unfinished.

@@ -40,12 +40,15 @@ class DungeonLayout {
 public:
     DungeonLayout(int width,int height,std::vector<DungeonCell> cells);
     const std::vector<DungeonCell>& cells() const { return cells_; }
+    DungeonCell& at(int x,int y);
+    const DungeonCell& at(int x,int y) const;
+    bool accepts(const RoomStamp& room,int x,int y) const;
     const std::vector<Position>& new_doors() const { return doors_; }
     std::uint32_t floor_count() const { return floor_count_; }
     void floor_count(std::uint32_t value) { floor_count_=value; }
     // Original WriteTemplate cell loop only. Room naming, placed-room records,
     // counters outside this loop and subsequent content population are separate.
-    void write_template(const RoomStamp& room,int x,int y,std::uint8_t room_id,int branch,Random& random);
+    void write_template(const RoomStamp& room,int x,int y,std::uint8_t room_id,int depth,Random& random);
 private:
     int width_,height_;
     std::vector<DungeonCell> cells_;
