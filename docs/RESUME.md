@@ -399,3 +399,18 @@ constructors recording; compares selected definition/kind, count override, money
 libc/cache/nextMT8. Synthetic case tables only, not real registration. Sixteen local
 groups pass. Latest factory source awaits MacCI. Next: original registration
 metadata and tables, other selectors/artifacts, actual room population ordering.
+
+Simple-factory run42618377334 passed27 native checks/package. register_factory_item
+now implements end-callback544f0 tables, including non-special type6 bolt filtering,
+all weapons and other kinds, global alchemical entries even when mask0, and no
+append for converted records. verify_item_tables.py matches1,024 fixtures /
+32,759 entries with reserved vectors, conversion-stack and empty parent-stack
+inputs; complete original callback executes, empty weapon spell string. With
+--content independently verifies565 base items/66 reagents. GameContent base tables
+register mask7, confirmed startup immediate0xb7c82 beforecall0xb7c8a; ESIbase0xb69c1
+plus16798c gives game//itemDB.xml at21e34d. Other startup masks5/1/7 correspond to
+expansion/expansion2/expansion3 but conversion mutation is still absent, so expanded
+catalog table getter throws instead of guessing. Native ground_items now use named
+factory/tables; inventory fixture exercises this next CI push. Sixteen local groups
+pass. Next factory gaps: random weapon/armour selectors, artifact creation; then
+ordered room content/population and full-level native integration.

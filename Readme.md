@@ -142,3 +142,9 @@ build/dredmor-factory --out PRIVATE_REPORT.json`. It covers named/misc/currency,
 reagent/component, potion, wand, bolts and trap paths. Random weapon/armour and
 artifact generation remain incomplete and fail explicitly. Session loot creation
 retains constructor results and RNG across saves; full room population is pending.
+
+`dredmor-item-tables DATA_ROOT` emits ordered base registration tables. Compare
+synthetic original loader callbacks and supplied base ingestion with
+`scripts/verify_item_tables.py ORIGINAL_BINARY build/dredmor-item-tables
+--content DATA_ROOT --out PRIVATE_REPORT.json`. Base table registration is
+implemented; expansion conversion/merge behavior remains unfinished.

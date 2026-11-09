@@ -3,6 +3,29 @@
 #include <stdexcept>
 
 namespace dredmor {
+void register_factory_item(ItemFactoryTables& tables,std::uint32_t index,const ItemDefinition& definition,
+    std::uint32_t level_sets,bool converted) {
+    if (converted || definition.builtin_subtype>=0) return;
+    if (definition.alchemical) tables.reagents.push_back(index);
+    for (std::size_t set=0;set<4;++set) if (level_sets&(1U<<set)) {
+        tables.named[set].push_back(index);
+        switch (definition.kind) {
+        case ItemKind::weapon:
+            tables.weapons[set].push_back(index);
+            if (definition.weapon_type==6 && !definition.special) tables.bolts[set].push_back(index);
+            break;
+        case ItemKind::armour:tables.armour[set].push_back(index);break;
+        case ItemKind::potion:tables.potions[set].push_back(index);break;
+        case ItemKind::wand:tables.wands[set].push_back(index);break;
+        case ItemKind::food:tables.food[set].push_back(index);break;
+        case ItemKind::gem:tables.gems[set].push_back(index);break;
+        case ItemKind::mushroom:tables.mushrooms[set].push_back(index);break;
+        case ItemKind::toolkit:tables.toolkits[set].push_back(index);break;
+        case ItemKind::trap:tables.traps[set].push_back(index);break;
+        default:break;
+        }
+    }
+}
 namespace {
 bool needs_artifact(const ItemDefinition& definition) {
     if (definition.kind!=ItemKind::weapon && definition.kind!=ItemKind::armour) return false;

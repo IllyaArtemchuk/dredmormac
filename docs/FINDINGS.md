@@ -907,3 +907,28 @@ first matches, case, unknown types, ignored artifact flag on named items and bot
 currency routes. Sixteen local groups pass; session tests cover failure rollback,
 full-state save/reload of mixed future factories and currency autocollection.
 Wallet run42617482250 passed all26 native checks/package; factory MacCI pending.
+
+## Item registration tables
+
+Original startup0xb7c79 loads game//itemDB.xml,0xb7c82 sets argument7 and0xb7c8a
+calls itemDBLoad4f6a0. ESIbase0xb69c1 +16798c points to string21e34d. Subsequent
+expansion/expansion2/expansion3 calls pass5/1/7, respectively. This is instruction
+and string evidence, not a whole startup execution claim. Base items therefore
+register in sets0..2. The initial curDBLevelSets global value1 alone would have
+led to an incorrect base table; the startup caller overrides it.
+
+register_factory_item mirrors end callback544f0: global alchemical registration
+precedes masking, converted entries append nowhere, every selected set gets the
+named entry, traps/toolkits have separate tables, weapons always enter weapon
+tables and only non-special weapon type6 enters bolt tables. Armour/potion/wand/
+food/gem/mushroom tables retain order. Unrecognized types still enter named pools.
+verify_item_tables.py matches1,024 complete callback fixtures /32,759 item records
+across all eleven four-set tables plus reagent list. Controlled completed entries,
+mask/conversion stack and empty enclosing-item stack are inputs; vectors reserve
+capacity, weapon spell strings are empty, ASCII/string imports supplied. Parsing,
+conversion mutation and spell binding are excluded. All565 supplied base entries
+and66 reagents agree with independent XML ingestion. GameContent exposes these
+base tables; expanded catalogs reject table access until conversion is recovered.
+Native named developer ground items now use this path. Sixteen local groups pass;
+registration/native changes await MacCI. Factory run42618377334 passed27 checks
+and relocated packaged-app smoke on actual arm64 macOS.

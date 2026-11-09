@@ -229,3 +229,13 @@ sprite boundaries. Sixteen local groups pass, including mixed resumed factories
 and atomic failed placement. Registration tables remain explicit inputs. Random
 weapon/armour/artifact generation and complete room population are unfinished;
 those unsupported generators throw atomically. New factory source awaits Mac CI.
+
+Simple-factory run42618377334 passed native validation/package. Factory table
+registration now matches1,024 full original end-callback fixtures /32,759 completed
+items, including conversion skips, all eleven four-set tables and the global
+reagent list. Independent ingestion matches565 supplied base items /66 reagents.
+Base mask7 is traced at original startup0xb7c82/0xb7c8a; base registration populates
+sets0..2, leaving3 empty. GameContent exposes base tables; expansion tables remain
+explicitly unavailable until conversion/merging is implemented. Native developer
+named ground items now use the measured factory and tables. Sixteen local groups
+pass; this registration/native integration awaits MacCI.

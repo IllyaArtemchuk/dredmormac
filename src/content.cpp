@@ -147,13 +147,18 @@ World RoomDefinition::instantiate(bool custom_blockers) const {
 }
 GameContent GameContent::load(const std::filesystem::path& root,bool expansions) {
     GameContent content;content.catalog_=Catalog::load(root,expansions);
+    if (!expansions) content.item_factory_tables_.emplace();
     bool found_tweaks=false;
     for (const auto& database:content.catalog_.databases()) {
         if (database->layer=="base" && database->source.filename()=="text.xml") content.room_name_words_=read_room_name_words(database->root);
         if (database->layer=="base" && database->source.filename()=="tweakDB.xml") {content.tweaks_=Tweaks::read(database->root);found_tweaks=true;}
         for (const auto& node:database->root.children) {
             if (database->source.filename()=="skillDB.xml" && node.tag=="ability") content.abilities_.push_back(read_ability(node));
-            if (database->source.filename()=="itemDB.xml" && node.tag=="item") content.items_.push_back(read_item(node));
+            if (database->source.filename()=="itemDB.xml" && node.tag=="item") {
+                auto item=read_item(node);
+                if (content.item_factory_tables_) register_factory_item(*content.item_factory_tables_,static_cast<std::uint32_t>(content.items_.size()),item,7);
+                content.items_.push_back(std::move(item));
+            }
             if (database->source.filename()=="skillDB.xml" && node.tag=="skill") {
                 const auto category=node.attribute("type");
                 const auto value=category=="warrior"?0:category=="wizard"?1:category=="rogue"?2:-1;
@@ -186,6 +191,10 @@ GameContent GameContent::load(const std::filesystem::path& root,bool expansions)
     currency.name="Zorkmids";currency.icon="items/cash0.png";content.items_.push_back(std::move(currency));
     if (!found_tweaks) throw std::runtime_error("base tweakDB.xml is required");
     content.monsters_=load_monsters(content.catalog_);return content;
+}
+const ItemFactoryTables& GameContent::item_factory_tables() const {
+    if (!item_factory_tables_) throw std::runtime_error("expansion item registration is not implemented");
+    return *item_factory_tables_;
 }
 const RoomDefinition& GameContent::room(std::string_view name) const {
     const RoomDefinition* result=nullptr;

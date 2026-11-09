@@ -208,17 +208,15 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
                 ![value[@"x"] isKindOfClass:NSNumber.class] || ![value[@"y"] isKindOfClass:NSNumber.class])
                 throw std::runtime_error("developer ground items require content and valid positions");
             const std::string name=[value[@"name"] UTF8String];
-            std::optional<std::size_t> index;
-            for (std::size_t i=0;i<_content->items().size();++i) if (_content->items()[i].name==name) {
-                if (index) throw std::runtime_error("ambiguous developer ground item");index=i;
-            }
-            if (!index) throw std::runtime_error("developer ground item not found");
             std::int32_t quantity=1;
             if (value[@"quantity"]) {
                 if (![value[@"quantity"] isKindOfClass:NSNumber.class]) throw std::runtime_error("invalid ground quantity");
                 quantity=[value[@"quantity"] intValue];
             }
-            _session->create_ground_item(static_cast<std::uint32_t>(*index),{[value[@"x"] intValue],[value[@"y"] intValue]},quantity);
+            dredmor::ItemFactoryContext context;
+            if (name=="zorkmids") context.gold_per_level=_content->tweaks().integer(dredmor::Difficulty::medium,"gold drop per level");
+            if (!_session->create_ground_loot(_content->item_factory_tables(),context,"named",name,quantity,false,
+                {[value[@"x"] intValue],[value[@"y"] intValue]})) throw std::runtime_error("developer ground item not found");
         }
         if (scene[@"ground_currency"] && ![scene[@"ground_currency"] isKindOfClass:NSArray.class]) return nil;
         for (id value in scene[@"ground_currency"]) {

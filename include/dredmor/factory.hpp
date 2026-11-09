@@ -8,8 +8,13 @@ namespace dredmor {
 struct ItemFactoryTables {
     using Pool=std::vector<std::uint32_t>;
     std::array<Pool,4> named,potions,wands,bolts,traps;
+    std::array<Pool,4> weapons,armour,food,gems,mushrooms,toolkits;
     Pool reagents;
 };
+// Original end-of-item registration; converted entries update existing objects
+// and do not append. Only the low four level-set mask bits are observed.
+void register_factory_item(ItemFactoryTables& tables,std::uint32_t index,const ItemDefinition& definition,
+                           std::uint32_t level_sets,bool converted=false);
 struct ItemFactoryContext {
     std::size_t level_set=0;
     SpawnDepthContext depth;

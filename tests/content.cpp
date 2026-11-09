@@ -13,6 +13,9 @@ int main(int argc,char** argv) {
         check(world.width()==7 && world.height()==5 && !world.passable({3,2}));
         check(world.player().x==3 && world.player().y==1);
         check(content.starting_ranks({0,1,2,3,4,5,6})==dredmor::ClassRanks({3,2,2}));
+        const auto& tables=content.item_factory_tables();
+        check(tables.named[0].size()==4 && tables.named[0]==tables.named[1] && tables.named[0]==tables.named[2] && tables.named[3].empty());
+        check(tables.food[0]==std::vector<std::uint32_t>({1,2}) && tables.armour[0]==std::vector<std::uint32_t>({0,3}));
         const auto loadout=content.starting_loadout({6,5,4,3,2,1,0});
         const auto static_room=content.room("Starting Room").instantiate(),dynamic_room=content.room("Starting Room").instantiate(false);
         check(!static_room.passable({3,2}) && dynamic_room.passable({3,2}));
