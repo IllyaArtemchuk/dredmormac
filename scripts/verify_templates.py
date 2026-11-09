@@ -34,7 +34,9 @@ def verify(root,port,expansions=False):
                     key=key.lower()
                     if key in flags:flags[key]=int(value) if key in ('minlevel','maxlevel','roomset') else int(int(value)!=0)
             fields=[width,height]+[flags[key] for key in ('shop','zoo','minlevel','maxlevel','roomset','quest','special','digglegod','notraps','nomonsters','noblockers','notreasure')]
-            expected.append(' '.join(map(str,fields))+f' {fingerprint:x}')
+            fixed=14695981039346656037
+            for byte in room.get('usefixedname','').encode():fixed=((fixed^byte)*1099511628211)&0xffffffffffffffff
+            expected.append(' '.join(map(str,fields))+f' {fingerprint:x} {fixed:x}')
             total_cells+=len(cells)
     args=[str(port.resolve()),str(root)]+(['--expansions'] if expansions else [])
     actual=subprocess.check_output(args,text=True).splitlines()

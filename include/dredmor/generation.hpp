@@ -30,6 +30,7 @@ struct RoomStamp {
     std::vector<TemplateCell> cells;
     bool shop=false,zoo=false;
     RoomPlacementRules rules{};
+    std::string fixed_name;
 };
 struct DungeonCell {
     std::uint8_t kind=0,room_id=0,door_flags=0;

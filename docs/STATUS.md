@@ -30,8 +30,8 @@ Verified:
 - Room-placement collision: 69,632 original executions match.
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
-- Ten local CTest groups pass, including deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42596610606 passed all nineteen checks, including
+- Eleven local CTest groups pass, including deterministic session and save/load tests.
+- Actual macos-15 arm64 CI run 42597407998 passed all nineteen checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -116,3 +116,9 @@ Room child-flag ingestion is corrected and covers level bounds, sets, quest/
 unique/god/population flags. Independent comparison now checks all those fields
 across 346 templates. Whitespace in the supplied expansion loadout amount parses
 with original atoi-style prefix semantics. Full level generation remains pending.
+
+Generator prerequisites: 1,080 original MT range selections / 9,720 outputs,
+1,028 original names/both RNG streams, and 1,024 original name-word callbacks
+match. Room-name pools and fixed overrides are available; singular/plural loader
+bug is preserved. Eleven local groups pass. Full generator integration remains
+pending; these new prerequisites await native CI.

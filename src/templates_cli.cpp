@@ -11,11 +11,13 @@ int main(int argc,char** argv) {
             std::uint64_t hash=14695981039346656037ull;
             for (auto cell:room.cells) for (auto value:{cell.kind,cell.door_orientation,cell.wall_marker})
                 hash=(hash^value)*1099511628211ull;
+            std::uint64_t fixed_hash=14695981039346656037ull;
+            for (unsigned char value:room.fixed_name) fixed_hash=(fixed_hash^value)*1099511628211ull;
             const auto& rules=room.rules;
             std::cout<<room.width<<' '<<room.height<<' '<<room.shop<<' '<<room.zoo<<' '
                 <<rules.minimum_level<<' '<<rules.maximum_level<<' '<<rules.room_set<<' '
                 <<rules.quest<<' '<<rules.unique<<' '<<rules.diggle_god<<' '<<rules.no_traps<<' '
-                <<rules.no_monsters<<' '<<rules.no_blockers<<' '<<rules.no_treasure<<' '<<std::hex<<hash<<std::dec<<'\n';
+                <<rules.no_monsters<<' '<<rules.no_blockers<<' '<<rules.no_treasure<<' '<<std::hex<<hash<<' '<<fixed_hash<<std::dec<<'\n';
         }
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

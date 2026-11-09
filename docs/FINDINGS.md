@@ -511,3 +511,30 @@ decimal-prefix reader for original room/loadout integer attributes. Port save an
 CLI integer validation remain strict. Out-of-range source values saturate to
 int32 as a stated port policy; original overflow has not been executed. All ten
 local groups and corrected 346-template comparison pass.
+
+Run 42597407998 (f76d6d0) passed all nineteen checks and relocated package smoke
+with corrected child room flags and whitespace-compatible loadout numbers.
+
+## Room names and generator RNG
+
+Original inline MT range mapping [0x195f1a,0x195f4f) matches 1,080 cases / 9,720
+outputs, including the next eight raw draws. No imports are supplied. Mapping is
+division/rejection by floor(UINT_MAX/count), not modulo. Counts outside
+1..0x7ffffffe return zero without a draw; count one still draws/rejects UINT_MAX.
+Room stamping now reuses that helper and still matches all 1,024 original loops.
+
+GenRoomName (0xd3670) matches 1,028 full-function fixtures, comparing name,
+subject, libc state and next eight MT outputs. Only string storage/operations and
+the separately verified Darwin rand boundary are supplied. Three MT coin flips
+are always consumed: optional adjective, singular/plural architecture, and suffix.
+A suffix is forced when no adjective was selected, but the third coin still draws.
+Word picks consume the separate libc stream, including one-entry pools.
+
+The text XML callback (0xd0a20) matches 1,024 synthetic adjective/architecture/noun
+nodes with only ASCII/string library boundaries and preallocated vectors. This
+confirms a loader bug: architecturePluralDB receives the singular text despite
+reading the plural attribute. The replacement preserves it. Other text node types
+and painting/statue/floor side effects are outside that comparison. GameContent
+loads the base name pools; room fixed-name overrides are retained and independently
+checked with all 346 templates. The fixed-name path will bypass random naming in
+generation. Eleven local test groups pass. Native validation awaits the next run.

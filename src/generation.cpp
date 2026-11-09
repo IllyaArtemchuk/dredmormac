@@ -41,9 +41,7 @@ void DungeonLayout::write_template(const RoomStamp& room,int x,int y,std::uint8_
         if (cell.kind==1) ++floor_count_;
         if (cell.kind==6) {
             cell.door_flags=source.door_orientation!=1;
-            std::uint32_t draw;
-            do { draw=random.u32(); } while (draw>0xfffffffdU);
-            if (draw<0x7fffffffU) cell.door_flags|=2;
+            if (random.bounded(2)==0) cell.door_flags|=2;
         }
         if (cell.kind>=7 && cell.kind<=10) {
             if (branch==8 || branch==9) cell.kind=8;

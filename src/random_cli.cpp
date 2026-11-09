@@ -20,6 +20,10 @@ int main() {
                 for (auto& item:key) if (!(std::cin >> item)) throw std::runtime_error("missing key item");
                 random.seed(key);
             } else if (command == "u32") std::cout << random.u32() << '\n';
+            else if (command == "bounded") {
+                std::uint32_t count;if (!(std::cin>>count)) throw std::runtime_error("missing MT bound");
+                std::cout<<random.bounded(count)<<'\n';
+            }
             else if (command == "i31") std::cout << random.i31() << '\n';
             else {
                 double value;

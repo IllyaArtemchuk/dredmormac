@@ -16,6 +16,9 @@ int main() {
     try {
         check(legacy_integer(" \t+003tail")==3 && legacy_integer("-12.5")==-12 && legacy_integer("none")==0);
         check(legacy_integer("2147483648")==2147483647 && legacy_integer("-2147483649")==(-2147483647-1));
+        Random bounded(1),reference(1);
+        check(bounded.bounded(0)==0 && bounded.bounded(0xffffffffU)==0 && bounded.u32()==reference.u32());
+        check(bounded.bounded(1)==0);reference.u32();check(bounded.u32()==reference.u32());
         check(dredmor::derive_primary({3,2,2}) == dredmor::PrimaryStats({10,9,9,12,12,11}));
         auto stats=dredmor::derive_secondary({10,10,10,10,10,10});
         check(stats[0]==20 && stats[1]==20 && stats[2]==1 && stats[3]==5);

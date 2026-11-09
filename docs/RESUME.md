@@ -168,3 +168,15 @@ doors become wall; generation retries whole layout unless non-shop rooms >15
 and floorCount>2999 (short game >10 / >799). Need preserve GenRoomName RNG too.
 New private generation-names-and-size.txt exports GenRoomName (0xd3670) and
 GenLevelContent (0x65c80); headless log work/generation-names-and-size.log.
+
+Room-rule run 42597407998 passed nineteen checks + package smoke.
+Generator prerequisites added: Random::bounded matches original inline range
+selection in 1,080 fixtures / 9,720 outputs with no stubs. Room stamp coin refactor
+still matches 1,024. names.cpp matches 1,028 full GenRoomName calls and both RNG
+states. read_room_name_words matches 1,024 original text callback nodes, including
+architecturePluralDB's singular-copy bug. Base pools are in GameContent; fixed
+room names retained. Eleven local groups pass; native run pending.
+Full generation must call random naming per written room (3 MT decisions plus
+libc word picks) unless usefixedname is nonempty. Private generation-names-and-size
+and name-word-loader exports establish this. Next: geometry/FIFO placement loop,
+then original control-flow comparison before content population.

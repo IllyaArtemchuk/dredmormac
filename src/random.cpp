@@ -52,6 +52,12 @@ double Random::real53() {
     const auto b=u32() >> 6;
     return (a*67108864.0+b) * (1.0/9007199254740992.0);
 }
+std::uint32_t Random::bounded(std::uint32_t count) {
+    if (count-1U>=0x7ffffffeU) return 0;
+    const auto divisor=0xffffffffU/count;std::uint32_t choice;
+    do {choice=u32()/divisor;} while (choice>=count);
+    return choice;
+}
 std::int32_t DarwinRandom::next() {
     if (state_==0) state_=123459876;
     state_=static_cast<std::uint32_t>((std::uint64_t(state_)*16807u)%2147483647u);

@@ -15,6 +15,8 @@ public:
     void seed(std::uint32_t value);
     void seed(const std::vector<std::uint32_t>& key);
     std::uint32_t u32();
+    // Original MT division/rejection mapping used by level/name generation.
+    std::uint32_t bounded(std::uint32_t count);
     std::int32_t i31() { return static_cast<std::int32_t>(u32() >> 1); }
     double real_closed() { return u32() * (1.0 / 4294967295.0); }
     double real_half_open() { return u32() * (1.0 / 4294967296.0); }

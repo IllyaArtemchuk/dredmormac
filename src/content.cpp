@@ -24,6 +24,7 @@ RoomStamp RoomDefinition::numeric_template() const {
     if (!width || !height || *width<1 || *height<1 || *width>512 || *height>512 || rows.size()>std::size_t(*height))
         throw std::runtime_error("invalid declared room dimensions: "+name);
     RoomStamp result;result.width=*width;result.height=*height;
+    for (const auto& attribute:source.attributes) if (ascii_lower(attribute.first)=="usefixedname") result.fixed_name=attribute.second;
     for (const auto& node:source.children) if (ascii_lower(node.tag)=="flags") {
         auto flag=[&](std::string_view name,bool& target){if (const auto value=legacy_attribute(node,name)) target=*value!=0;};
         auto integer=[&](std::string_view name,int& target){if (const auto value=legacy_attribute(node,name)) target=*value;};
@@ -97,6 +98,7 @@ GameContent GameContent::load(const std::filesystem::path& root,bool expansions)
     GameContent content;content.catalog_=Catalog::load(root,expansions);
     bool found_tweaks=false;
     for (const auto& database:content.catalog_.databases()) {
+        if (database->layer=="base" && database->source.filename()=="text.xml") content.room_name_words_=read_room_name_words(database->root);
         if (database->layer=="base" && database->source.filename()=="tweakDB.xml") {content.tweaks_=Tweaks::read(database->root);found_tweaks=true;}
         for (const auto& node:database->root.children) {
             if (database->source.filename()=="skillDB.xml" && node.tag=="ability") content.abilities_.push_back(read_ability(node));

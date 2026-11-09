@@ -3,6 +3,7 @@
 #include "dredmor/session.hpp"
 #include "dredmor/generation.hpp"
 #include "dredmor/abilities.hpp"
+#include "dredmor/names.hpp"
 
 namespace dredmor {
 struct SkillLoadout { std::string type,subtype;int amount=1;bool always=false; };
@@ -29,6 +30,7 @@ public:
     const RoomDefinition& room(std::string_view name) const;
     const MonsterDefinition& monster(std::string_view name) const;
     const Tweaks& tweaks() const { return tweaks_; }
+    const RoomNameWords& room_name_words() const { return room_name_words_; }
     Actor make_monster(std::string_view name,Position position,Difficulty difficulty,int dungeon_level=0) const;
     ClassRanks starting_ranks(const std::vector<int>& skill_ids) const;
     std::vector<StartingLoadout> starting_loadout(const std::vector<int>& skill_ids) const;
@@ -40,5 +42,6 @@ private:
     std::vector<AbilityDefinition> abilities_;
     std::vector<RoomDefinition> rooms_;
     Tweaks tweaks_;
+    RoomNameWords room_name_words_;
 };
 }
