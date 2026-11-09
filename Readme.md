@@ -5,7 +5,7 @@ analysis foundation and provisional room preview, **not a complete game**.
 Original game files are required and are never distributed with the source.
 
 The portable C++17 core runs deterministic room replays. A native AppKit target
-loads an original tileset and an exported original hero sprite. The distance
+loads an original tileset and animated SPR hero/monster sprites directly. The distance
 routine has been checked against 8,200 executions of the supplied i386 binary.
 The RNG matches 28,550 original outputs, including exact double bits. Base stat
 derivation matches 2,568 original code-fragment runs; the entire character
@@ -80,16 +80,20 @@ build/macos-arm64/DredmorMac.app/Contents/MacOS/DredmorMac \
   '/private/derived/starting-room/scene.json'
 ```
 
-Arrow keys move; `.` waits. Closing the window quits. This target is written but
-has **not been compiled or smoke-tested on a Mac**. No SDK cross-compilation,
-signing, notarization or full-game compatibility is claimed. The original
-32-bit app needs a legacy macOS environment for full reference gameplay.
+Arrow keys move or attack; `.` waits. Command-S saves the current port session;
+Command-O loads a port save for the same prepared room. Malformed saves fail
+before replacing the current state. These saves are not original .sav files.
+Closing the window quits. The UI remains a developer room/encounter view.
 
-The branch/manual `Native arm64 macOS validation` GitHub Actions workflow targets the
-standard macos-15 arm64 runner. It builds the app and exercises a synthetic
-window/draw/move/wait test with no original game files. Its first run is pending.
-Passing it would verify the native
-foundation, not full-game fidelity or testing with original assets.
+Actual standard macos-15 arm64 runs compile with AppleClang and test the native
+window, movement, combat and animated SPR loading. Run 42584845873 passed all
+13 checks and relocated, ad-hoc signed app packaging smoke:
+https://github.com/IllyaArtemchuk/dredmormac/actions/runs/42584845873
+
+CI uses only synthetic assets. Its development app artifact contains no game
+files and is not a complete game release. Original-asset visual fidelity,
+notarization and full-game compatibility remain pending. The original i386 app
+needs legacy macOS for full reference gameplay.
 
 ## GameFrame
 

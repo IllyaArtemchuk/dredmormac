@@ -28,12 +28,12 @@ Verified:
 - Monster scaling: 2,048 original full-function fixtures / 61,440 fields match.
 - XP table: all 350 original thresholds in seven input configurations match.
 - Eight local CTest groups pass, including deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42583263923 passed all twelve checks, including
+- Actual macos-15 arm64 CI run 42584845873 passed all thirteen checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
   expansion. Index-zero transparency and animation scheduling need original
-  visual comparison. Renderer uses all frames; synthetic animation CI is pending.
+  visual comparison. Renderer uses all frames; synthetic animation CI passes.
 - Ghidra successfully imported/analyzed the game; reproducible targeted exports.
 - Original Starting Room and hero SPR prepare successfully from supplied data.
 - Embedded startup version 1.1.4 traced through the formatter's actual arguments.
@@ -52,7 +52,8 @@ Blockers and limits:
 
 Current work: native scene renderer is connected to the turn session and original
 content definitions. Combat-window CI and portable development app packaging pass.
-Adding direct SPR animation and native save/load controls.
+Direct SPR animation passes Mac CI. Native save/load controls and atomic reload
+checks are added and awaiting the next native run.
 DoRandomize and seed flow are identified; decision/arithmetic combat rules are
 compared, while complete DoCombat/triggers and original HP/death side-effect
 comparisons remain unfinished. Session HP/death behavior exists but is not yet

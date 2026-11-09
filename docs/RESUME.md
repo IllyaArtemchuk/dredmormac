@@ -53,11 +53,12 @@ Modern macOS cannot run the original i386 game, so native port testing and
 original gameplay capture may require different machines.
 
 `.github/workflows/native-macos.yml` runs on implementation-branch pushes and
-workflow_dispatch. Actual run 42583263923 passed all twelve checks on standard
+workflow_dispatch. Actual run 42584845873 passed all thirteen checks on standard
 macos-15 arm64, including native combat and relocated/ad-hoc-signed package smoke.
 The development app artifact contains no original assets. Direct animated SPR
 loading now has local decoder tests and 698-file/3,633-frame palette comparisons;
-its new native synthetic animation smoke awaits the next push. Original asset
+its native synthetic animation smoke passes. Save/Load menu controls are added;
+their native atomic roundtrip smoke awaits the next push. Original asset
 visual comparison and full original gameplay parity remain pending.
 
 Continue from the ordered tasks. Source has no selected distribution license;

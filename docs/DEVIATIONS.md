@@ -12,15 +12,18 @@
   Conditional decorations, entities, scripts and their graphics are absent.
 - Preview spawn is the passable cell nearest the room center, not a recovered
   spawn policy. Wall and floor atlas crops are fixed, without adjacency rules.
-- SPR exporter uses only the first frame, assumes transparent palette index 0,
-  and rejects transparency trailers. Animation is not implemented.
+- Native SPR loading decodes all frames and assumes transparent palette index 0.
+  The renderer loops frame delays on a separate presentation clock; original
+  scheduling and alpha still need visual comparison. The PNG exporter retains
+  its first-frame fallback and rejects unsupported layouts/trailers.
 - AppKit frontend compiles and runs on actual arm64 macOS CI; its synthetic
   window/input smoke passes. Original-asset visual fidelity and full gameplay
   validation remain pending. The UI remains a room/encounter view, not original UI.
 - Distance routine matches sampled original i386 execution, including wraparound.
   Unusual floating-point rounding modes have not been compared.
-- RNG interfaces match sampled original outputs and double bits. Seed flow across
-  the full game and the separate macOS libc rand() stream are not yet implemented.
+- RNG interfaces match sampled original outputs and double bits. Separate Darwin
+  libc rand() stream matches 36,864 actual Mac outputs. DoRandomize startup seed
+  flow is identified; full-game seed/consumption parity remains pending.
 - Class-rank primary and secondary stats match original controlled fixtures.
   Basic equipment aggregation exists; complete abilities, artifacts, encrusting,
   dual-wield, buffs and polymorph aggregation remain incomplete/unverified.
@@ -32,5 +35,7 @@
   are not supported. Malformed item integer strings are rejected more strictly
   than original atoi. These edge policies are not original parity claims.
 - Session XML saves are port-specific and not compatible with original saves.
+  Native Save/Load controls operate on the current prepared room. Cross-room
+  rendering and original load/menu UI remain incomplete.
 - Embedded startup patch version is 1.1.4; additional suffix/mod state and
   expansion parity are unresolved. No parity claim.

@@ -26,6 +26,7 @@
 12. [ ] Generation/progression/death/saves: compare seeded levels and roundtrip
     original-compatible saves; malformed saves fail without partial mutation.
 13. [ ] Remaining base-game UI/audio/systems, then separately scoped expansions.
-14. [ ] Mac: build arm64 app on an actual Mac, verify architecture, launch scene,
-    exercise movement/quit, record OS/toolchain, screenshot and observed results.
-    Signing/distribution packaging and complete-game smoke tests follow.
+14. [ ] Mac: actual arm64 builds, native window/movement/combat/animation checks
+    and ad-hoc signed portable development packaging pass. Original-asset visual
+    comparison, screenshots, distribution signing/notarization and complete-game
+    smoke remain pending.

@@ -257,3 +257,11 @@ Index zero is assumed transparent; original visual comparison remains pending.
 Native rendering selects frames with a presentation clock independent of session
 turn/RNG state. This timing policy is provisional, not original engine parity.
 Reproduce using scripts/compare-sprites.py DATA_ROOT --report PRIVATE_REPORT.
+
+Run 42584845873 (f750d1b) passed all thirteen checks and relocated package smoke
+with synthetic multiframe SPR assets in both movement and combat windows. Native
+Save/Load actions now call the session serializer, use atomic file writes, and
+validate the room plus all actor image resources before swapping loaded state.
+New native smoke saves, advances a turn, reloads, compares full serialized state,
+and checks that malformed input leaves the state unchanged. This new check
+awaits native execution; original saves and cross-room rendering remain absent.

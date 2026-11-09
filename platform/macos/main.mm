@@ -50,6 +50,7 @@
 @interface RoomView : NSView {
     std::unique_ptr<dredmor::Session> _session;
     std::unique_ptr<dredmor::GameContent> _content;
+    std::filesystem::path _dataRoot;
     NSArray<NSString*> *_rows;
     NSImage *_atlas;
     SpriteImage *_hero;
@@ -62,6 +63,11 @@
 - (NSString*)snapshot;
 - (BOOL)hasLivingEnemies;
 - (BOOL)hasAnimatedHero;
+- (void)saveToURL:(NSURL*)url;
+- (void)loadFromURL:(NSURL*)url;
+- (BOOL)smokeSaveLoad;
+- (void)saveDocument:(id)sender;
+- (void)openDocument:(id)sender;
 @end
 
 @implementation RoomView
@@ -73,6 +79,7 @@
         dredmor::ClassRanks ranks={3,2,2};
         int experience=190;
         if ([scene[@"data_root"] isKindOfClass:NSString.class]) {
+            _dataRoot=std::filesystem::canonical([scene[@"data_root"] UTF8String]);
             _content=std::make_unique<dredmor::GameContent>(dredmor::GameContent::load([scene[@"data_root"] UTF8String]));
             std::vector<int> selected;
             if ([scene[@"skills"] isKindOfClass:NSArray.class]) {
@@ -143,6 +150,84 @@
     return NO;
 }
 - (BOOL)hasAnimatedHero { return [_hero frameAt:0]!=[_hero frameAt:100]; }
+- (void)saveToURL:(NSURL*)url {
+    std::ostringstream output;_session->save(output);
+    const auto bytes=output.str();
+    NSData *data=[NSData dataWithBytes:bytes.data() length:bytes.size()];
+    NSError *error=nil;
+    if (![data writeToURL:url options:NSDataWritingAtomic error:&error])
+        throw std::runtime_error(error.localizedDescription.UTF8String?:"cannot write save");
+}
+- (void)loadFromURL:(NSURL*)url {
+    NSError *error=nil;NSNumber *size=nil;
+    if (![url getResourceValue:&size forKey:NSURLFileSizeKey error:&error] || size.unsignedLongLongValue>64*1024*1024)
+        throw std::runtime_error("cannot read save or save exceeds 64 MiB limit");
+    NSData *data=[NSData dataWithContentsOfURL:url options:0 error:&error];
+    if (!data) throw std::runtime_error(error.localizedDescription.UTF8String?:"cannot read save");
+    std::string bytes(static_cast<const char*>(data.bytes),data.length);std::istringstream input(bytes);
+    auto definitions=_content?std::make_shared<const std::vector<dredmor::ItemDefinition>>(_content->items()):nullptr;
+    auto loaded=std::make_unique<dredmor::Session>(dredmor::Session::load(input,definitions));
+    // Current renderer supports a single prepared room. Reject another layout
+    // before replacing either the session or its images.
+    const auto& old=_session->world();const auto& world=loaded->world();
+    if (old.width()!=world.width() || old.height()!=world.height())
+        throw std::runtime_error("open the save's prepared room before loading this file");
+    for (int y=0;y<old.height();++y) for (int x=0;x<old.width();++x)
+        if (old.tile(x,y)!=world.tile(x,y)) throw std::runtime_error("save belongs to another room layout");
+    NSMutableDictionary<NSNumber*,SpriteImage*> *images=[NSMutableDictionary dictionary];
+    for (const auto& enemy:loaded->enemies()) {
+        if (_content) {
+            const auto definition=_content->make_monster(enemy.name,enemy.position,dredmor::Difficulty::medium);
+            if (definition.sprite.empty()) throw std::runtime_error("saved monster has no idle sprite");
+            const auto path=std::filesystem::canonical(_dataRoot/definition.sprite);
+            const auto relative=path.lexically_relative(_dataRoot);
+            if (relative.empty() || *relative.begin()=="..") throw std::runtime_error("monster sprite escapes data root");
+            images[@(enemy.id)]=[[SpriteImage alloc] initWithPath:[NSString stringWithUTF8String:path.c_str()]];
+        } else {
+            SpriteImage *image=_enemyImages[@(enemy.id)];
+            if (!image) throw std::runtime_error("saved actor image is unavailable in this scene");
+            images[@(enemy.id)]=image;
+        }
+    }
+    _session=std::move(loaded);_enemyImages=images;self.needsDisplay=YES;
+}
+- (void)showFailure:(const std::exception&)error {
+    NSAlert *alert=[NSAlert new];alert.messageText=@"Cannot complete file operation";
+    alert.informativeText=[NSString stringWithUTF8String:error.what()];[alert runModal];
+}
+- (void)saveDocument:(id)sender {
+    NSSavePanel *panel=[NSSavePanel savePanel];panel.allowedFileTypes=@[@"dredmor-save"];
+    panel.nameFieldStringValue=@"Encounter.dredmor-save";
+    panel.message=@"Save this port's session. Original game saves use a different format.";
+    if ([panel runModal]!=NSModalResponseOK) return;
+    try { [self saveToURL:panel.URL]; } catch (const std::exception& error) { [self showFailure:error]; }
+}
+- (void)openDocument:(id)sender {
+    NSOpenPanel *panel=[NSOpenPanel openPanel];panel.allowedFileTypes=@[@"dredmor-save"];
+    panel.allowsMultipleSelection=NO;panel.canChooseDirectories=NO;
+    panel.message=@"Load a port session for the currently prepared room.";
+    if ([panel runModal]!=NSModalResponseOK) return;
+    try { [self loadFromURL:panel.URL]; } catch (const std::exception& error) { [self showFailure:error]; }
+}
+- (BOOL)smokeSaveLoad {
+    NSURL *url=[NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:
+        [NSUUID.UUID.UUIDString stringByAppendingString:@".dredmor-save"]]];
+    try {
+        std::ostringstream before;_session->save(before);
+        [self saveToURL:url];_session->step(dredmor::Action::wait);[self loadFromURL:url];
+        std::ostringstream after;_session->save(after);
+        if (before.str()!=after.str()) throw std::runtime_error("native save/load changed session state");
+        [@"invalid save" writeToURL:url atomically:YES encoding:NSUTF8StringEncoding error:nullptr];
+        bool rejected=false;
+        try { [self loadFromURL:url]; } catch (const std::exception&) { rejected=true; }
+        std::ostringstream unchanged;_session->save(unchanged);
+        [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];
+        return rejected && before.str()==unchanged.str();
+    } catch (const std::exception& error) {
+        fprintf(stderr,"native save/load failed: %s\n",error.what());
+        [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];return NO;
+    }
+}
 - (void)keyDown:(NSEvent*)event {
     using dredmor::Action;
     Action action;
@@ -189,7 +274,7 @@
     [hero drawInRect:NSMakeRect(20+(p.x-.5)*cell,20+(p.y-1)*cell,cell*2,cell*2)
              fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1
        respectFlipped:YES hints:nil];
-    NSString *status=[NSString stringWithFormat:@"Turn %llu · HP %d/%d · Mana %d/%d\nArrow keys move or attack · . waits%@",
+    NSString *status=[NSString stringWithFormat:@"Turn %llu · HP %d/%d · Mana %d/%d\nArrows move/attack · . waits · ⌘S saves · ⌘O loads%@",
                        (unsigned long long)world.turn(),_session->player().health,_session->player().secondary[0],
                        _session->player().mana,_session->player().secondary[1],_session->player().alive()?@"":@" · You have died"];
     [status drawAtPoint:NSMakePoint(20,self.bounds.size.height-55)
@@ -223,6 +308,16 @@ int main(int argc,const char**argv) {
         try { view=[[RoomView alloc] initWithScene:scene]; }
         catch (const std::exception& e) { fprintf(stderr,"%s\n",e.what()); return 1; }
         if (!view) { fprintf(stderr,"Cannot load scene images\n"); return 1; }
+        NSMenu *menu=[NSMenu new];
+        NSMenuItem *appMenuItem=[NSMenuItem new];[menu addItem:appMenuItem];
+        NSMenu *appMenu=[[NSMenu alloc] initWithTitle:@"DredmorMac"];
+        [appMenu addItemWithTitle:@"Quit DredmorMac" action:@selector(terminate:) keyEquivalent:@"q"];
+        appMenuItem.submenu=appMenu;
+        NSMenuItem *fileMenuItem=[NSMenuItem new];[menu addItem:fileMenuItem];
+        NSMenu *fileMenu=[[NSMenu alloc] initWithTitle:@"File"];
+        NSMenuItem *open=[fileMenu addItemWithTitle:@"Load Session…" action:@selector(openDocument:) keyEquivalent:@"o"];
+        NSMenuItem *save=[fileMenu addItemWithTitle:@"Save Session…" action:@selector(saveDocument:) keyEquivalent:@"s"];
+        open.target=view;save.target=view;fileMenuItem.submenu=fileMenu;app.mainMenu=menu;
         static AppDelegate *delegate;
         delegate=[AppDelegate new]; app.delegate=delegate;
         delegate.window=[[NSWindow alloc] initWithContentRect:view.frame
@@ -246,10 +341,10 @@ int main(int argc,const char**argv) {
                 [view keyDown:right]; [view keyDown:wait]; [view displayIfNeeded];
                 NSString *expected=[scene[@"smoke_expected"] isKindOfClass:NSString.class]?scene[@"smoke_expected"]:@"{\"turn\":2,\"x\":2,\"y\":1}";
                 if (![[view snapshot] isEqualToString:expected] || ([scene[@"smoke_combat"] boolValue] && [view hasLivingEnemies]) ||
-                    ([scene[@"smoke_animation"] boolValue] && ![view hasAnimatedHero])) {
+                    ([scene[@"smoke_animation"] boolValue] && ![view hasAnimatedHero]) || ![view smokeSaveLoad]) {
                     fprintf(stderr,"native smoke failed: %s\n",[[view snapshot] UTF8String]); std::exit(1);
                 }
-                puts("native smoke: window, animated SPR, draw, movement and wait passed");
+                puts("native smoke: animated SPR, draw, movement, combat and atomic save/load passed");
                 [app terminate:nil];
             });
         }
