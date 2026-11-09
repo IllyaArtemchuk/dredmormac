@@ -20,15 +20,16 @@ int main() {
             if (!(std::cin>>std::quoted(spell.type)>>player_caster>>origin.x>>origin.y>>target.x>>target.y>>allow>>count) || count>10000) throw std::invalid_argument("invalid cast fixture");
             auto player=actor(1),monster=actor(2);monster.position={4,5};
             for (std::size_t i=0;i<count;++i) {
-                dredmor::SpellEffectDefinition effect;
-                if (!(std::cin>>effect.percent>>effect.affects_caster>>effect.primary_scale>>effect.secondary_scale>>effect.unblockable)) throw std::invalid_argument("invalid cast effect");
+                dredmor::SpellEffectDefinition effect;std::uint32_t amount_scale;
+                if (!(std::cin>>std::quoted(effect.type)>>effect.amount>>amount_scale>>effect.percent>>effect.affects_caster>>effect.primary_scale>>effect.secondary_scale>>effect.unblockable)) throw std::invalid_argument("invalid cast effect");
+                std::memcpy(&effect.amount_scale,&amount_scale,4);
                 for (auto& n:effect.damage) if (!(std::cin>>n)) throw std::invalid_argument("missing spell damage");
                 for (auto& n:effect.scaling) {std::uint32_t bits;if (!(std::cin>>bits)) throw std::invalid_argument("missing spell scaling");std::memcpy(&n,&bits,4);}
                 spell.effects.push_back(std::move(effect));
             }
             std::istringstream rows("#########\n#.......#\n#.......#\n#.......#\n#...@...#\n#.......#\n#.......#\n#.......#\n#########\n");
             dredmor::Session session(dredmor::World::read(rows),player,seed);session.spawn_enemy(monster);
-            const auto accepted=session.cast_damage_spell(spell,origin,target,player_caster?1:2,allow);
+            const auto accepted=session.cast_spell(spell,origin,target,player_caster?1:2,allow);
             std::cout<<accepted<<' '<<session.player().health<<' '<<session.enemies()[0].health;
             std::size_t events=0;for (const auto& event:session.events()) if (event.kind==dredmor::EventKind::spell_damage) ++events;
             std::cout<<' '<<events;

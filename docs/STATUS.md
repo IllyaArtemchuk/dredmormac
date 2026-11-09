@@ -515,3 +515,19 @@ charges2→1→0, origin(1,2). Full22 local groups pass with new activation/terr
 profile-migration/rollback tests; current integration awaits MacCI. Complete spell
 families/buffs, disarm UI, actual spell VFX/audio, horde/element population and
 full-level play remain unfinished. Next: validate MacCI while extending effects.
+
+Heal effects now execute with measured ApplyEffectAt behavior: currentHP<1 is
+unchanged; amount adds with signed32 wrap; amountF contributes only when positive,
+using the chosen scaling attribute and float conversion; only an upper maxHP clamp
+is applied in the original. resolve_healing matches4096 actual heal branches,
+including float/nonfinite/signed edge cases. Session cast_spell now handles mixed
+damage+heal, emits spell_heal events, and rejects negative resulting HP atomically
+because current save/actor invariants do not support that pathological state.
+verify_spell_cast.py now matches4096 mixed actual DoActualSpellLoop→ApplyEffectAt
+casts, combining original heal HP changes and supplied damage HP delivery; primary/
+secondary scaling, chance gates, targeting and libc state remain covered. Existing
+22 local groups pass. Full effect families/buffs/recursion, original damage HP/death
+side effects and original whole-game scheduling remain incomplete.
+Native trap run42645003384 failed an opaque smoke assertion despite the equivalent
+portable movement probe passing. d2930ad adds stage/state diagnostics; rerun
+42646040605 is inprogress. This is being fixed; no native-trap success is claimed.

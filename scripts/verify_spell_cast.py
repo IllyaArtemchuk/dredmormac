@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Original basic damage cast through actual target/effect/damage dispatch."""
+"""Original mixed damage/heal casts through actual target/effect dispatch."""
 import argparse
 import hashlib
 import json
@@ -56,10 +56,11 @@ class Cast(SpellDamage):
         spell=self.allocate(0x200);self.write(spell+0x18,{'self':0,'adjacent':2,'target':8,'targetfloor':9}[kind])
         self.string(spell+0x138,'');self.string(spell+0x13c,'')
         array=self.allocate(max(4,len(effects)*0x11c))
-        for index,(percent,affects,primary,secondary,unblockable,damage,scaling) in enumerate(effects):
-            effect=array+index*0x11c;self.original.call('__ZN11spellEffectC2Ev',effect);self.write(effect,0)
+        for index,(effect_kind,amount,amount_scale,percent,affects,primary,secondary,unblockable,damage,scaling) in enumerate(effects):
+            effect=array+index*0x11c;self.original.call('__ZN11spellEffectC2Ev',effect);self.write(effect,0 if effect_kind=='damage' else 2)
             self.write(effect+4,*damage);self.write(effect+0x44,*scaling);self.write(effect+0xcc,percent);self.write(effect+0x88,affects)
             self.write(effect+0xe0,primary);self.write(effect+0xdc,secondary);self.write(effect+0xe4,unblockable)
+            self.write(effect+0xd0,amount,amount_scale)
         self.write(spell+0x11c,array,array+len(effects)*0x11c,array+len(effects)*0x11c)
         accepted=self.original.call('__Z17DoActualSpellLoopP12skillDBEntryiiiiP8HittablePKci',spell,ox,oy,tx,ty,self.caster,0,allow,budget=2000000)
         return [accepted,self.read(self.player+0x108)[0],self.read(self.monster+0x108)[0],len(self.results),*[n for row in self.results for n in row],self.state]
@@ -67,19 +68,20 @@ class Cast(SpellDamage):
 
 def verify(binary,port):
     oracle=Cast(binary);rng=random.Random(0x994e0);cases=[];expected=[];lines=[]
-    for index in range(2048):
+    for index in range(4096):
         actors=[]
         for _ in range(2):
-            primary=[rng.randrange(1,30) for _ in range(6)];secondary=[rng.randrange(1,30) for _ in range(24)];secondary[0]=1000
+            primary=[rng.randrange(1,30) for _ in range(6)];secondary=[rng.randrange(1,30) for _ in range(24)];secondary[0]=2000
             actors.append([1000,primary,secondary,[rng.randrange(-3,20) for _ in range(16)]])
         effects=[]
         for _ in range(rng.randrange(1,4)):
-            effects.append([rng.choice([-1,0,50,99,100,101]),rng.randrange(2),rng.choice([-1,0,3]),rng.choice([2,3,17]),rng.randrange(2),
+            effects.append([rng.choice(['damage','heal']),rng.randrange(-20,26),struct.unpack('<I',struct.pack('<f',rng.choice([-.5,0.,.1,1.5])))[0],
+                            rng.choice([-1,0,50,99,100,101]),rng.randrange(2),rng.choice([-1,0,3]),rng.choice([2,3,17]),rng.randrange(2),
                             [rng.randrange(-5,20) for _ in range(16)],[struct.unpack('<I',struct.pack('<f',rng.choice([0.,-.25,.1,.5])))[0] for _ in range(16)]])
         target=rng.choice([(4,4),(4,5),(3,3),(-1,4),(9,4)]);origin=rng.choice([(4,4),(4,5),(4,6)])
         case=[rng.getrandbits(32),rng.choice(['self','adjacent','target','targetfloor']),rng.randrange(2),*origin,*target,rng.randrange(2),actors,effects]
         cases.append(case);expected.append(oracle.run_cast(case))
-        values=[*case[:8],len(effects),*[n for health,p,s,r in actors for n in [health,*p,*s,*r]],*[n for effect in effects for n in [*effect[:5],*effect[5],*effect[6]]]]
+        values=[*case[:8],len(effects),*[n for health,p,s,r in actors for n in [health,*p,*s,*r]],*[n for effect in effects for n in [*effect[:8],*effect[8],*effect[9]]]]
         lines.append(' '.join(json.dumps(n) if isinstance(n,str) else str(n) for n in values))
     result=subprocess.run([str(port.resolve())],input='\n'.join(lines)+'\n',text=True,capture_output=True,check=True)
     actual=[[int(n)&0xffffffff for n in line.split()] for line in result.stdout.splitlines()]
@@ -87,9 +89,9 @@ def verify(binary,port):
         index=next(i for i,(a,b) in enumerate(zip(actual,expected)) if a!=b)
         raise AssertionError(f'basic cast fixture {index}, {cases[index][:8]}: actual {actual[index]}, original {expected[index]}')
     return dict(binary_sha256=hashlib.sha256(oracle.original.data).hexdigest(),cases=len(cases),mismatches=0,
-                scope='actual DoActualSpellLoop self/adjacent/target/targetfloor, ApplyEffectAt damage and DoSpellDamage; Hittable/Monster virtual identity, HP delivery, VFX/UI/audio/logging/library boundaries; accepted target, ordered damage requests and both HP under supplied delivery, libc state compared; buffs/other effects/entity kinds and original HP/death side effects excluded')
+                scope='actual DoActualSpellLoop self/adjacent/target/targetfloor, ApplyEffectAt mixed damage/heal and DoSpellDamage; Hittable/Monster virtual identity, damage HP delivery, VFX/UI/audio/logging/library boundaries; accepted target, ordered damage requests, actual heal HP and both HP under supplied damage delivery, libc state compared; buffs/other effects/entity kinds and original damage HP/death side effects excluded')
 
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('binary',type=Path);parser.add_argument('port',type=Path);parser.add_argument('--out',type=Path,required=True)
-    args=parser.parse_args();report=verify(args.binary,args.port);args.out.write_text(json.dumps(report,indent=2)+'\n');print(f"{report['cases']} original basic damage casts match")
+    args=parser.parse_args();report=verify(args.binary,args.port);args.out.write_text(json.dumps(report,indent=2)+'\n');print(f"{report['cases']} original mixed damage/heal casts match")

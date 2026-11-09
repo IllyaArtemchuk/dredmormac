@@ -227,10 +227,10 @@ std::optional<std::uint64_t> Session::create_room_monster(const RoomMonsterRecor
     actor.room_local_id=record.placement.id;actor.can_push=record.placement.can_push;actor.room_spawned=true;
     const auto result=next.spawn_enemy(std::move(actor));*this=std::move(next);return result;
 }
-bool Session::cast_damage_spell(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire) {
-    auto next=*this;next.events_.clear();const auto result=next.cast_damage_spell_impl(spell,origin,target,caster,allow_haywire);*this=std::move(next);return result;
+bool Session::cast_spell(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire) {
+    auto next=*this;next.events_.clear();const auto result=next.cast_spell_impl(spell,origin,target,caster,allow_haywire);*this=std::move(next);return result;
 }
-bool Session::cast_damage_spell_impl(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire) {
+bool Session::cast_spell_impl(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire) {
     if (spell.type=="self") target=origin;
     else if (spell.type=="adjacent") {
         const auto dx=std::uint32_t(target.x)-std::uint32_t(origin.x),dy=std::uint32_t(target.y)-std::uint32_t(origin.y);
@@ -247,7 +247,7 @@ bool Session::cast_damage_spell_impl(const SpellDefinition& spell,Position origi
     else for (auto& enemy:enemies_) if (enemy.id==caster) {source=&enemy;break;}
     if (!source) throw std::invalid_argument("spell caster not found");
     for (const auto& effect:spell.effects) {
-        if (effect.type!="damage" || effect.midas || effect.burn || effect.is_sleeping || effect.regeneration_graphic || !effect.taxa.empty() || !effect.source.children.empty())
+        if ((effect.type!="damage" && effect.type!="heal") || effect.midas || effect.burn || effect.is_sleeping || effect.regeneration_graphic || !effect.taxa.empty() || !effect.source.children.empty())
             throw std::invalid_argument("spell effect execution is not implemented: "+effect.type);
         for (const auto& attribute:effect.source.attributes) {
             auto key=attribute.first;for (auto& c:key) if (c>='A' && c<='Z') c+=32;
@@ -257,7 +257,14 @@ bool Session::cast_damage_spell_impl(const SpellDefinition& spell,Position origi
             throw std::invalid_argument("spell scaling attribute outside range");
         if (effect.percent!=100 && random_.libc.next()/21474837>effect.percent) continue;
         Actor* victim=same(player_.position,target)?&player_:enemy_at(target);
-        if (!victim || !victim->alive() || (!effect.affects_caster && source->id==victim->id)) continue;
+        if (!victim || !victim->alive()) continue;
+        if (effect.type=="heal") {
+            const auto attribute=effect.primary_scale==-1?source->secondary[effect.secondary_scale]:source->primary[effect.primary_scale];
+            const auto health=resolve_healing(victim->health,victim->secondary[0],effect.amount,effect.amount_scale,attribute);
+            if (health<0) throw std::runtime_error("negative healing HP is outside current session save invariants");
+            events_.push_back({EventKind::spell_heal,source->id,victim->id,health-victim->health});victim->health=health;continue;
+        }
+        if (!effect.affects_caster && source->id==victim->id) continue;
         SpellDamageInput input;input.haywire=source->secondary[5];input.resist=victim->secondary[11];input.armour=victim->secondary[10];
         input.scaling_attribute=effect.primary_scale==-1?source->secondary[effect.secondary_scale]:source->primary[effect.primary_scale];
         input.allow_haywire=allow_haywire || spell.type=="self" || spell.type=="adjacent";
@@ -297,7 +304,7 @@ void Session::activate_traps_impl(Actor& actor) {
         const auto request=trigger_trap(trap,definition,actor.position,spell!=nullptr,monster);
         if (!request) {events_.push_back({EventKind::trap_spell_missing,actor.id,trap.instance});continue;}
         events_.push_back({EventKind::trap_triggered,actor.id,trap.instance});
-        cast_damage_spell_impl(*spell,request->origin,request->target,request->caster_is_target?actor.id:player_.id,request->monster_cast);
+        cast_spell_impl(*spell,request->origin,request->target,request->caster_is_target?actor.id:player_.id,request->monster_cast);
     }
 }
 void Session::take_currency(std::int32_t amount) {auto next=*this;next.currency_transfer_impl(amount,CurrencyOperation::take);*this=std::move(next);}

@@ -44,7 +44,7 @@ int main() {
         auto missing=fixture.session();fixture.trap(missing);missing.spell_profile(std::make_shared<const std::vector<SpellDefinition>>());missing.step(Action::east);
         check(missing.player().health==health && missing.traps()[0].charges==2 && missing.events().back().kind==EventKind::trap_spell_missing);
         auto unsupported=fixture.session();fixture.trap(unsupported);auto partial=*fixture.spells;
-        partial[0].effects.push_back(read_spell_effect(parse_xml("<effect type='heal' amount='1'/>")));
+        partial[0].effects.push_back(read_spell_effect(parse_xml("<effect type='teleport' amount='1'/>")));
         unsupported.spell_profile(std::make_shared<const std::vector<SpellDefinition>>(partial));const auto before=saved(unsupported);failed=false;
         try {unsupported.step(Action::east);} catch(const std::invalid_argument&) {failed=true;}
         check(failed && saved(unsupported)==before);

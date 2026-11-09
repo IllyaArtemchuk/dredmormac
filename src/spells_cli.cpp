@@ -15,6 +15,13 @@ void output(const dredmor::SpellEffectDefinition& effect) {
 }
 int main(int argc,char** argv) {
     try {
+        if (argc==2 && std::string(argv[1])=="--heal") {
+            std::int32_t current,maximum,amount,attribute;std::uint32_t bits;
+            while (std::cin>>current>>maximum>>amount>>bits>>attribute) {
+                float scale;std::memcpy(&scale,&bits,4);std::cout<<dredmor::resolve_healing(current,maximum,amount,scale,attribute)<<'\n';
+            }
+            return std::cin.eof()?0:1;
+        }
         if (argc==3 && std::string(argv[1])=="--content") {
             const auto catalog=dredmor::Catalog::load(argv[2],true);
             for (const auto& entry:catalog.entries()) if (entry.node->tag=="spell" && entry.database->source.filename()=="spellDB.xml") {

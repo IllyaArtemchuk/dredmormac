@@ -31,7 +31,7 @@ struct Actor {
 struct GroundItem { InventoryItem item;Position position; };
 struct RoomLootCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
 struct RoomTrapCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
-enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken,spell_damage,trap_click,trap_triggered,trap_spell_missing };
+enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken,spell_damage,trap_click,trap_triggered,trap_spell_missing,spell_heal };
 struct TurnEvent {
     EventKind kind;
     std::uint64_t actor=0,target=0;
@@ -79,7 +79,7 @@ public:
         const ItemFactoryContext& context,const TrapMap& map,Position origin={0,0});
     // Low-level cast: no mana/cooldown/turn scheduling. Unsupported dispatch or
     // effects fail atomically while the remaining spell engine is implemented.
-    bool cast_damage_spell(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster=0,bool allow_haywire=true);
+    bool cast_spell(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster=0,bool allow_haywire=true);
     void spell_profile(std::shared_ptr<const std::vector<SpellDefinition>> definitions) {spells_=std::move(definitions);}
     std::vector<std::size_t> detect_traps();
     void give_currency(std::int32_t amount);
@@ -135,7 +135,7 @@ private:
     bool hit_breakable_impl(std::size_t index);
     std::optional<std::uint64_t> create_ground_loot_impl(const ItemFactoryTables& tables,const ItemFactoryContext& context,
         std::string_view type,std::string_view subtype,int quantity,bool artifact,Position position);
-    bool cast_damage_spell_impl(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire);
+    bool cast_spell_impl(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire);
     void activate_traps_impl(Actor& actor);
 };
 Actor make_player(const ClassRanks& ranks,std::string name="Player");

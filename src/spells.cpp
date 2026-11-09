@@ -2,8 +2,21 @@
 #include "dredmor/legacy_number.hpp"
 #include <cstdlib>
 #include <stdexcept>
+#include <cmath>
+#include <cstring>
+#include <limits>
+#include <algorithm>
 
 namespace dredmor {
+std::int32_t resolve_healing(std::int32_t current,std::int32_t maximum,std::int32_t amount,float scale,std::int32_t attribute) {
+    if (current<1) return current;
+    const auto bits=std::uint32_t(current)+std::uint32_t(amount);std::int32_t value;std::memcpy(&value,&bits,4);
+    if (scale>0) {
+        const float bonus=scale*static_cast<float>(attribute);const float result=static_cast<float>(value)+bonus;
+        value=!std::isfinite(result) || result>=2147483648.0f || result< -2147483648.0f?std::numeric_limits<std::int32_t>::min():static_cast<std::int32_t>(result);
+    }
+    return std::min(value,maximum);
+}
 namespace {
 std::string lower(std::string value) {for (auto& c:value) if (c>='A' && c<='Z') c+=32;return value;}
 }
