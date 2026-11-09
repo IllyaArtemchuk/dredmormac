@@ -40,6 +40,11 @@ ArtifactRequest artifact_request(const ItemDefinition& definition,int quality) {
     }
     return request;
 }
+int roll_depth_artifact_quality(int depth,DarwinRandom& random) {
+    // floor(double(depth)*0.25) is positive exactly when depth>=4.
+    return depth>=4?int(random.bounded(static_cast<std::uint32_t>(depth/4)))+1:1;
+}
+int roll_explicit_artifact_quality(DarwinRandom& random) {return int(random.bounded(3))+1;}
 std::string generate_artifact_name(const ArtifactWords& words,GameRandom& random) {
     if (words.nouns.size()!=words.plurals.size()) throw std::invalid_argument("artifact noun/plural pools differ");
     auto candidate=random;

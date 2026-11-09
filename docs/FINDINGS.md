@@ -1029,3 +1029,31 @@ artifact flag uses(rand*6>>32)+1, yielding1..3 over Darwin rand's positive range
 Named artifact construction consumes a depth-based quality roll before definition
 quality overrides it inside CreateArtifact. Full factory integration remains next.
 Artifact core run42621347955 passed actual Mac validation and packaged-app smoke.
+
+## Artifact factories and uniqueness
+
+make_loot_item now connects all modeled artifact routes. Generic artifact type
+uses its Level argument for quarter-depth quality and preserves discarded first
+weapon construction. Named items use curLevel depth and consume quality RNG even
+when definition quality overrides it. Explicit weapon/armour artifact flag uses
+1..3 quality. Source artifact flag alone does not cause generation on entry-based
+reagent/component or unflagged random armour paths. Named subtype does cause it;
+the passed artifact flag is ignored on named paths. This distinction replaces the
+earlier overbroad guard that rejected any selected named-artifact definition.
+
+verify_artifact_factory.py matches1,024 original full factory calls, including134
+discarded first weapons. Actual selectors, name generation/CreateArtifact and both
+RNG streams execute. Gear/Buff construction/destruction, virtual item text, floor/
+log/tweak and allocation/string/libc are boundaries. Compares selected definition,
+quantity, payload presence/text/quality/all modifiers/weapon damage, unique flags,
+libc/normal cache and next8 MT. Full constructors and global object IDs are excluded.
+
+Session owns ItemFactoryState and persists selected unique weapon indices in an
+optional savev7 container. Earlier v7 saves could not select unique artifacts, so
+missing container means empty. Loader rejects invalid/duplicate/non-weapon/non-
+artifact indices. Failed placement rolls back selection flags and RNG. Resumed
+sessions produce identical future mixed artifacts. Named construction does not
+mark the weapon flag, while random weapon selection does; armour ignores it.
+All18 local groups and existing2,100 simple factory comparisons pass. Native
+artifact fixture now uses named factory. Ownership Mac run42623376554 is queued;
+expanded factory native validation is pending. Full room population remains next.

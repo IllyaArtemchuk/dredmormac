@@ -30,8 +30,8 @@ Verified:
 - Room-placement collision: 69,632 original executions match.
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
-- Thirteen local CTest groups pass, including deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42597407998 passed all nineteen checks, including
+- Eighteen local CTest groups pass, including deterministic session and save/load tests.
+- Actual macos-15 arm64 CI run 42621347955 passed all twenty-nine checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -272,3 +272,14 @@ Direct HP/MP bonuses update on equip; removal clamps HP to1 as original DeapplyB
 Eighteen local groups pass. New native artifact pickup/equip/save smoke awaits MacCI.
 Complete artifact factory selection/quality and unique-state persistence are next;
 ordered full room population and full gameplay remain incomplete.
+
+Artifact factory routes now match1,024 full original executions, including134
+discarded first weapons, named quality overrides, separate Level/curLevel depths,
+1..3 explicit artifact quality, unique flags and all generated payload/RNG state.
+Gear/Buff constructors/destruction and virtual item text remain boundaries. Session
+persists unique weapon flags in optional savev7 metadata (earlier v7 files lacked
+selection support and default empty). Failure and resumed mixed-artifact tests
+pass; all18 local groups and existing2,100 simple factory comparisons pass. Native
+artifact fixture now uses the real named factory. Ownership run42623376554 is
+queued for a Mac runner; this expanded factory source awaits its own CI push.
+Next: ordered room content/population and complete constructor/interaction effects.

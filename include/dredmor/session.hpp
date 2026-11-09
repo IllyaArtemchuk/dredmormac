@@ -84,6 +84,7 @@ private:
     std::vector<SkillRank> skills_;
     std::shared_ptr<const std::vector<AbilityDefinition>> abilities_;
     GameRandom random_;
+    ItemFactoryState factory_state_;
     Progression progression_;
     std::uint64_t next_actor_=2;
     int experience_n_;

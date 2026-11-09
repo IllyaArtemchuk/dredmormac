@@ -215,6 +215,7 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
                 quantity=[value[@"quantity"] intValue];
             }
             dredmor::ItemFactoryContext context;
+            context.artifact_words=&_content->artifact_words();
             if (value[@"artifact_quality"]) {
                 if (![value[@"artifact_quality"] isKindOfClass:NSNumber.class]) throw std::runtime_error("invalid artifact quality");
                 const auto quality=[value[@"artifact_quality"] longLongValue];

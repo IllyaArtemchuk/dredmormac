@@ -139,8 +139,8 @@ exports. This workflow has successfully analyzed the supplied Mach-O.
 `dredmor-factory` exercises simple loot creation using explicit ordered item
 registration tables. Compare with `scripts/verify_factory.py ORIGINAL_BINARY
 build/dredmor-factory --out PRIVATE_REPORT.json`. It covers named/misc/currency,
-reagent/component, potion, wand, bolts and trap paths. Non-artifact weapon/armour selection and construction are implemented;
-artifact generation remains incomplete and fails explicitly. Session loot creation
+reagent/component, potion, wand, bolts, trap and weapon/armour paths. Artifact
+routes use the recovered name/stat generator and persistent unique weapon flags. Session loot creation
 retains constructor results and RNG across saves; full room population is pending.
 
 `dredmor-item-tables DATA_ROOT` emits ordered base registration tables. Compare
@@ -161,4 +161,5 @@ build/dredmor-artifact --out PRIVATE_REPORT.json`; metadata uses
 `verify_artifact_words.py ORIGINAL_BINARY build/dredmor-artifact --content DATA_ROOT
 --out PRIVATE_REPORT.json`. These compare names, descriptions, stat rolls and RNG
 with explicit Buff-constructor/item-text boundaries. Artifact instances support ground/inventory/equipment ownership and save persistence;
-complete artifact factory integration and unique-artifact state remain pending.
+artifact factory selection/quality and unique weapon flags are integrated. Complete
+constructor side effects and full room population remain pending.

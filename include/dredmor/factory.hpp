@@ -1,6 +1,7 @@
 #pragma once
 #include "dredmor/currency.hpp"
 #include <array>
+#include <set>
 
 namespace dredmor {
 // Ordered registration tables are explicit inputs. This does not infer expansion
@@ -22,12 +23,14 @@ struct ItemFactoryContext {
     SpawnDepthContext depth;
     int gold_per_level=0;
     float trap_deviation=0;
+    const ArtifactWords* artifact_words=nullptr;
+    std::optional<int> level_depth;
 };
-// Named and non-artifact simple loot construction, including currency, misc,
-// reagent/component, potion, wand, bolts, trap and non-artifact weapon/armour.
-// Artifact generation requires further recovered code and throws atomically.
+struct ItemFactoryState {std::set<std::uint32_t> spawned_artifacts;};
+// Full modeled loot dispatch. A supplied state retains original unique weapon
+// artifact selection across calls; Session owns and persists that state.
 std::optional<InventoryItem> make_loot_item(const std::vector<ItemDefinition>& definitions,
     const ItemFactoryTables& tables,const ItemFactoryContext& context,std::string_view type,
     std::string_view subtype,int quantity,bool artifact,std::uint64_t instance,GameRandom& random,
-    const std::vector<SkillRank>& skills={},const std::vector<AbilityDefinition>& abilities={});
+    const std::vector<SkillRank>& skills={},const std::vector<AbilityDefinition>& abilities={},ItemFactoryState* state=nullptr);
 }

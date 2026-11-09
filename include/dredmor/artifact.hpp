@@ -15,6 +15,8 @@ struct ArtifactRequest {
     std::string base_description;
 };
 ArtifactRequest artifact_request(const ItemDefinition& definition,int quality);
+int roll_depth_artifact_quality(int depth,DarwinRandom& random);
+int roll_explicit_artifact_quality(DarwinRandom& random);
 struct Artifact {
     std::string name,description,buff_description;
     int quality=1;

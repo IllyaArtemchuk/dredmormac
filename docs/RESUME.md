@@ -482,3 +482,25 @@ passed artifact flag; named definitionartifact calls depth-based quality draw th
 CreateArtifact overrides todefinition quality, preserving that discarded draw.
 Artifact type uses Level argument depth; named uses curLevel. All this factory
 integration still pending; preserve raw original inputs/outputs outside tracked git.
+
+Artifact factory integration is now implemented in make_loot_item. Context has
+artifact_words pointer and optional level_depth (Level argument depth vs curLevel
+SpawnDepthContext). ItemFactoryState.spawned_artifacts is copied/committed with
+RNG; Session owns it. Gear selection flags apply only to random weapon artifacts;
+named construction does not mark them. Generic typeartifact preserves discarded
+first weapon and depth-quality draw. Explicit weapon/armour flag quality1..3;
+named subtype ignores passed flag, but named definitionartifact rolls discarded
+depth quality then overrides inside CreateArtifact. Random armour flagfalse may
+select a definitionartifact and create a plain base item, without generation.
+Reagent/component entry-based construction likewise does not auto-create artifacts.
+verify_artifact_factory.py matches1,024 full original outer/named factory calls /
+134 discarded weapons, actual selectors/CreateArtifact, gear/Buff constructor and
+virtual text boundaries plus floor/log/tweak/libs. Compares definition/kind/count,
+payload/quality/allmodifiers/weapon damage, unique flags, libc/cache/nextMT8.
+Existing2,100 simple cases and18 local groups pass. Session tests compare24 future
+artifact creations after reload, failed placement rollback and duplicate/invalid
+unique-state saves. Savev7 optional spawned-artifacts container supports earlier
+v7 empty state. Native artifact fixture now marks synthetic cap namedartifact and
+uses real factory (no explicit quality bypass). Ownership run42623376554 queued
+for runner (13:12UTC); factory changes still await push/CI. Next: ordered room
+content execution/population and complete constructor effects/interactions.

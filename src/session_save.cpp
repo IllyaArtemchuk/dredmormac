@@ -187,6 +187,9 @@ void Session::save(std::ostream& out) const {
     for (const auto& item:ground_) write_item(out,item.item,"x=\""+std::to_string(item.position.x)+"\" y=\""+std::to_string(item.position.y)+"\"");
     out<<"</ground>\n";write_array(out,"ranks",ranks_);write_array(out,"intrinsic-damage",intrinsic_damage_);
     write_array(out,"intrinsic-resistance",intrinsic_resistance_);
+    if (!factory_state_.spawned_artifacts.empty()) {
+        out<<"<spawned-artifacts>";for (auto index:factory_state_.spawned_artifacts) out<<index<<' ';out<<"</spawned-artifacts>\n";
+    }
     out<<"<skills content=\""<<ability_signature(abilities_)<<"\">\n";
     for (auto skill:skills_) out<<"<skill id=\""<<skill.id<<"\" rank=\""<<skill.rank<<"\"/>\n";
     out<<"</skills>\n<custom-objects>\n";
@@ -291,6 +294,18 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     session.ranks_=array<std::int32_t,3>(child(root,"ranks"));
     session.intrinsic_damage_=array<std::int32_t,16>(child(root,"intrinsic-damage"));
     session.intrinsic_resistance_=array<std::int32_t,16>(child(root,"intrinsic-resistance"));
+    if (root.first("spawned-artifacts")) {
+        if (version!="7" || !session.definitions_) throw std::runtime_error("invalid saved artifact registration");
+        const auto& spawned=child(root,"spawned-artifacts");
+        if (!spawned.children.empty()) throw std::runtime_error("invalid saved artifact registration");
+        std::istringstream indices(spawned.text);std::string token;
+        while (indices>>token) {
+            const auto index=number<std::uint32_t>(token);
+            if (index>=session.definitions_->size() || session.factory_state_.spawned_artifacts.size()>=10000 ||
+                session.definitions_->at(index).kind!=ItemKind::weapon || !artifact_request(session.definitions_->at(index),0).fixed_name ||
+                !session.factory_state_.spawned_artifacts.insert(index).second) throw std::runtime_error("invalid saved artifact registration");
+        }
+    }
     if (version!="1") {
         const auto& selected=child(root,"skills");
         const auto content=attribute_number<std::uint64_t>(selected,"content");

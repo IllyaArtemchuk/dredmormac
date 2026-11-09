@@ -8,6 +8,7 @@ from pathlib import Path
 import struct
 import shutil
 import zlib
+import xml.etree.ElementTree as ET
 
 
 def png(width,height,color):
@@ -58,7 +59,8 @@ if __name__=='__main__':
             if args.artifact:
                 (root/'game/text.xml').write_text('''<text><startPhoneme text="A"/><phoneme text="b"/><title text="Keeper"/>
 <noun text="Thing" plural="Things"/><adjective text="Bright"/><quality text="polished"/><material text="tin"/><decor text="dots"/></text>''')
-                scene['ground_items'][0]['artifact_quality']=10
+                item_db=ET.parse(root/'game/itemDB.xml');cap=next(item for item in item_db.getroot() if item.get('name')=='Fixture cap')
+                cap.set('artifact','1');ET.SubElement(cap,'artifact',{'quality':'10'});item_db.write(root/'game/itemDB.xml',encoding='unicode')
                 scene['smoke_artifact']=True
         if args.objects:
             (root/'game/rooms.xml').write_text('''<roomdb><room name="Starting Room" width="5" height="4">
