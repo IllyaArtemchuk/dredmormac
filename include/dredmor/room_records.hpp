@@ -10,4 +10,31 @@ using RoomMarkers=std::map<char,Position>;
 // Explicit x/y do not change the template. Missing coordinates return nullopt.
 std::optional<Position> take_room_point(RoomAttributes& attributes,std::string_view prefix,
                                        const RoomMarkers& markers,RoomStamp& room);
+struct RoomObjectPlacement {
+    Position relative{};
+    int percent=100;
+    std::uint8_t can_push=1;
+    std::string id;
+    XmlNode source;
+};
+struct RoomElementDefinition {
+    RoomObjectPlacement placement;
+    std::string type,name,contents;
+};
+enum class RoomElementKind {
+    none,bookshelf,lever,lutefisk_statue,portal,anvil,statue,dredmor_statue,
+    evil_chest,freezer,bbq,fountain,diggle_god,dispenser,dirt,wizard_portal,
+    wizard_controls,wizard_pedestal,wizard_graffiti,wizard_key
+};
+struct RoomElementPlan {
+    bool accepted=false;
+    RoomElementKind kind=RoomElementKind::none;
+    int variant=-1;
+    Position position{};
+    std::string name,contents;
+};
+RoomElementDefinition read_room_element(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room);
+// Creation dispatch only. Constructors/finalization can consume additional RNG
+// and have entity effects that are not performed by this planning function.
+RoomElementPlan plan_room_element(const RoomElementDefinition& definition,Position origin,DarwinRandom& random);
 }

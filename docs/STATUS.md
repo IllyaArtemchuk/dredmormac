@@ -154,3 +154,9 @@ Corrected numeric ingestion: referenced digit markers become floor during XML
 loading, including supplied script point references. All 346 templates match
 updated independent checks; corrected base arrays match 64 original geometries /
 67 attempts. Thirteen local groups pass; this ingestion correction awaits Mac CI.
+
+Point-ingestion run 42604426802 passed all twenty-two native checks and packaging.
+Element creation plans now match 2,573 original executions with constructor/
+finalization boundaries. Typed ingestion matches all175 supplied element records.
+Thirteen local groups pass. Entity effects/extra RNG, other record classes,
+scripts/population and full-level session/native integration remain unfinished.

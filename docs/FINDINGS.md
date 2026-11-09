@@ -657,3 +657,30 @@ Full geometry is rerun with corrected base arrays: 64 cases / 67 attempts, three
 rerolled cases, zero mismatches in cells/records/names/spawn and both RNG streams.
 This remains a controlled-array execution, not full original XML parser/expansion
 registration or room script-action parity. Thirteen local test groups pass.
+
+Run 42604426802 (0eaa020) passed twenty-two native checks and relocated app smoke.
+
+## Room element factory planning
+
+RoomElementRecord::CreateInLevel (0x1a1d30) matches 2,573 executions with recording
+entity constructor/finalization boundaries and supplied allocation/strings/rand.
+Checks appearance decision, exact constructor/arguments, wrapping coordinates,
+bookshelf contents override, Diggle God name and the RNG state after the gate.
+All 23 unique recognized type strings plus unknown/case variants are exercised.
+Unknown types still accept/finalize with a null object if their appearance gate
+passes; type matching is case sensitive. The repeated portal comparison at the
+end of the original dispatcher adds no reachable type.
+
+Percent >=100 consumes no gate RNG. Otherwise the original rejects only when
+percent < rand bucket 0..99: zero percent has a one-in-100 acceptance chance, and
+99 always accepts while still drawing. Dispenser variants are craft4, food1,
+bolt0, drink2, thrown3; portal receives0. Constructors/finalization can have
+additional RNG and entity effects; the plan intentionally does not perform them
+and does not claim complete content-pass RNG parity.
+
+RoomDefinition::elements exposes typed common placement/type/name/contents while
+retaining original source metadata. Independent XML ingestion matches all175
+element definitions across346 supplied rooms. Common metadata is percent100,
+can_push byte1 and empty room-local id by default; points use the verified resolver.
+Thirteen local groups pass with reader, off-by-one gates, unknown types, vending
+variants and atomic malformed metadata checks. New planning awaits native CI.

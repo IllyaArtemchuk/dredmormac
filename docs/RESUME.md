@@ -242,3 +242,15 @@ checks pass; basegeometry64cases/67attempts passes after rerun. Thirteen local
 groups pass; native correction validation pending push.
 Next: common appearance gate and typed room object/element creation plans;
 finalize places entity, assigns room-local id and can_push. Scripts still raw.
+
+Point-ingestion run 42604426802 passed twenty-two native checks/package smoke.
+RoomDefinition::elements exposes typed RoomElementDefinition. plan_room_element
+matches originalCreateInLevel0x1a1d30 in2,573 fixtures, with constructors/finalizer
+recorded and their RNG/effects excluded. verify_room_elements.py supports
+--content DATA_ROOT; all175 definitions/346 rooms independently agree. Thirteen
+local groups pass; native plan validation pending push. Gate: percent>=100 draws
+nothing; otherwise accept bucket<=percent, so0 has1% and99 always accepts/draws.
+Dispatch is case sensitive; unknown type still accepts but finalizes null. Vending
+craft4/food1/bolt0/drink2/thrown3, portal0. Bookshelf contents override only when
+nonempty; DiggleGod receives name. No actual entities are constructed by plans.
+Next: other room records/constructor side effects and original room population.

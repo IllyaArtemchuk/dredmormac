@@ -4,6 +4,7 @@
 #include "dredmor/generation.hpp"
 #include "dredmor/abilities.hpp"
 #include "dredmor/names.hpp"
+#include "dredmor/room_records.hpp"
 
 namespace dredmor {
 struct SkillLoadout { std::string type,subtype;int amount=1;bool always=false; };
@@ -18,6 +19,7 @@ struct RoomDefinition {
     World instantiate() const;
     // Original numeric cell/door/wall arrays, before scripts and population.
     RoomStamp numeric_template() const;
+    std::vector<RoomElementDefinition> elements() const;
 };
 class GameContent {
 public:

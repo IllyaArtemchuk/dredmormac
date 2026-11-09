@@ -20,6 +20,14 @@ std::optional<int> legacy_attribute(const XmlNode& node,std::string_view key) {
     return std::nullopt;
 }
 }
+std::vector<RoomElementDefinition> RoomDefinition::elements() const {
+    auto numeric=numeric_template();RoomMarkers markers;
+    for (std::size_t y=0;y<rows.size();++y) for (std::size_t x=0;x<std::min(rows[y].size(),std::size_t(numeric.width));++x)
+        if (rows[y][x]>='1' && rows[y][x]<='9') markers[rows[y][x]]={int(x),int(y)};
+    std::vector<RoomElementDefinition> result;
+    for (const auto& node:source.children) if (ascii_lower(node.tag)=="element") result.push_back(read_room_element(node,markers,numeric));
+    return result;
+}
 RoomStamp RoomDefinition::numeric_template() const {
     const auto width=legacy_attribute(source,"width"),height=legacy_attribute(source,"height");
     if (!width || !height || *width<1 || *height<1 || *width>512 || *height>512 || rows.size()>std::size_t(*height))
