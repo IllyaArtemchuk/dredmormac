@@ -1446,3 +1446,30 @@ Next concrete work is deferred trigger/buff scheduling and additional spell type
 then horde/element/script population and complete generated-floor session/UI flow.
 The overall reimplementation remains incomplete; these validations cover the named
 subsystems and supplied original-routine comparisons, not whole-game parity.
+
+## Scheduled spells — 2026-11-10
+
+Scheduled spell integration now supports ApplyEffectAt deferred trigger44 and
+repeat dot43, plus Hittable::UpdateTriggers45326. 2048 original sequences match
+creation, DoResistancec9490, counters, eligibility, child heal/mana HP/MP, queue
+fields and libc state across multiple passes. Per-actor counters wrap int32,
+decrement before firing, and remove zero entries after the traversal. One-shot
+entries fire at zero even on dead owners; repeat entries require live owners.
+Initial repeat count0 becomes-1 and persists. New entries are visited during the
+same pass; global player position supplies scheduled cast origin regardless of
+stored caster. A shared4096-operation budget rejects cycles atomically.
+Session advances these passes at its existing provisional turn boundary. Full
+original action-queue placement, overlapping actor object-list order, buffs/taxa,
+Steam achievements and missing dot-child behavior remain excluded. Player dot
+resistance is rolled before the dead/corpses gate; monster eligibility checks it
+first. Buff gates remain explicit unsupported errors.
+Saves containing pending spells use port format8 with matched spell rules,
+validated owner/caster/index/flags and ordered per-actor queues. This prevents old
+format7 readers silently discarding scheduled work. Saves without pending work
+continue using7; versions1..7 still load. Pending rule replacement rejects.
+Tests cover wait scheduling, no tick on blocked input, nested same-pass additions,
+monster-caster self origin, wrap, resumed effects, malformed identities and cycle
+rollback. All25 local groups pass. Native trap smoke now also saves/resumes a
+countdown and a repeating heal/mana spell; current source awaits MacCI.
+
+Reference: supplied 1.1.4 i386 executable SHA256 a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d. Trigger default ctor9c32c/copy46002; payload remaining0, repeat4, spell8, percentc, caster10, gate fields14..20, parent string24. Original routines execute under Unicorn; C++ string/list/allocation, actor virtual identity, UI/audio boundaries are supplied. No supplied bytes or private reports are tracked.

@@ -36,9 +36,10 @@ int main() {
         auto atomic=session_with(std::make_shared<const std::vector<SpellDefinition>>(std::vector<SpellDefinition>{invalid_child,leaf}));const auto untouched=saved(atomic);rejected=false;
         try {atomic.cast_spell(root,{4,1},{2,1});} catch(const std::invalid_argument&) {rejected=true;}
         check(rejected && saved(atomic)==untouched && atomic.events().empty());
-        auto delayed=root;delayed.effects[1].amount=2;rejected=false;
-        try {atomic.cast_spell(delayed,{4,1},{2,1});} catch(const std::invalid_argument&) {rejected=true;}
-        check(rejected && saved(atomic)==untouched);
+        auto delayed=root;delayed.effects[1].amount=2;atomic.cast_spell(delayed,{4,1},{2,1});
+        check(atomic.enemies()[0].triggers.size()==1);atomic.update_triggers(2);const auto pending=saved(atomic);rejected=false;
+        try {atomic.update_triggers(2);} catch(const std::invalid_argument&) {rejected=true;}
+        check(rejected && saved(atomic)==pending);
         auto mana=read_spell(parse_xml("<spell name='Mana' type='target'><effect type='spellpoints' amount='5'/></spell>"));
         auto resources=session_with(profile,30);resources.cast_spell(mana,{4,1},{3,2},2);
         check(resources.player().mana==20 && resources.enemies()[0].mana==0 && resources.events().size()==1 &&

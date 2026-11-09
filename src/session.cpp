@@ -233,6 +233,13 @@ bool Session::cast_spell(const SpellDefinition& spell,Position origin,Position t
 bool Session::cast_spell_impl(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire) {
     std::size_t remaining=4096;return cast_spell_recursive(spell,origin,target,caster,allow_haywire,0,remaining);
 }
+void Session::spell_profile(std::shared_ptr<const std::vector<SpellDefinition>> definitions) {
+    if (definitions!=spells_) {
+        if (!player_.triggers.empty()) throw std::invalid_argument("cannot replace rules with pending spells");
+        for (const auto& actor:enemies_) if (!actor.triggers.empty()) throw std::invalid_argument("cannot replace rules with pending spells");
+    }
+    spells_=std::move(definitions);
+}
 void Session::player_facing(int direction) {
     if (direction<0 || direction>3) throw std::invalid_argument("invalid player facing");
     player_facing_=direction;
@@ -275,20 +282,41 @@ void Session::apply_spell_effects(const SpellDefinition& spell,Position target,s
     else for (auto& enemy:enemies_) if (enemy.id==caster) {source=&enemy;break;}
     if (!source) throw std::invalid_argument("spell caster not found");
     for (const auto& effect:spell.effects) {
-        if ((effect.type!="damage" && effect.type!="heal" && effect.type!="trigger" && effect.type!="spellpoints") || effect.midas || effect.burn || effect.is_sleeping || effect.regeneration_graphic || !effect.taxa.empty() || !effect.source.children.empty())
+        if ((effect.type!="damage" && effect.type!="heal" && effect.type!="trigger" && effect.type!="dot" && effect.type!="spellpoints") || effect.midas || effect.burn || effect.is_sleeping || effect.regeneration_graphic || !effect.taxa.empty() || !effect.source.children.empty())
             throw std::invalid_argument("spell effect execution is not implemented: "+effect.type);
         for (const auto& attribute:effect.source.attributes) {
             auto key=attribute.first;for (auto& c:key) if (c>='A' && c<='Z') c+=32;
             if (key.rfind("requirebuff",0)==0 && legacy_integer(attribute.second)) throw std::invalid_argument("spell buff gate execution is not implemented");
         }
-        if (effect.type=="trigger") {
+        if (effect.type=="trigger" || effect.type=="dot") {
             const SpellDefinition* child=nullptr;
             if (spells_) for (const auto& candidate:*spells_) if (candidate.name==effect.spell) {child=&candidate;break;}
             // ApplyEffectAt returns immediately for a missing child, skipping
             // later effects. Immediate triggers always consume their own roll,
             // including percent100, and start at the caster's current position.
-            if (!child) return;
-            if (effect.amount) throw std::invalid_argument("delayed trigger execution is not implemented");
+            if (!child) {
+                if (effect.type=="dot") throw std::invalid_argument("scheduled damage-over-time spell not found");
+                return;
+            }
+            if (effect.amount || effect.type=="dot") {
+                auto attach=[&](Actor& victim) {
+                    if (!same(victim.position,target)) return false;
+                    if (!effect.affects_corpses && !victim.alive() && (effect.type!="dot" || victim.id!=player_.id)) return false;
+                    if (effect.type=="dot" && effect.resistable && random_.libc.next()/42949673<victim.secondary[11]) return false;
+                    if (!effect.affects_corpses && !victim.alive()) return false;
+                    if (victim.triggers.size()>=4096) throw std::runtime_error("scheduled spell capacity exhausted");
+                    victim.triggers.push_back({effect.amount,effect.percent,effect.type=="dot",static_cast<std::size_t>(child-spells_->data()),source->id,spell.name});
+                    return true;
+                };
+                // Trigger44 attaches to the last eligible tile object (reverse
+                // list traversal); dot43 visits all objects in forward order.
+                if (effect.type=="dot") {attach(player_);for (auto& enemy:enemies_) attach(enemy);}
+                else {
+                    bool attached=false;for (auto it=enemies_.rbegin();it!=enemies_.rend() && !attached;++it) attached=attach(*it);
+                    if (!attached) attach(player_);
+                }
+                continue;
+            }
             if (random_.libc.next()/21474837>effect.percent) continue;
             cast_spell_recursive(*child,source->position,target,source->id,true,depth+1,remaining);continue;
         }
@@ -324,6 +352,30 @@ void Session::apply_spell_effects(const SpellDefinition& spell,Position target,s
             }
         }
     }
+}
+Actor& Session::actor_by_id(std::uint64_t id) {
+    if (!id || id==player_.id) return player_;
+    for (auto& actor:enemies_) if (actor.id==id) return actor;
+    throw std::invalid_argument("scheduled spell actor not found");
+}
+void Session::update_triggers(std::uint64_t id) {
+    auto next=*this;next.events_.clear();std::size_t remaining=4096;
+    next.update_triggers_impl(next.actor_by_id(id),remaining);*this=std::move(next);
+}
+void Session::update_triggers_impl(Actor& actor,std::size_t& remaining) {
+    // Indexing deliberately observes newly appended entries. Never hold a
+    // vector reference across the recursive cast, which may reallocate it.
+    for (std::size_t i=0;i<actor.triggers.size();++i) {
+        if (!remaining) throw std::runtime_error("scheduled spell execution budget exhausted");
+        --remaining;
+        auto bits=std::uint32_t(actor.triggers[i].remaining)-1;std::int32_t count;std::memcpy(&count,&bits,4);
+        actor.triggers[i].remaining=count;const auto trigger=actor.triggers[i];
+        if ((!trigger.repeat && count!=0) || (trigger.repeat && !actor.alive())) continue;
+        if (random_.libc.next()/21474837>trigger.percent) continue;
+        if (!spells_ || trigger.spell>=spells_->size()) throw std::runtime_error("scheduled spell rules unavailable");
+        cast_spell_recursive((*spells_)[trigger.spell],player_.position,actor.position,trigger.caster,true,0,remaining);
+    }
+    actor.triggers.erase(std::remove_if(actor.triggers.begin(),actor.triggers.end(),[](const ScheduledSpell& trigger){return trigger.remaining==0;}),actor.triggers.end());
 }
 std::vector<std::size_t> Session::detect_traps() {
     std::vector<std::size_t> visible;
@@ -411,6 +463,10 @@ std::optional<Position> Session::next_step(const Actor& enemy) const {
     return Position{step%width,step/width};
 }
 void Session::enemy_turns() {
+    // Provisional session turn boundary; the per-actor update above is measured,
+    // but the complete original player/monster action queue remains pending.
+    std::size_t remaining=4096;update_triggers_impl(player_,remaining);
+    for (auto& enemy:enemies_) update_triggers_impl(enemy,remaining);
     for (auto& enemy:enemies_) if (enemy.alive() && player_.alive()) {
         const auto dx=std::abs(enemy.position.x-player_.position.x),dy=std::abs(enemy.position.y-player_.position.y);
         if (dx+dy==1) attack(enemy,player_);

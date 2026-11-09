@@ -600,6 +600,25 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
         }
         if (_session->traps()[0].charges!=0 || !_session->traps()[0].pending_destruction ||
             _session->player().health!=_session->player().secondary[0]-14 || _session->player().mana!=_session->player().secondary[1]-4 || _session->passable(_session->traps()[1].origin)) return fail("second activation");
+        auto schedule=[&](const std::string& name) {
+            for (const auto& spell:_content->spells()) if (spell.name==name) {
+                const auto position=_session->player().position;return _session->cast_spell(spell,position,position);
+            }
+            return false;
+        };
+        const auto health=_session->player().health,mana=_session->player().mana;
+        if (!schedule("Fixture delayed") || _session->player().triggers.size()!=1) return fail("delayed creation");
+        _session->step(dredmor::Action::wait);
+        if (_session->player().health!=health || _session->player().triggers[0].remaining!=1 || ![self smokeSaveLoad]) return fail("delayed save");
+        _session->step(dredmor::Action::wait);
+        if (!_session->player().triggers.empty() || _session->player().health!=health+1 || _session->player().mana!=mana-1) return fail("delayed firing");
+        if (!schedule("Fixture overtime")) return fail("dot creation");
+        for (int i=1;i<=3;++i) {
+            _session->step(dredmor::Action::wait);
+            if (_session->player().health!=health+1+i || _session->player().mana!=mana-1-i) return fail("dot firing");
+            if (i==1 && ![self smokeSaveLoad]) return fail("dot save");
+        }
+        if (!_session->player().triggers.empty()) return fail("dot expiration");
         return YES;
     } catch(const std::exception& error) {
         [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];fprintf(stderr,"native traps: %s\n",error.what());return NO;

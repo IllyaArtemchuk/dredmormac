@@ -71,6 +71,9 @@ if __name__=='__main__':
             (root/'game/spellDB.xml').write_text('''<spellDB>
 <spell name="Fixture trap spell" type="target"><effect type="spellpoints" amount="-3"/><effect type="trigger" spell="Fixture trap damage"/></spell>
 <spell name="Fixture trap damage" type="template" templateID="7"><effect type="damage" slashing="8" affectsCaster="1" unblockable="1"/><effect type="spellpoints" amount="1"/></spell>
+<spell name="Fixture delayed" type="target"><effect type="trigger" spell="Fixture scheduled leaf" amount="2"/></spell>
+<spell name="Fixture overtime" type="target"><effect type="dot" spell="Fixture scheduled leaf" amount="3" resistable="0"/></spell>
+<spell name="Fixture scheduled leaf" type="target"><effect type="heal" amount="1"/><effect type="spellpoints" amount="-1"/></spell>
 </spellDB>''')
             (root/'game/manTemplateDB.xml').write_text('''<templatedb><template width="1" height="1" name="7" affectsPlayer="1"><row text="#"/></template></templatedb>''')
             (root/'dungeon/trap.spr').write_bytes(sprite());(root/'dungeon/origin.spr').write_bytes(sprite())

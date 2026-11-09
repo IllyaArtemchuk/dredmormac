@@ -13,6 +13,13 @@
 #include <memory>
 
 namespace dredmor {
+struct ScheduledSpell {
+    std::int32_t remaining=0,percent=100;
+    bool repeat=false;
+    std::size_t spell=0;
+    std::uint64_t caster=0;
+    std::string parent;
+};
 struct Actor {
     std::uint64_t id=0;
     std::string name,sprite;
@@ -26,6 +33,7 @@ struct Actor {
     bool room_spawned=false;
     std::uint32_t monster_flags=0;
     int monster_terrain=0;
+    std::vector<ScheduledSpell> triggers;
     bool alive() const { return health>0; }
 };
 struct GroundItem { InventoryItem item;Position position; };
@@ -80,9 +88,11 @@ public:
     // Low-level cast: no mana/cooldown/turn scheduling. Unsupported dispatch or
     // effects fail atomically while the remaining spell engine is implemented.
     bool cast_spell(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster=0,bool allow_haywire=true);
+    // One measured Hittable::UpdateTriggers pass; does not advance the world.
+    void update_triggers(std::uint64_t actor);
     int player_facing() const {return player_facing_;}
     void player_facing(int direction);
-    void spell_profile(std::shared_ptr<const std::vector<SpellDefinition>> definitions) {spells_=std::move(definitions);}
+    void spell_profile(std::shared_ptr<const std::vector<SpellDefinition>> definitions);
     std::vector<std::size_t> detect_traps();
     void give_currency(std::int32_t amount);
     void take_currency(std::int32_t amount);
@@ -143,6 +153,8 @@ private:
         std::size_t depth,std::size_t& remaining);
     void apply_spell_effects(const SpellDefinition& spell,Position target,std::uint64_t caster,bool allow_haywire,std::size_t depth,std::size_t& remaining);
     void activate_traps_impl(Actor& actor);
+    Actor& actor_by_id(std::uint64_t id);
+    void update_triggers_impl(Actor& actor,std::size_t& remaining);
 };
 Actor make_player(const ClassRanks& ranks,std::string name="Player");
 }

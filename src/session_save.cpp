@@ -250,7 +250,8 @@ CustomRoomObject read_room_object(const XmlNode& node,const World& world) {
 }
 }
 void Session::save(std::ostream& out) const {
-    out<<"<dredmor-session version=\"7\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
+    bool scheduled=!player_.triggers.empty();for (const auto& actor:enemies_) scheduled=scheduled || !actor.triggers.empty();
+    out<<"<dredmor-session version=\""<<(scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
        <<"\" content=\""<<signature(definitions_)<<"\"";
     if (player_facing_!=2) out<<" facing=\""<<player_facing_<<"\"";
     out<<">\n<room>"<<escape(world_.room_text())<<"</room>\n";
@@ -296,6 +297,20 @@ void Session::save(std::ostream& out) const {
     out<<"</skills>\n<custom-objects>\n";
     for (const auto& object:custom_objects_) write_room_object(out,object);
     out<<"</custom-objects>\n";
+    if (scheduled) {
+        if (!spells_) throw std::runtime_error("scheduled spells require spell content");
+        out<<"<scheduled-spells>\n";
+        auto write=[&](const Actor& actor) {
+            for (const auto& trigger:actor.triggers) {
+                if (trigger.spell>=spells_->size()) throw std::runtime_error("invalid scheduled spell index");
+                out<<"<trigger owner=\""<<actor.id<<"\" caster=\""<<trigger.caster<<"\" spell=\""<<trigger.spell
+                   <<"\" remaining=\""<<trigger.remaining<<"\" percent=\""<<trigger.percent<<"\" repeat=\""<<trigger.repeat
+                   <<"\" parent=\""<<escape(trigger.parent)<<"\"/>\n";
+            }
+        };
+        write(player_);for (const auto& actor:enemies_) write(actor);
+        out<<"</scheduled-spells>\n";
+    }
     if (spells_) {
         out<<"<spell-rules content=\""<<spell_signature(spells_)<<"\"";const auto maneuvers=maneuver_signature(spells_);
         if (maneuvers) out<<" maneuvers=\""<<maneuvers<<"\"";
@@ -324,11 +339,13 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     if (input.bad()) throw std::runtime_error("cannot read session save");
     const auto root=parse_xml(content,"session save");
     const auto version=attribute(root,"version");
-    if (root.tag!="dredmor-session" || (version!="1" && version!="2" && version!="3" && version!="4" && version!="5" && version!="6" && version!="7")) throw std::runtime_error("unsupported session save version");
+    const bool modern=version=="7" || version=="8";
+    if (version=="8" && !root.first("scheduled-spells")) throw std::runtime_error("version eight requires scheduled spell state");
+    if (root.tag!="dredmor-session" || (version!="1" && version!="2" && version!="3" && version!="4" && version!="5" && version!="6" && !modern)) throw std::runtime_error("unsupported session save version");
     const bool legacy_types=version=="1" || version=="2";
     if (attribute_number<std::uint64_t>(root,"content")!=signature(definitions,legacy_types)) throw std::runtime_error("save item content does not match loaded definitions");
     if (root.first("spell-rules")) {
-        if (version!="7" || !spells || attribute_number<std::uint64_t>(child(root,"spell-rules"),"content")!=spell_signature(spells))
+        if (!modern || !spells || attribute_number<std::uint64_t>(child(root,"spell-rules"),"content")!=spell_signature(spells))
             throw std::runtime_error("save spell content does not match loaded definitions");
         const auto& rules=child(root,"spell-rules");
         if (rules.attributes.count("maneuvers") && attribute_number<std::uint64_t>(rules,"maneuvers")!=maneuver_signature(spells))
@@ -336,18 +353,18 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     }
     const auto turn=attribute_number<std::uint64_t>(root,"turn");
     if (turn==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("saved turn counter exhausted");
-    std::istringstream rows(child(root,"room").text);auto world=World::restore(rows,turn);auto player=read_actor(child(root,"player"),version=="6" || version=="7",version=="7");
+    std::istringstream rows(child(root,"room").text);auto world=World::restore(rows,turn);auto player=read_actor(child(root,"player"),version=="6" || modern,modern);
     if (player.position.x!=world.player().x || player.position.y!=world.player().y) throw std::runtime_error("saved player/room position mismatch");
     Session session(std::move(world),player,0,attribute_number<int>(root,"experience-n"));
     if (root.attributes.count("facing")) {
-        if (version!="7") throw std::runtime_error("saved facing requires version seven");
+        if (!modern) throw std::runtime_error("saved facing requires version seven");
         session.player_facing(attribute_number<int>(root,"facing"));
     }
     session.definitions_=std::move(definitions);session.spells_=std::move(spells);session.next_actor_=attribute_number<std::uint64_t>(root,"next-actor");
     std::set<std::uint64_t> actors={player.id},items;
     for (const auto& node:child(root,"enemies").children) {
         if (node.tag!="enemy" || session.enemies_.size()>=512) throw std::runtime_error("invalid saved enemy list");
-        auto actor=read_actor(node,version=="6" || version=="7",version=="7");
+        auto actor=read_actor(node,version=="6" || modern,modern);
         if (!actors.insert(actor.id).second || !session.world_.passable(actor.position)) throw std::runtime_error("invalid saved enemy identity/position");
         if (actor.alive()) {
             if ((actor.position.x==player.position.x && actor.position.y==player.position.y) || session.enemy_at(actor.position)) throw std::runtime_error("saved actors overlap");
@@ -355,6 +372,21 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
         session.enemies_.push_back(std::move(actor));
     }
     if (!session.next_actor_ || session.next_actor_<=*actors.rbegin()) throw std::runtime_error("invalid saved actor sequence");
+    if (root.first("scheduled-spells")) {
+        if (version!="8" || !session.spells_ || !root.first("spell-rules")) throw std::runtime_error("scheduled spells require version eight and matching rules");
+        std::size_t count=0;
+        for (const auto& node:child(root,"scheduled-spells").children) {
+            if (node.tag!="trigger" || !node.children.empty() || ++count>4096*513) throw std::runtime_error("invalid scheduled spell list");
+            const auto owner=attribute_number<std::uint64_t>(node,"owner");
+            ScheduledSpell trigger;trigger.caster=attribute_number<std::uint64_t>(node,"caster");
+            trigger.spell=attribute_number<std::size_t>(node,"spell");trigger.remaining=attribute_number<std::int32_t>(node,"remaining");
+            trigger.percent=attribute_number<std::int32_t>(node,"percent");trigger.repeat=flag(node,"repeat");trigger.parent=attribute(node,"parent");
+            if (!actors.count(owner) || (trigger.caster && !actors.count(trigger.caster)) || trigger.spell>=session.spells_->size()) throw std::runtime_error("invalid scheduled spell identity");
+            auto& actor=session.actor_by_id(owner);
+            if (actor.triggers.size()>=4096) throw std::runtime_error("scheduled spell capacity exceeded");
+            actor.triggers.push_back(std::move(trigger));
+        }
+    }
     const auto& progress=child(root,"progress");
     session.progression_={attribute_number<int>(progress,"level"),attribute_number<int>(progress,"xp"),attribute_number<int>(progress,"lifetime"),
                           attribute_number<int>(progress,"score"),attribute_number<int>(progress,"points")};
@@ -362,20 +394,20 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     const auto& random=child(root,"random");
     session.random_.libc.seed(attribute_number<std::uint32_t>(random,"libc"));
     session.random_.mt.restore({array<std::uint32_t,624>(random),attribute_number<std::size_t>(random,"index")});
-    if (version=="5" || version=="6" || version=="7") {
+    if (version=="5" || version=="6" || modern) {
         const auto bits=attribute_number<std::uint32_t>(random,"normal-spare");float spare;
         std::memcpy(&spare,&bits,sizeof(spare));
         if (!std::isfinite(spare)) throw std::runtime_error("invalid saved normal cache");
         session.random_.normal.restore({flag(random,"normal-available"),spare});
     }
-    if (version=="4" || version=="5" || version=="6" || version=="7") for (const auto& node:child(root,"custom-objects").children) {
+    if (version=="4" || version=="5" || version=="6" || modern) for (const auto& node:child(root,"custom-objects").children) {
         if (node.tag!="object" || session.custom_objects_.size()>=10000) throw std::runtime_error("invalid saved custom object list");
         auto object=read_room_object(node,session.world_);
-        if (object.kind==CustomRoomKind::breakable || (object.kind==CustomRoomKind::pedestal && version!="7")) throw std::runtime_error("invalid saved custom object kind");
+        if (object.kind==CustomRoomKind::breakable || (object.kind==CustomRoomKind::pedestal && !modern)) throw std::runtime_error("invalid saved custom object kind");
         session.custom_objects_.push_back(std::move(object));
     }
     if (root.first("breakables")) {
-        if (version!="7") throw std::runtime_error("breakables require save version seven");
+        if (!modern) throw std::runtime_error("breakables require save version seven");
         for (const auto& node:child(root,"breakables").children) {
             if (node.tag!="breakable" || node.children.size()!=4 || session.breakables_.size()>=10000) throw std::runtime_error("invalid saved breakable list");
             BreakableRoomObject object;object.object=read_room_object(child(node,"object"),session.world_);
@@ -395,8 +427,8 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     auto validate_item=[&](const XmlNode& node) {
         if (node.tag!="item") throw std::runtime_error("invalid saved item node");
         auto item=read_item_instance(node);
-        if (item.artifact && version!="7") throw std::runtime_error("artifact payload requires save version seven");
-        if (version!="7" && (node.attributes.count("room-id") || node.attributes.count("push"))) throw std::runtime_error("item room metadata requires save version seven");
+        if (item.artifact && !modern) throw std::runtime_error("artifact payload requires save version seven");
+        if (!modern && (node.attributes.count("room-id") || node.attributes.count("push"))) throw std::runtime_error("item room metadata requires save version seven");
         if (legacy_types) {
             const auto kind=static_cast<std::uint32_t>(item.kind);
             if (kind==11) item.kind=ItemKind::trap;
@@ -425,7 +457,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
         session.drop(validate_item(node),{attribute_number<int>(node,"x"),attribute_number<int>(node,"y")});
     }
     if (root.first("traps")) {
-        if (version!="7" || !session.definitions_) throw std::runtime_error("saved traps need version seven and definitions");
+        if (!modern || !session.definitions_) throw std::runtime_error("saved traps need version seven and definitions");
         for (const auto& node:child(root,"traps").children) {
             TrapInstance trap;trap.instance=attribute_number<std::uint64_t>(node,"instance");trap.definition=attribute_number<std::uint32_t>(node,"definition");
             trap.position={attribute_number<int>(node,"x"),attribute_number<int>(node,"y")};trap.origin={attribute_number<int>(node,"origin-x"),attribute_number<int>(node,"origin-y")};
@@ -443,7 +475,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     session.intrinsic_damage_=array<std::int32_t,16>(child(root,"intrinsic-damage"));
     session.intrinsic_resistance_=array<std::int32_t,16>(child(root,"intrinsic-resistance"));
     if (root.first("spawned-artifacts")) {
-        if (version!="7" || !session.definitions_) throw std::runtime_error("invalid saved artifact registration");
+        if (!modern || !session.definitions_) throw std::runtime_error("invalid saved artifact registration");
         const auto& spawned=child(root,"spawned-artifacts");
         if (!spawned.children.empty()) throw std::runtime_error("invalid saved artifact registration");
         std::istringstream indices(spawned.text);std::string token;
@@ -455,7 +487,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
         }
     }
     if (root.first("monster-counts")) {
-        if (version!="7") throw std::runtime_error("monster counts require save version seven");
+        if (!modern) throw std::runtime_error("monster counts require save version seven");
         for (const auto& entry:child(root,"monster-counts").children) {
             const auto name=attribute(entry,"name");const auto count=attribute_number<std::int32_t>(entry,"count");
             if (entry.tag!="entry" || name.empty() || count<1 || !entry.children.empty() || session.monster_state_.counts.size()>=10000 ||
@@ -466,7 +498,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
         const auto& selected=child(root,"skills");
         const auto content=attribute_number<std::uint64_t>(selected,"content");
         if (content) {
-            if (!session.definitions_ || !abilities || ability_signature(abilities,version=="6" || version=="7")!=content)
+            if (!session.definitions_ || !abilities || ability_signature(abilities,version=="6" || modern)!=content)
                 throw std::runtime_error("save ability content does not match loaded definitions");
             std::set<int> seen;
             for (const auto& node:selected.children) {

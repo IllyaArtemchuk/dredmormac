@@ -64,3 +64,12 @@
   These policies are explicit deviations. Original template VFX and playback are
   not yet reproduced. Facing on successful moves uses recovered direction values;
   other original facing transitions and animation remain pending.
+
+- Scheduled spell counter/chance/creation kernels now have2048 original sequence
+  comparisons. Their placement before the provisional enemy-turn loop is a port
+  scheduling policy, not verified original whole-turn timing. Actor tile-object
+  overlap ordering, buff gates/taxa and Steam achievements remain unsupported.
+  A4096-operation budget rolls back cycles; original unbounded looping is not
+  reproduced. Missing dot child rejects rather than retaining a null spell.
+  Save format8 is emitted when pending spells require persistence; otherwise7
+  remains sufficient. Both are port formats, not original save compatibility.
