@@ -20,6 +20,11 @@ int main(int argc,char** argv) {
         check(content.items()[4].builtin_subtype==0 && content.items()[5].builtin_subtype==1);
         check(content.items()[6].builtin_subtype==2 && content.items()[6].kind==dredmor::ItemKind::currency);
         check(content.abilities().size()==1 && content.abilities()[0].skill_name=="Fixture 0");
+        check(content.spells().size()==3 && content.find_spell("Fixture spell")==&content.spells()[0]);
+        check(!content.find_spell("fixture spell") && content.find_spell("Fixture spell")->effects[0].damage[1]==8);
+        const auto scaled_effect=dredmor::read_spell_effect(dredmor::parse_xml("<effect TYPE='damage' crushing='4' CRUSHING='99' crushingF='0.5tail' CrushingF='9' amount=' -2suffix' secondaryScale='4' affectsCaster='-3'/>"));
+        check(scaled_effect.damage[0]==4 && scaled_effect.scaling[0]==.5f && scaled_effect.amount==-2 && scaled_effect.secondary_scale==4 && scaled_effect.affects_caster==-3);
+        check(scaled_effect.percent==100 && scaled_effect.primary_scale==-1 && scaled_effect.resistable && scaled_effect.affects_corpses && scaled_effect.floor_scale==1);
         auto world=content.room("Starting Room").instantiate();
         check(world.width()==7 && world.height()==5 && !world.passable({3,2}));
         check(world.player().x==3 && world.player().y==1);

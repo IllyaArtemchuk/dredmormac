@@ -31,7 +31,7 @@ Verified:
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
 - Twenty-one local CTest groups pass, including deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42638509915 passed all thirty-eight checks, including
+- Actual macos-15 arm64 CI run 42639187152 passed all thirty-eight checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -448,3 +448,23 @@ private report spell-damage.json. Existing21 local groups pass with damage tests
 Current source awaits MacCI. Full spell effect/type/target parsing and dispatch,
 HP/effects/buffs, trap movement integration and native presentation remain pending.
 Private spell-dispatch-and-parser.txt exports994e0/82abe/7c970/85924 for next work.
+
+Spell damage source run42639187152 passed Mac CI and packaging. New spells.hpp/cpp
+parses generic direct-child effect fields and damage/scaling arrays, preserving
+raw spell/effect XML for pending execution. Defaults follow spellEffect ctor82abe:
+primaryScale-1,secondaryScale3,percent100,floorScaleF1,resistable/affectsCorpses1.
+Full actual effect StartElement7c970 + ctor match1536 synthetic cases, including
+legacy numeric prefixes, float bits/nonfinite, target flags, chances and strings.
+Generic property names ignore ASCII case, while ConvertEffectType54fc0 and
+ConvertEffectTypeF82530 fallback names are case sensitive (crushing/crushingF).
+Independent source ingestion agrees for947 supplied spells /1631 direct effects
+across selected layers. Source report spell-effects.json stays private. Unknown
+fields/options/buffs and type enum semantics are not claimed by this comparison.
+GameContent exposes spells and exact-name first registration lookup; original
+EndElement82150 appends to_spellDB and findSpell7c760 linearly returns first match.
+Synthetic fixture tests duplicate names/first match, case behavior and defaults.
+All21 local groups pass. Current parser source awaits MacCI. Target/effect dispatch,
+buffs, HP changes, trap movement/native integration and other spell types remain
+unfinished. Private spell-effect-dispatch.txt contains ApplyEffectAt904c0 (~6142
+lines); spell-registration.txt records EndElement/findSpell. ConvertSpellType probes:
+self0,missile1,adjacent2,area3,cone7,target8,targetfloor9,targetmonster22,template24.

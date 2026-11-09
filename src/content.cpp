@@ -216,6 +216,9 @@ GameContent GameContent::load(const std::filesystem::path& root,bool expansions)
     currency.name="Zorkmids";currency.icon="items/cash0.png";content.items_.push_back(std::move(currency));
     if (!found_tweaks) throw std::runtime_error("base tweakDB.xml is required");
     content.monsters_=load_monsters(content.catalog_);
+    for (const auto& entry:content.catalog_.entries()) if (entry.node->tag=="spell" && entry.database->source.filename()=="spellDB.xml") {
+        auto spell=read_spell(*entry.node);spell.layer=entry.database->layer;content.spells_.push_back(std::move(spell));
+    }
     if (!expansions) content.monster_tables_=build_base_monster_tables(content.catalog_,content.monsters_);
     return content;
 }
@@ -226,6 +229,11 @@ const ItemFactoryTables& GameContent::item_factory_tables() const {
 const MonsterTables& GameContent::monster_tables() const {
     if (!monster_tables_) throw std::runtime_error("expansion monster registration is not implemented");
     return *monster_tables_;
+}
+const SpellDefinition* GameContent::find_spell(std::string_view name) const {
+    // Original findSpell scans registration order and returns the first match.
+    for (const auto& spell:spells_) if (spell.name==name) return &spell;
+    return nullptr;
 }
 ItemFactoryContext GameContent::loot_context(SpawnDepthContext depth,std::size_t level_set,Difficulty difficulty) const {
     ItemFactoryContext context;context.depth=depth;context.level_set=level_set;

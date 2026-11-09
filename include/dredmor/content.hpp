@@ -6,6 +6,7 @@
 #include "dredmor/names.hpp"
 #include "dredmor/room_records.hpp"
 #include "dredmor/artifact.hpp"
+#include "dredmor/spells.hpp"
 
 namespace dredmor {
 struct SkillLoadout { std::string type,subtype;int amount=1;bool always=false; };
@@ -35,6 +36,8 @@ public:
     const std::vector<MonsterDefinition>& monsters() const { return monsters_; }
     const std::vector<SkillDefinition>& skills() const { return skills_; }
     const std::vector<AbilityDefinition>& abilities() const { return abilities_; }
+    const std::vector<SpellDefinition>& spells() const {return spells_;}
+    const SpellDefinition* find_spell(std::string_view name) const;
     const std::vector<RoomDefinition>& rooms() const { return rooms_; }
     const RoomDefinition& room(std::string_view name) const;
     const MonsterDefinition& monster(std::string_view name) const;
@@ -56,6 +59,7 @@ private:
     std::vector<MonsterDefinition> monsters_;
     std::vector<SkillDefinition> skills_;
     std::vector<AbilityDefinition> abilities_;
+    std::vector<SpellDefinition> spells_;
     std::vector<RoomDefinition> rooms_;
     Tweaks tweaks_;
     RoomNameWords room_name_words_;

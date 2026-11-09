@@ -1,0 +1,5 @@
+<spellDB>
+  <spell name="Fixture spell" type="target"><effect type="damage" slashing="8" affectsCaster="1"/><anim sprite="synthetic/effect" frames="2"/></spell>
+  <spell name="Fixture spell" type="target"><effect type="heal" amount="5"/></spell>
+  <spell name="Fixture trigger" type="self"><effect type="trigger" spell="Fixture spell"/></spell>
+</spellDB>
