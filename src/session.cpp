@@ -235,7 +235,7 @@ bool Session::cast_spell_impl(const SpellDefinition& spell,Position origin,Posit
 }
 void Session::spell_profile(std::shared_ptr<const std::vector<SpellDefinition>> definitions) {
     if (definitions!=spells_) {
-        if (!player_buffs_.empty()) throw std::invalid_argument("cannot replace rules with active buffs");
+        if (has_player_buff_state()) throw std::invalid_argument("cannot replace rules with active buff state");
         if (!player_.triggers.empty()) throw std::invalid_argument("cannot replace rules with pending spells");
         for (const auto& actor:enemies_) if (!actor.triggers.empty()) throw std::invalid_argument("cannot replace rules with pending spells");
     }
@@ -540,13 +540,9 @@ void Session::equipment_profile(ClassRanks ranks,std::shared_ptr<const std::vect
 void Session::rebuild_equipment() {
     if (!definitions_) return;
     static const std::vector<AbilityDefinition> empty;
-    ItemModifiers buffs;
+    ItemModifiers buffs;buffs.primary=buff_primary_flat_;buffs.secondary=buff_secondary_flat_;
     for (const auto& active:player_buffs_) {
         const auto& modifiers=buff_definition(active).modifiers;
-        if (!active.deapplied) {
-            for (std::size_t i=0;i<6;++i) buffs.primary[i]=add(buffs.primary[i],modifiers.primary[i]);
-            for (std::size_t i=0;i<24;++i) buffs.secondary[i]=add(buffs.secondary[i],modifiers.secondary[i]);
-        }
         for (std::size_t i=0;i<16;++i) {buffs.damage[i]=add(buffs.damage[i],modifiers.damage[i]);buffs.resistance[i]=add(buffs.resistance[i],modifiers.resistance[i]);}
     }
     auto stats=equipment_.rebuild(ranks_,*definitions_,buffs.primary,buffs.secondary,skills_,abilities_?*abilities_:empty);

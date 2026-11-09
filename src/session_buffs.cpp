@@ -14,6 +14,15 @@ bool Session::actor_has_buff(const Actor& actor,const std::string& name) const {
     for (const auto& buff:player_buffs_) if (spells_->at(buff.spell).name==name) return true;
     return false;
 }
+bool Session::has_player_buff_state() const {
+    return !player_buffs_.empty() || std::any_of(buff_primary_flat_.begin(),buff_primary_flat_.end(),[](auto n){return n!=0;}) ||
+        std::any_of(buff_secondary_flat_.begin(),buff_secondary_flat_.end(),[](auto n){return n!=0;});
+}
+void Session::sort_player_buffs() {
+    std::vector<std::string> names;for (const auto& buff:player_buffs_) names.push_back(spells_->at(buff.spell).name);
+    const auto order=buff_order(names);auto previous=std::move(player_buffs_);player_buffs_.clear();player_buffs_.reserve(previous.size());
+    for (auto index:order) player_buffs_.push_back(std::move(previous[index]));
+}
 const BuffDefinition& Session::buff_definition(const ActiveBuff& buff) const {
     if (!spells_ || buff.spell>=spells_->size() || buff.buff>=spells_->at(buff.spell).buffs.size()) throw std::invalid_argument("active buff rules unavailable");
     return spells_->at(buff.spell).buffs[buff.buff];
@@ -65,10 +74,12 @@ void Session::apply_player_buff(std::size_t spell,std::size_t buff) {
     if (definition.stack_size>0 && count>=definition.stack_size) return;
     if (player_buffs_.size()>=4096) throw std::runtime_error("active buff capacity exhausted");
     player_.health=add(player_.health,definition.modifiers.secondary[0]);player_.mana=add(player_.mana,definition.modifiers.secondary[1]);
+    for (std::size_t i=0;i<6;++i) buff_primary_flat_[i]=add(buff_primary_flat_[i],definition.modifiers.primary[i]);
+    for (std::size_t i=0;i<24;++i) buff_secondary_flat_[i]=add(buff_secondary_flat_[i],definition.modifiers.secondary[i]);
     player_buffs_.push_back(active);rebuild_equipment();
     if (player_.health<1 || player_.secondary[0]<1 || player_.secondary[1]<0) throw std::runtime_error("buff lethal stat transition is not implemented");
     player_.mana=std::max(0,player_.mana);
-    std::stable_sort(player_buffs_.begin(),player_buffs_.end(),[&](const auto& a,const auto& b){return spells_->at(a.spell).name<spells_->at(b.spell).name;});
+    sort_player_buffs();
 }
 void Session::update_player_buffs() {
     auto next=*this;next.events_.clear();next.update_player_buffs_impl();*this=std::move(next);
@@ -76,21 +87,22 @@ void Session::update_player_buffs() {
 void Session::update_player_buffs_impl() {
     // Player::UpdateBuffs handles every upkeep payment before the shared
     // Hittable timer pass. A nonstacking refresh leaves this clock unchanged.
-    std::vector<bool> pending(player_buffs_.size(),false);
     for (std::size_t i=0;i<player_buffs_.size();++i) {
         auto& buff=player_buffs_[i];const auto interval=buff_definition(buff).mana_upkeep;
         if (!interval) continue;
         buff.upkeep_remaining=add(buff.upkeep_remaining,-1);
         if (!buff.upkeep_remaining) {
-            if (player_.mana<1) pending[i]=true;
+            if (player_.mana<1) buff.pending=true;
             else {--player_.mana;buff.upkeep_remaining=interval;}
         }
     }
-    std::size_t index=0;
-    for (auto& buff:player_buffs_) {
-        const auto& definition=buff_definition(buff);const auto tick=tick_buff({buff.remaining,false,definition.use_timer,pending[index++]});buff.remaining=tick.clock.remaining;
-        if (tick.deapply && !buff.deapplied) {
+    for (std::size_t index=0;index<player_buffs_.size();++index) {
+        auto& buff=player_buffs_[index];const auto& definition=buff_definition(buff);
+        const auto tick=tick_buff({buff.remaining,false,definition.use_timer,buff.pending});buff.remaining=tick.clock.remaining;
+        if (tick.deapply) {
             buff.deapplied=true;
+            for (std::size_t i=0;i<6;++i) buff_primary_flat_[i]=add(buff_primary_flat_[i],add(~definition.modifiers.primary[i],1));
+            for (std::size_t i=0;i<24;++i) buff_secondary_flat_[i]=add(buff_secondary_flat_[i],add(~definition.modifiers.secondary[i],1));
             player_.health=add(player_.health,add(~definition.modifiers.secondary[0],1));
             player_.mana=add(player_.mana,add(~definition.modifiers.secondary[1],1));
             const auto& name=spells_->at(buff.spell).name;
@@ -100,8 +112,11 @@ void Session::update_player_buffs_impl() {
             // rebuild; flat primary/secondary modifiers are already removed.
             rebuild_equipment();player_.health=std::max(1,player_.health);player_.mana=std::max(0,player_.mana);
             if (player_.health>player_.secondary[0] || player_.mana>player_.secondary[1]) throw std::runtime_error("buff removal exceeds current stat invariants");
+            // Player::DeapplyBuff sorts before Hittable resumes traversal.
+            // A moved entry can be visited again or skipped in this same pass.
+            sort_player_buffs();
         }
     }
-    player_buffs_.erase(std::remove_if(player_buffs_.begin(),player_buffs_.end(),[](const auto& buff){return buff.deapplied;}),player_buffs_.end());
+    player_buffs_.erase(std::remove_if(player_buffs_.begin(),player_buffs_.end(),[&](const auto& buff){return buff.pending || (buff.remaining<0 && buff_definition(buff).use_timer);}),player_buffs_.end());
 }
 }

@@ -1585,3 +1585,37 @@ Tests also cover active buffs expiring before the player's gated trigger pass.
 Native trap smoke now saves/reloads a pending gated resource spell while its
 required buff is active, then checks upkeep, firing and expiry. All28 local
 groups pass. Current trigger-gate source awaits MacCI. Full game remains unfinished.
+
+
+Trigger-gate sourcea6db78e passed actual arm64 macos-15 run42719863912,
+job129510770319: all47 checks and relocated packaged-app smoke, including gated
+pending spell saves with active buffs and mana upkeep.
+
+Buff ordering is now explicit and independent of host std::sort tie behavior.
+verify_buff_order.py matches1024 full identity permutations through original
+BuffSort115a90, introsort12abd0, insertion12aeb0/12af90 and heap fallback. Inputs
+include lengths0..4096, equal names, sorted/reversed data and forced depth0..3
+plus the normal computed budget. String/comparison/memmove library boundaries
+are supplied; original partition, recursion, insertion and heap code execute.
+Player::DeapplyBuff sorts during Hittable's timer traversal, so entries can be
+revisited or skipped. The session now mirrors that movement and stores primary/
+secondary buff flats independently of the active vector. Original deapplication
+can repeat for one entry; cleanup can delete another without deapplying it.
+A controlled24-identical-buff case leaves12 active entries after the first pass
+but zero net primary flats; the second pass removes those12 and leaves-12 primary
+flat, even with no active buffs. A subsequent rebuild retains this legacy result.
+verify_buff_session.py now matches1024 full sequences including256 large-stack
+cases (24/32/48 applications), mana exhaustion, sorting during expiry and port
+save/resume. All compared primary/secondary/damage/resistance/HP/MP and ordered
+identity/lifetime/upkeep fields agree after each operation. The prior limited
+large equal-name scope is superseded for these modeled stat/upkeep families.
+Save11 retains independent buff flats, including empty active-vector residuals.
+Older saves1..10 migrate their modeled flats from their active entries. Gated
+queues remain supported, and source/rule replacement rejects while residual buff
+state exists. All28 local groups pass, including the measured24-stack fixture,
+small-save9 migration, empty-vector residual save/reload and rebuild. The2048
+trigger-gate comparison still matches with save11. Native smoke now exercises
+large-stack expiry, midpoint saves and residual-state saves. The room-view HUD
+shows up to three active buff names and remaining turns, with an overflow count.
+Current sorting/state/HUD source awaits MacCI. Monster buffs, other upkeep/status
+families, lethal apply paths, generic requirebuff and full floor play remain work.

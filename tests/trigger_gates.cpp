@@ -23,14 +23,14 @@ int main() {
         session.cast_spell(forbidden,{2,1},{2,1});check(session.player().mana==5);
         session.cast_spell(forbidden,{5,2},{2,1},2);check(session.player().mana==10);
         gate.effects[0].amount=2;session.cast_spell(gate,{5,2},{2,1},2);check(session.player().triggers.size()==1);
-        const auto pending=saved(session);check(pending.find("version=\"10\"")!=std::string::npos);
+        const auto pending=saved(session);check(pending.find("version=\"11\"")!=std::string::npos);
         std::istringstream data(pending);auto resumed=Session::load(data,items,{},profile);
         for (int i=0;i<2;++i) {session.update_triggers(1);resumed.update_triggers(1);check(saved(session)==saved(resumed));}
         check(session.player().mana==15 && session.player().triggers.empty()); // Scheduled gates examine the owner.
         session.cast_spell(gate,{2,1},{5,2});session.update_triggers(2);session.update_triggers(2);check(session.player().mana==15 && session.enemies()[0].triggers.empty());
         session=base;session.cast_spell(active,{2,1},{2,1});session.cast_spell(gate,{2,1},{2,1});
         session.step(Action::wait);session.step(Action::wait);check(session.player_buffs().empty() && session.player().triggers.empty() && session.player().mana==0);
-        auto downgraded=pending;downgraded.replace(downgraded.find("version=\"10\""),12,"version=\"9\"");std::istringstream invalid(downgraded);bool rejected=false;
+        auto downgraded=pending;downgraded.replace(downgraded.find("version=\"11\""),12,"version=\"9\"");std::istringstream invalid(downgraded);bool rejected=false;
         try {Session::load(invalid,items,{},profile);} catch(const std::exception&) {rejected=true;}check(rejected);
         auto bad=pending;auto start=bad.find("requires=\"1\"");check(start!=std::string::npos);bad.replace(start,12,"requires=\"2\"");std::istringstream flags(bad);rejected=false;
         try {Session::load(flags,items,{},profile);} catch(const std::exception&) {rejected=true;}check(rejected);

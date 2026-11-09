@@ -17,7 +17,13 @@ void output(const BuffDefinition& buff) {
 }
 int main(int argc,char** argv) {
     try {
-        if (argc==2 && std::string(argv[1])=="--tick") {
+        if (argc==2 && std::string(argv[1])=="--order") {
+            std::size_t count;int depth;while (std::cin>>count>>depth) {
+                if (count>4096) throw std::invalid_argument("buff order capacity exceeded");std::vector<std::string> names(count);
+                for (auto& name:names) if (!(std::cin>>std::quoted(name))) throw std::invalid_argument("missing buff sort name");
+                for (auto index:buff_order(names,depth)) std::cout<<index<<' ';std::cout<<'\n';
+            }
+        } else if (argc==2 && std::string(argv[1])=="--tick") {
             BuffClock clock;while (std::cin>>clock.remaining>>clock.permanent>>clock.use_timer>>clock.pending) {
                 const auto tick=tick_buff(clock);std::cout<<tick.clock.remaining<<' '<<tick.deapply<<' '<<tick.remove<<'\n';
             }

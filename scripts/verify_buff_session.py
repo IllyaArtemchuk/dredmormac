@@ -41,12 +41,12 @@ class PlayerBuffs(Buffs):
             for pointer in self.read(start,(end-start)//4):result.extend([int(self.value(pointer+0x1a8).split()[-1]),self.read(pointer+0x27c)[0],self.read(pointer+0x1a4)[0]])
         output()
         for operation in operations:
-            if operation=='t':self.original.call('__ZN6Player11UpdateBuffsEv',actor)
+            if operation=='t':self.original.call('__ZN6Player11UpdateBuffsEv',actor,budget=5000000)
             elif operation=='m':self.write(actor+0x10c,0)
             elif operation=='s':pass  # Port save/resume must preserve measured state.
             else:
                 buff=self.allocate(0x29c);self.original.call('__ZN4BuffC2ERKS_',buff,buffs[int(operation)]);self.write(buff,buff_vtable)
-                self.original.call('__ZN6Player9ApplyBuffEP4Buff',actor,buff)
+                self.original.call('__ZN6Player9ApplyBuffEP4Buff',actor,buff,budget=5000000)
             output()
         return result
 
@@ -61,6 +61,10 @@ def verify(binary,port):
             definitions.append([rng.choice([-1,0,1,2,3]),rng.randrange(2),rng.randrange(2),rng.choice([0,1,2,3]),f'icon{rng.randrange(2)}',rng.choice([0,1,2,3,-1]),primary,secondary,[rng.randrange(-2,6) for _ in range(16)],[rng.randrange(-2,6) for _ in range(16)]])
         definitions.append([0,1,1,0,'rebuild',0,[0]*6,[0]*24,[0]*16,[0]*16])
         operations=rng.choice(['001st1t2tttt3t','0tst0t1tt2tt3t','012stttt3t','210st0t1ttt3t','012smttt3t'])
+        if index>=768:
+            for i,row in enumerate(definitions[:3]):
+                row[1]=int(i!=1);row[2]=1;row[3]=0;row[5]=0 if index<896 else rng.choice([1,2,3]);row[6]=[1,0,0,0,0,0];row[7]=[0]*24
+            operations=''.join(rng.choice('012') for _ in range(rng.choice([24,32,48])))+'ststtst3t'
         cases.append((definitions,operations));expected.append(oracle.run_sequence(definitions,operations))
         values=[len(definitions)]
         for row in definitions:values.extend([*row[:6],*[n for fields in row[6:] for n in fields]])
@@ -73,8 +77,8 @@ def verify(binary,port):
         if a!=b:
             different=[(n,x,y) for n,(x,y) in enumerate(zip(a,b)) if x!=y]
             raise AssertionError(f'buff sequence {i}, {cases[i]}, differences {different[:15]}, lengths {len(a)}/{len(b)}')
-    return dict(binary_sha256=hashlib.sha256(oracle.original.data).hexdigest(),cases=len(cases),mismatches=0,
-                scope='actual Player::ApplyBuff, Hittable apply/deapply/update, Player::UpdateBuffs mana upkeep, Player::DeapplyBuff, full Player::RebuildAttributes, Buff copy and sorting; primary6/secondary24/damage16/resistance16/HP/MP and ordered buff identity/countdown compared after every operation; port save/resume inserted; string/allocation, icon identities and destructor supplied; no abilities/equipment, monster buffs, lethal transitions, non-mana upkeep, status callbacks or VFX')
+    return dict(binary_sha256=hashlib.sha256(oracle.original.data).hexdigest(),cases=len(cases),large_stack_cases=256,mismatches=0,
+                scope='actual Player::ApplyBuff, Hittable apply/deapply/update, Player::UpdateBuffs mana upkeep, Player::DeapplyBuff, full Player::RebuildAttributes, Buff copy and sorting including large equal-name groups and sorting during expiry; primary6/secondary24/damage16/resistance16/HP/MP and ordered buff identity/countdown compared after every operation; port save/resume inserted; string/allocation, icon identities and destructor supplied; no abilities/equipment, monster buffs, lethal transitions, non-mana upkeep, status callbacks or VFX')
 
 
 if __name__=='__main__':

@@ -631,6 +631,12 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
         if (!_session->player_buffs().empty() || _session->player().primary!=primary || _session->player().secondary!=secondary ||
             _session->player().health!=buffHealth || _session->player().mana!=buffMana-2 || _session->player().resistance[7]!=resistance[7]+3 || !_session->player().triggers.empty()) return fail("buff expiration");
         if (!schedule("Fixture buff rebuild") || _session->player().resistance!=resistance) return fail("buff subsequent rebuild");
+        _session->step(dredmor::Action::wait);
+        for (int i=0;i<24;++i) if (!schedule("Fixture large buff")) return fail("large buff application");
+        _session->step(dredmor::Action::wait);
+        if (_session->player_buffs().size()!=12 || _session->player().primary!=primary || ![self smokeSaveLoad]) return fail("large buff traversal");
+        _session->step(dredmor::Action::wait);
+        if (!_session->player_buffs().empty() || _session->player().primary[0]!=std::max(0,primary[0]-12) || ![self smokeSaveLoad]) return fail("large buff residual state");
         return YES;
     } catch(const std::exception& error) {
         [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];fprintf(stderr,"native traps: %s\n",error.what());return NO;
@@ -680,7 +686,7 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
     const auto& world=_session->world();
     const uint64_t animationTime=static_cast<uint64_t>((NSProcessInfo.processInfo.systemUptime-_animationStart)*1000);
     const CGFloat cell=MIN((self.bounds.size.width-40)/world.width(),
-                           (self.bounds.size.height-90)/world.height());
+                           (self.bounds.size.height-110)/world.height());
     for (int y=0;y<world.height();++y) for (int x=0;x<world.width();++x) {
         unichar tile=[_rows[y] characterAtIndex:x];
         if (tile==' ') continue;
@@ -739,9 +745,22 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
                        (unsigned long long)world.turn(),_session->player().health,_session->player().secondary[0],
                        _session->player().mana,_session->player().secondary[1],_session->player().zorkmids,
                        _session->player().alive()?@"":@" · You have died"];
-    [status drawAtPoint:NSMakePoint(20,self.bounds.size.height-55)
+    [status drawAtPoint:NSMakePoint(20,self.bounds.size.height-70)
         withAttributes:@{NSForegroundColorAttributeName:NSColor.whiteColor,
                          NSFontAttributeName:[NSFont systemFontOfSize:13]}];
+    NSMutableArray<NSString*> *buffLabels=[NSMutableArray array];
+    if (_content) for (const auto& active:_session->player_buffs()) {
+        if (buffLabels.count==3) break;
+        const auto& spell=_content->spells().at(active.spell);const auto& definition=spell.buffs.at(active.buff);
+        NSString *name=[NSString stringWithUTF8String:spell.name.c_str()]?:@"Buff";
+        if (definition.use_timer) [buffLabels addObject:[NSString stringWithFormat:@"%@ (%lld turns)",name,static_cast<long long>(std::max<int64_t>(1,int64_t(active.remaining)+1))]];
+        else [buffLabels addObject:name];
+    }
+    if (_session->player_buffs().size()>buffLabels.count) [buffLabels addObject:[NSString stringWithFormat:@"+%zu more",_session->player_buffs().size()-buffLabels.count]];
+    NSString *buffStatus=buffLabels.count?[NSString stringWithFormat:@"Buffs: %@",[buffLabels componentsJoinedByString:@" · "]]:@"Buffs: none";
+    NSMutableParagraphStyle *buffStyle=[[NSMutableParagraphStyle alloc] init];buffStyle.lineBreakMode=NSLineBreakByTruncatingTail;
+    [buffStatus drawInRect:NSMakeRect(20,self.bounds.size.height-28,MAX(0,self.bounds.size.width-40),18)
+        withAttributes:@{NSForegroundColorAttributeName:NSColor.lightGrayColor,NSFontAttributeName:[NSFont systemFontOfSize:12],NSParagraphStyleAttributeName:buffStyle}];
 }
 @end
 

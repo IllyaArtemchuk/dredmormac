@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <functional>
+#include <algorithm>
 
 namespace dredmor {
 namespace {
@@ -69,6 +70,51 @@ std::uint64_t buff_signature(const BuffDefinition& buff) {
     std::uint32_t bits;std::memcpy(&bits,&buff.zorkmid_scale,4);add(std::to_string(bits));
     std::function<void(const XmlNode&)> source=[&](const XmlNode& node) {add(node.tag);add(node.text);for (const auto& a:node.attributes) {add(a.first);add(a.second);}for (const auto& child:node.children) source(child);};
     source(buff.source);return hash?hash:1;
+}
+std::vector<std::size_t> buff_order(const std::vector<std::string>& names,int depth) {
+    std::vector<std::size_t> order;for (std::size_t i=0;i<names.size();++i) order.push_back(i);
+    auto less=[&](std::size_t a,std::size_t b){return names[a]<names[b];};
+    auto heap_adjust=[&](std::size_t first,std::size_t length,std::size_t hole,std::size_t value) {
+        const auto top=hole;auto child=2*(hole+1);
+        while (child<length) {
+            if (less(order[first+child],order[first+child-1])) --child;
+            order[first+hole]=order[first+child];hole=child;child=2*(hole+1);
+        }
+        if (child==length) {order[first+hole]=order[first+child-1];hole=child-1;}
+        while (hole>top) {const auto parent=(hole-1)/2;if (!less(order[first+parent],value)) break;order[first+hole]=order[first+parent];hole=parent;}
+        order[first+hole]=value;
+    };
+    auto heap_sort=[&](std::size_t first,std::size_t last) {
+        auto length=last-first;if (length<2) return;
+        auto parent=(length-2)/2;
+        for (;;) {heap_adjust(first,length,parent,order[first+parent]);if (!parent) break;--parent;}
+        while (length>1) {const auto value=order[first+length-1];order[first+length-1]=order[first];--length;heap_adjust(first,length,0,value);}
+    };
+    std::function<void(std::size_t,std::size_t,int)> partition=[&](std::size_t first,std::size_t last,int budget) {
+        while (last-first>16) {
+            if (!budget) {heap_sort(first,last);return;}
+            --budget;const auto a=order[first],b=order[first+(last-first)/2],c=order[last-1];
+            const auto pivot=less(a,b)?(less(b,c)?b:less(a,c)?c:a):(less(a,c)?a:less(b,c)?c:b);
+            auto left=first,right=last;
+            for (;;) {
+                while (less(order[left],pivot)) ++left;
+                do {--right;} while (less(pivot,order[right]));
+                if (right<=left) break;
+                std::swap(order[left],order[right]);++left;
+            }
+            partition(left,last,budget);last=left;
+        }
+    };
+    if (depth<0) {depth=0;for (auto size=order.size();size>1;size>>=1) depth+=2;}
+    partition(0,order.size(),depth);
+    // Insertion finishing preserves the partition's tie order. The guarded
+    // form has the same comparisons/results as the original sentinel form.
+    for (std::size_t i=1;i<order.size();++i) {
+        const auto value=order[i];auto at=i;
+        while (at && less(value,order[at-1])) {order[at]=order[at-1];--at;}
+        order[at]=value;
+    }
+    return order;
 }
 BuffTick tick_buff(BuffClock clock) {
     bool deapply=false;

@@ -93,3 +93,8 @@
   owner after chance. Generic requirebuff9c remains unsupported. Monster active
   buff state is not implemented. Save10 retains gated queue state, separately
   from the original game's save format.
+
+- Buff name tie ordering and sorting during expiry now match original kernels
+  and256 large-stack lifecycle cases. Independent flat modifiers preserve the
+  original residual-stat quirks across save11, including empty active vectors.
+  The room-view buff-name/timer HUD is a port interface, not original UI parity.

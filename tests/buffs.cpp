@@ -20,6 +20,8 @@ int main() {
         tick=tick_buff({0,true,true,true});check(tick.clock.remaining==0 && !tick.deapply && tick.remove);
         tick=tick_buff({std::numeric_limits<std::int32_t>::min(),false,true,false});check(tick.clock.remaining==std::numeric_limits<std::int32_t>::max() && !tick.remove);
         bool rejected=false;try {read_buff(parse_xml("<buff><primarybuff id='6'/></buff>"));} catch(const std::invalid_argument&) {rejected=true;}check(rejected);
+        const auto order=buff_order(std::vector<std::string>(17,"Same"));
+        check(order==std::vector<std::size_t>({16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0}));
         std::cout<<"buff metadata, modifier overrides, retained source, timer flags and wrapping passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

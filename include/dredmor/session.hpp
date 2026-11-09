@@ -27,6 +27,7 @@ struct ActiveBuff {
     std::int32_t remaining=0;
     std::int32_t upkeep_remaining=0;
     bool deapplied=false;
+    bool pending=false;
 };
 struct Actor {
     std::uint64_t id=0;
@@ -123,6 +124,8 @@ public:
 private:
     int player_facing_=2;
     std::vector<ActiveBuff> player_buffs_;
+    PrimaryStats buff_primary_flat_{};
+    SecondaryStats buff_secondary_flat_{};
     MonsterSpawnState monster_state_;
     friend class CharacterBuilder;
     World world_;
@@ -172,6 +175,8 @@ private:
     const BuffDefinition& buff_definition(const ActiveBuff& buff) const;
     std::string buff_icon(const ActiveBuff& buff) const;
     bool actor_has_buff(const Actor& actor,const std::string& name) const;
+    bool has_player_buff_state() const;
+    void sort_player_buffs();
     void validate_player_buff(const BuffDefinition& definition) const;
 };
 Actor make_player(const ClassRanks& ranks,std::string name="Player");

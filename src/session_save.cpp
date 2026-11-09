@@ -262,7 +262,8 @@ void Session::save(std::ostream& out) const {
     bool scheduled=!player_.triggers.empty();for (const auto& actor:enemies_) scheduled=scheduled || !actor.triggers.empty();
     bool gated=false;auto gates=[&](const Actor& actor){for (const auto& trigger:actor.triggers) gated=gated || trigger.requires_buff || trigger.forbids_buff || !trigger.required_buff.empty() || !trigger.forbidden_buff.empty();};
     gates(player_);for (const auto& actor:enemies_) gates(actor);
-    out<<"<dredmor-session version=\""<<(gated?10:!player_buffs_.empty()?9:scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
+    const bool buff_state=has_player_buff_state();
+    out<<"<dredmor-session version=\""<<(buff_state?11:gated?10:scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
        <<"\" content=\""<<signature(definitions_)<<"\"";
     if (player_facing_!=2) out<<" facing=\""<<player_facing_<<"\"";
     out<<">\n<room>"<<escape(world_.room_text())<<"</room>\n";
@@ -324,13 +325,14 @@ void Session::save(std::ostream& out) const {
         write(player_);for (const auto& actor:enemies_) write(actor);
         out<<"</scheduled-spells>\n";
     }
-    if (!player_buffs_.empty()) {
+    if (buff_state) {
         out<<"<player-buffs>\n";
         for (const auto& buff:player_buffs_) {
-            buff_definition(buff);if (buff.deapplied) throw std::runtime_error("cannot save a transient deapplied buff");
+            buff_definition(buff);if (buff.deapplied || buff.pending) throw std::runtime_error("cannot save a transient deapplied buff");
             out<<"<buff spell=\""<<buff.spell<<"\" definition=\""<<buff.buff<<"\" remaining=\""<<buff.remaining<<"\" upkeep=\""<<buff.upkeep_remaining<<"\"/>\n";
         }
         out<<"</player-buffs>\n";
+        write_array(out,"buff-primary-flat",buff_primary_flat_);write_array(out,"buff-secondary-flat",buff_secondary_flat_);
     }
     if (spells_) {
         out<<"<spell-rules content=\""<<spell_signature(spells_)<<"\"";const auto maneuvers=maneuver_signature(spells_);
@@ -361,7 +363,8 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     if (input.bad()) throw std::runtime_error("cannot read session save");
     const auto root=parse_xml(content,"session save");
     const auto version=attribute(root,"version");
-    const bool modern=version=="7" || version=="8" || version=="9" || version=="10";
+    const bool modern=version=="7" || version=="8" || version=="9" || version=="10" || version=="11";
+    if (version=="11" && !root.first("player-buffs")) throw std::runtime_error("version eleven requires buff state");
     if (version=="10" && !root.first("scheduled-spells")) throw std::runtime_error("version ten requires gated spell state");
     if (version=="8" && !root.first("scheduled-spells")) throw std::runtime_error("version eight requires scheduled spell state");
     if (version=="9" && !root.first("player-buffs")) throw std::runtime_error("version nine requires active buff state");
@@ -398,7 +401,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     }
     if (!session.next_actor_ || session.next_actor_<=*actors.rbegin()) throw std::runtime_error("invalid saved actor sequence");
     if (root.first("scheduled-spells")) {
-        if ((version!="8" && version!="9" && version!="10") || !session.spells_ || !root.first("spell-rules")) throw std::runtime_error("scheduled spells require matching rules and a supported version");
+        if ((version!="8" && version!="9" && version!="10" && version!="11") || !session.spells_ || !root.first("spell-rules")) throw std::runtime_error("scheduled spells require matching rules and a supported version");
         std::size_t count=0;
         for (const auto& node:child(root,"scheduled-spells").children) {
             if (node.tag!="trigger" || !node.children.empty() || ++count>4096*513) throw std::runtime_error("invalid scheduled spell list");
@@ -406,7 +409,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
             ScheduledSpell trigger;trigger.caster=attribute_number<std::uint64_t>(node,"caster");
             trigger.spell=attribute_number<std::size_t>(node,"spell");trigger.remaining=attribute_number<std::int32_t>(node,"remaining");
             trigger.percent=attribute_number<std::int32_t>(node,"percent");trigger.repeat=flag(node,"repeat");trigger.parent=attribute(node,"parent");
-            if (version=="10") {trigger.requires_buff=flag(node,"requires");trigger.forbids_buff=flag(node,"forbids");trigger.required_buff=attribute(node,"required-name");trigger.forbidden_buff=attribute(node,"forbidden-name");}
+            if (version=="10" || (version=="11" && node.attributes.count("requires"))) {trigger.requires_buff=flag(node,"requires");trigger.forbids_buff=flag(node,"forbids");trigger.required_buff=attribute(node,"required-name");trigger.forbidden_buff=attribute(node,"forbidden-name");}
             else if (node.attributes.count("requires") || node.attributes.count("forbids") || node.attributes.count("required-name") || node.attributes.count("forbidden-name")) throw std::runtime_error("trigger buff gates require version ten");
             if (!actors.count(owner) || (trigger.caster && !actors.count(trigger.caster)) || trigger.spell>=session.spells_->size()) throw std::runtime_error("invalid scheduled spell identity");
             auto& actor=session.actor_by_id(owner);
@@ -415,7 +418,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
         }
     }
     if (root.first("player-buffs")) {
-        if ((version!="9" && version!="10") || !session.spells_ || !root.first("spell-rules") || !child(root,"spell-rules").attributes.count("buffs")) throw std::runtime_error("active buffs require matching rules and a supported version");
+        if ((version!="9" && version!="10" && version!="11") || !session.spells_ || !root.first("spell-rules") || !child(root,"spell-rules").attributes.count("buffs")) throw std::runtime_error("active buffs require matching rules and a supported version");
         for (const auto& node:child(root,"player-buffs").children) {
             if (node.tag!="buff" || !node.children.empty() || session.player_buffs_.size()>=4096) throw std::runtime_error("invalid saved buff list");
             ActiveBuff buff;buff.spell=attribute_number<std::size_t>(node,"spell");buff.buff=attribute_number<std::size_t>(node,"definition");buff.remaining=attribute_number<std::int32_t>(node,"remaining");
@@ -424,6 +427,18 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
             if (!definition.mana_upkeep && buff.upkeep_remaining) throw std::runtime_error("inactive buff upkeep has a countdown");
             if (!session.player_buffs_.empty() && session.spells_->at(session.player_buffs_.back().spell).name>session.spells_->at(buff.spell).name) throw std::runtime_error("saved buffs are out of order");
             session.player_buffs_.push_back(buff);
+        }
+    }
+    if (version=="11") {
+        session.buff_primary_flat_=array<std::int32_t,6>(child(root,"buff-primary-flat"));
+        session.buff_secondary_flat_=array<std::int32_t,24>(child(root,"buff-secondary-flat"));
+    } else {
+        if (root.first("buff-primary-flat") || root.first("buff-secondary-flat")) throw std::runtime_error("independent buff flats require version eleven");
+        auto add=[](std::int32_t a,std::int32_t b){const auto bits=std::uint32_t(a)+std::uint32_t(b);std::int32_t result;std::memcpy(&result,&bits,4);return result;};
+        for (const auto& buff:session.player_buffs_) {
+            const auto& modifiers=session.buff_definition(buff).modifiers;
+            for (std::size_t i=0;i<6;++i) session.buff_primary_flat_[i]=add(session.buff_primary_flat_[i],modifiers.primary[i]);
+            for (std::size_t i=0;i<24;++i) session.buff_secondary_flat_[i]=add(session.buff_secondary_flat_[i],modifiers.secondary[i]);
         }
     }
     const auto& progress=child(root,"progress");
