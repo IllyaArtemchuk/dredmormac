@@ -7,6 +7,32 @@
 #include <stdexcept>
 
 namespace dredmor {
+void register_monster(MonsterTables& tables,std::uint32_t index,const MonsterDefinition& definition,std::uint32_t level_sets) {
+    if ((level_sets&15) && !definition.special && (definition.level<0 || definition.level>=15)) throw std::invalid_argument("monster level outside original table range");
+    for (std::size_t set=0;set<4;++set) if (level_sets&(1U<<set)) {
+        tables.named[set].push_back(index);
+        if (!definition.special) tables.levels[definition.level][set].push_back(index);
+    }
+    if (definition.diggle_hell) tables.diggle_hell.push_back(index);
+}
+MonsterTables build_base_monster_tables(const Catalog& catalog,const std::vector<MonsterDefinition>& definitions) {
+    MonsterTables tables;std::map<const XmlNode*,std::uint32_t> indices;std::size_t index=0;
+    for (const auto& entry:catalog.entries()) if (entry.node->tag=="monster") {
+        if (index>=definitions.size() || entry.database->layer!="base") throw std::invalid_argument("base monster table content mismatch");
+        indices.emplace(entry.node,static_cast<std::uint32_t>(index++));
+    }
+    if (index!=definitions.size()) throw std::invalid_argument("base monster table definition count mismatch");
+    std::function<void(const XmlNode&)> close=[&](const XmlNode& node) {
+        for (const auto& child:node.children) if (child.tag=="monster") close(child);
+        const auto index=indices.at(&node);register_monster(tables,index,definitions[index],7);
+    };
+    for (const auto& entry:catalog.entries()) if (entry.node->tag=="monster" && !entry.parent_variant) close(*entry.node);
+    return tables;
+}
+std::optional<std::uint32_t> find_registered_monster(const MonsterTables& tables,const std::vector<MonsterDefinition>& definitions,std::string_view display_name) {
+    for (const auto& pool:tables.named) for (auto index:pool) if (definitions.at(index).display_name==display_name) return index;
+    return std::nullopt;
+}
 ClassRanks monster_creation_ranks(ClassRanks ranks,int level_adder,DarwinRandom& random) {
     const auto steps=level_adder<0?-std::int64_t(level_adder):std::int64_t(level_adder);
     if (steps>1000000) throw std::invalid_argument("monster level adjustment exceeds execution budget");
@@ -43,6 +69,8 @@ MonsterDefinition read_monster(const XmlNode& node,const MonsterDefinition* pare
     result.parent=parent?parent->name:"";
     result.name=attribute(node,"name").value_or("");
     if (result.name.empty()) throw std::runtime_error("monster name missing");
+    result.display_name=attribute(node,"displayname").value_or("");if (result.display_name.empty()) result.display_name=result.name;
+    result.special=integer(node,"special",result.special);result.diggle_hell=integer(node,"digglehell",result.diggle_hell)!=0;
     result.level=integer(node,"level",result.level);
     result.source_chain.push_back(node);
     for (const auto& child:node.children) {

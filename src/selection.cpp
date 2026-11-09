@@ -6,6 +6,15 @@
 #include <cstring>
 
 namespace dredmor {
+int select_monster_level(SpawnDepthContext depth,int boost_chance,bool expansion,Random& random) {
+    const int cap=expansion?14:9;
+    if (depth.alternate && depth.alternate_depth<0) return static_cast<int>(random.bounded(cap));
+    const auto chance=static_cast<std::uint32_t>(boost_chance);const int level=depth.alternate?depth.alternate_depth:depth.depth;
+    if (chance-1U<0x7ffffffeU && random.bounded(chance)!=0) return level;
+    if (level< -1) return 0;
+    const std::uint32_t bits=std::uint32_t(level)+1U;std::int32_t boosted;std::memcpy(&boosted,&bits,4);
+    return std::min(boosted,cap);
+}
 namespace {
 int gear_target(GameRandom& random,SpawnDepthContext depth,float deviation,int offset,bool weapon) {
     auto truncate=[](float value) {

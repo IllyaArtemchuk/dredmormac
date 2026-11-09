@@ -7,6 +7,16 @@ int main(int argc,char** argv) {
     try {
         check(argc==2);auto content=dredmor::GameContent::load(argv[1]);
         check(content.items().size()==7 && content.monsters().size()==2 && content.skills().size()==7);
+        check(content.monster_tables().named[0]==std::vector<std::uint32_t>({1,0}) && content.monster_tables().named[3].empty());
+        check(content.monster_tables().levels[0][0]==std::vector<std::uint32_t>({1,0}));
+        std::vector<dredmor::MonsterDefinition> duplicate_monsters{
+            dredmor::read_monster(dredmor::parse_xml("<monster name='Internal parent' displayName='Shared' special='1'/>")),
+            dredmor::read_monster(dredmor::parse_xml("<monster name='Internal child' displayName='Shared' level='2'/>"))};
+        dredmor::MonsterTables monster_tables;dredmor::register_monster(monster_tables,1,duplicate_monsters[1],7);
+        dredmor::register_monster(monster_tables,0,duplicate_monsters[0],15);
+        check(dredmor::find_registered_monster(monster_tables,duplicate_monsters,"Shared")==1);
+        check(!dredmor::find_registered_monster(monster_tables,duplicate_monsters,"Internal child"));
+        check(monster_tables.levels[2][0]==std::vector<std::uint32_t>({1}) && monster_tables.levels[2][3].empty());
         check(content.items()[4].builtin_subtype==0 && content.items()[5].builtin_subtype==1);
         check(content.items()[6].builtin_subtype==2 && content.items()[6].kind==dredmor::ItemKind::currency);
         check(content.abilities().size()==1 && content.abilities()[0].skill_name=="Fixture 0");

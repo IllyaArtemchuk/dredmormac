@@ -12,6 +12,8 @@ std::size_t select_booze(const std::vector<FoodCandidate>& pool,DarwinRandom& ra
 bool loadout_allowed(const ClassRanks& ranks,int category,bool always);
 struct TrapCandidate {int level=0;bool special=false,debug=false;};
 struct SpawnDepthContext {int depth=0;bool alternate=false;int alternate_depth=-1;};
+// Level::GetRandomMonsterLevel, including boost RNG and the expansion floor cap.
+int select_monster_level(SpawnDepthContext depth,int boost_chance,bool expansion,Random& random);
 struct TrapSelection {std::size_t index=0;int target_level=1;unsigned attempts=0;};
 // Original complete GetRandomTrap selection with supplied ordered LevelSet pool
 // and tweak deviation. Entity construction and table registration are separate.

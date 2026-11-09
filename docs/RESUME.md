@@ -593,3 +593,22 @@ lookup and a new synthetic native-monsters fixture. Random monster/horde/trap/
 element population, full effects/AI/scripts and full-level play remain unfinished.
 Twenty local groups pass. New Mac validation is pending; room-loot run42632516392
 was still queued at this checkpoint. No archive/toolchain blocker currently exists.
+
+Monster level selection now matches4096 full original GetRandomMonsterLevel2bb7e
+executions, including invalid boost bounds, MT rejection, alternate random depth,
+expansion cap9/14 and signed-wrap edge cases. Monster EndElementdc6f0 registration
+and InitMonsterTables612b0 match512 fixtures /16552 completed entries across4 named
+pools,15x4 buckets and independent diggleHell registration. XML parser remains
+outside that oracle. Independent source traversal agrees for all81 base monsters
+and9 diggleHell entries. Base monDBLoad mask7 is observed at startupb7b1e/b7b26;
+expansion calls use5,1,7 but merge semantics remain unsupported. Source close order
+registers nested variants before their parent. Named lookup compares displayName
+(falls back to own name, without inheriting the parent's display override) and
+returns the first match across pools; actual dc570 probe confirms display/name
+distinction. GameContent::create_monster now follows this registration lookup;
+stat-only make_monster retains internal-name lookup. Out-of-range nonspecial
+bucket indices fail explicitly instead of reproducing original out-of-array writes.
+All20 local groups pass. Run42632516392 validated room loot onMac. Monster Mac
+run42633520439 failed only because the new test lacked explicit<sstream>; fixed
+in e537b02 and rerun42633827494 is queued. Full random SpawnMonster, population,
+scripts/AI/spells and whole-level/native visual parity remain incomplete.

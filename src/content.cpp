@@ -210,11 +210,15 @@ GameContent GameContent::load(const std::filesystem::path& root,bool expansions)
     ItemDefinition currency;currency.kind=ItemKind::currency;currency.builtin_subtype=2;
     currency.name="Zorkmids";currency.icon="items/cash0.png";content.items_.push_back(std::move(currency));
     if (!found_tweaks) throw std::runtime_error("base tweakDB.xml is required");
-    content.monsters_=load_monsters(content.catalog_);return content;
+    content.monsters_=load_monsters(content.catalog_);
+    if (!expansions) content.monster_tables_=build_base_monster_tables(content.catalog_,content.monsters_);return content;
 }
 const ItemFactoryTables& GameContent::item_factory_tables() const {
     if (!item_factory_tables_) throw std::runtime_error("expansion item registration is not implemented");
     return *item_factory_tables_;
+}
+const MonsterTables& GameContent::monster_tables() const {
+    if (!monster_tables_) throw std::runtime_error("expansion monster registration is not implemented");return *monster_tables_;
 }
 ItemFactoryContext GameContent::loot_context(SpawnDepthContext depth,std::size_t level_set,Difficulty difficulty) const {
     ItemFactoryContext context;context.depth=depth;context.level_set=level_set;
@@ -241,9 +245,11 @@ Actor GameContent::make_monster(std::string_view name,Position position,Difficul
     actor.experience_reward=definition.experience;actor.sprite=definition.idle_sprites[3];return actor;
 }
 Actor GameContent::create_monster(std::string_view name,Position position,Difficulty difficulty,int dungeon_level,DarwinRandom& random) const {
-    const auto& definition=monster(name);auto input=tweaks_.monster_input(definition,difficulty,dungeon_level);
+    const auto index=find_registered_monster(monster_tables(),monsters_,name);
+    if (!index) throw std::invalid_argument("registered monster not found: "+std::string(name));
+    const auto& definition=monsters_.at(*index);auto input=tweaks_.monster_input(definition,difficulty,dungeon_level);
     input.ranks=monster_creation_ranks(input.ranks,tweaks_.integer(difficulty,"monster level adder"),random);
-    const auto stats=derive_monster(input);auto actor=make_monster(name,position,difficulty,dungeon_level);
+    const auto stats=derive_monster(input);auto actor=make_monster(definition.name,position,difficulty,dungeon_level);
     actor.primary=stats.primary;actor.secondary=stats.secondary;actor.health=stats.secondary[0];actor.mana=stats.secondary[1];return actor;
 }
 ClassRanks GameContent::starting_ranks(const std::vector<int>& skill_ids) const {

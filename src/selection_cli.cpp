@@ -6,6 +6,12 @@ int main() {
     try {
         std::string mode;
         while (std::cin>>mode) {
+            if (mode=="monster-level") {
+                std::uint32_t seed;dredmor::SpawnDepthContext depth;int boost;bool expansion;
+                if (!(std::cin>>seed>>depth.depth>>depth.alternate>>depth.alternate_depth>>boost>>expansion)) throw std::invalid_argument("invalid monster level input");
+                dredmor::Random random(seed);std::cout<<dredmor::select_monster_level(depth,boost,expansion,random);
+                for (int i=0;i<8;++i) std::cout<<' '<<random.u32();std::cout<<'\n';continue;
+            }
             std::uint32_t seed;std::size_t count;
             if (!(std::cin>>seed>>count) || count<1 || count>10000) throw std::invalid_argument("invalid food selection input");
             std::vector<dredmor::FoodCandidate> pool(count);

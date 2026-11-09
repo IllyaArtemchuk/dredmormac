@@ -1,6 +1,25 @@
 #include "dredmor/monsters.hpp"
+#include "dredmor/content.hpp"
 #include <iostream>
+void print_tables(const dredmor::MonsterTables& tables) {
+    for (const auto& pool:tables.named) {std::cout<<pool.size();for (auto index:pool) std::cout<<' '<<index;std::cout<<' ';}
+    for (const auto& level:tables.levels) for (const auto& pool:level) {std::cout<<pool.size();for (auto index:pool) std::cout<<' '<<index;std::cout<<' ';}
+    std::cout<<tables.diggle_hell.size();for (auto index:tables.diggle_hell) std::cout<<' '<<index;std::cout<<'\n';
+}
 int main(int argc,char** argv) {
+    if (argc==3 && std::string(argv[1])=="--tables-content") {print_tables(dredmor::GameContent::load(argv[2]).monster_tables());return 0;}
+    if (argc==2 && std::string(argv[1])=="--tables") {
+        std::size_t count;while (std::cin>>count) {
+            if (count>10000) return 1;dredmor::MonsterTables tables;
+            for (std::size_t i=0;i<count;++i) {
+                dredmor::MonsterDefinition definition;std::uint32_t mask;
+                if (!(std::cin>>definition.level>>definition.special>>definition.diggle_hell>>mask)) return 1;
+                dredmor::register_monster(tables,i,definition,mask);
+            }
+            print_tables(tables);
+        }
+        return std::cin.eof()?0:1;
+    }
     const bool creation=argc==2 && std::string(argv[1])=="--creation";
     if (argc!=1 && !creation) return 1;
     dredmor::MonsterStatInput input;
