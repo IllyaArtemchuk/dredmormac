@@ -164,6 +164,33 @@ InventoryItem read_item_instance(const XmlNode& node) {
     }
     item.stackable=stack!=0;return item;
 }
+void write_room_sprite(std::ostream& out,const RoomSprite& sprite) {
+    out<<" image=\""<<escape(sprite.image)<<"\" series=\""<<escape(sprite.series)<<"\" first=\""<<sprite.first
+       <<"\" count=\""<<sprite.count<<"\" rate=\""<<sprite.rate<<'"';
+}
+RoomSprite read_room_sprite(const XmlNode& node) {
+    return {attribute(node,"image"),attribute(node,"series"),attribute_number<int>(node,"first"),attribute_number<int>(node,"count"),attribute_number<int>(node,"rate")};
+}
+bool same_sprite(const RoomSprite& a,const RoomSprite& b) {
+    return a.image==b.image && a.series==b.series && a.first==b.first && a.count==b.count && a.rate==b.rate;
+}
+void write_room_object(std::ostream& out,const CustomRoomObject& object) {
+    out<<"<object kind=\""<<unsigned(object.kind)<<"\" name=\""<<escape(object.name)<<"\" description=\""<<escape(object.description)
+       <<"\" id=\""<<escape(object.room_local_id)<<"\" x=\""<<object.position.x<<"\" y=\""<<object.position.y<<"\" push=\""<<unsigned(object.can_push)
+       <<"\" movement=\""<<object.blocks_movement<<"\" vision=\""<<object.blocks_vision<<"\" frame=\""<<object.frame<<"\" playing=\""<<object.playing
+       <<"\" looping=\""<<object.looping<<'"';write_room_sprite(out,object.sprite);out<<"/>\n";
+}
+CustomRoomObject read_room_object(const XmlNode& node,const World& world) {
+    const auto kind=attribute_number<unsigned>(node,"kind"),push=attribute_number<unsigned>(node,"push");
+    if (kind>3 || push>255) throw std::runtime_error("invalid saved room object type/push");
+    CustomRoomObject object;object.kind=static_cast<CustomRoomKind>(kind);object.can_push=push;
+    object.position={attribute_number<int>(node,"x"),attribute_number<int>(node,"y")};
+    if (object.position.x<0 || object.position.y<0 || object.position.x>=world.width() || object.position.y>=world.height())
+        throw std::runtime_error("saved room object outside room");
+    object.name=attribute(node,"name");object.description=attribute(node,"description");object.room_local_id=attribute(node,"id");
+    object.blocks_movement=flag(node,"movement");object.blocks_vision=flag(node,"vision");object.frame=attribute_number<std::uint32_t>(node,"frame");
+    object.playing=flag(node,"playing");object.looping=flag(node,"looping");object.sprite=read_room_sprite(node);return object;
+}
 }
 void Session::save(std::ostream& out) const {
     out<<"<dredmor-session version=\"7\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
@@ -193,15 +220,22 @@ void Session::save(std::ostream& out) const {
     out<<"<skills content=\""<<ability_signature(abilities_)<<"\">\n";
     for (auto skill:skills_) out<<"<skill id=\""<<skill.id<<"\" rank=\""<<skill.rank<<"\"/>\n";
     out<<"</skills>\n<custom-objects>\n";
-    for (const auto& object:custom_objects_) {
-        const auto& sprite=object.sprite;
-        out<<"<object kind=\""<<unsigned(object.kind)<<"\" name=\""<<escape(object.name)<<"\" description=\""<<escape(object.description)
-            <<"\" id=\""<<escape(object.room_local_id)<<"\" x=\""<<object.position.x<<"\" y=\""<<object.position.y<<"\" push=\""<<unsigned(object.can_push)
-            <<"\" movement=\""<<object.blocks_movement<<"\" vision=\""<<object.blocks_vision<<"\" frame=\""<<object.frame<<"\" playing=\""<<object.playing
-            <<"\" looping=\""<<object.looping<<"\" image=\""<<escape(sprite.image)<<"\" series=\""<<escape(sprite.series)<<"\" first=\""<<sprite.first
-            <<"\" count=\""<<sprite.count<<"\" rate=\""<<sprite.rate<<"\"/>\n";
+    for (const auto& object:custom_objects_) write_room_object(out,object);
+    out<<"</custom-objects>\n";
+    if (!breakables_.empty()) {
+        out<<"<breakables>\n";
+        for (const auto& object:breakables_) {
+            out<<"<breakable hits-needed=\""<<object.hits_needed<<"\" hits-taken=\""<<object.hits_taken<<"\" intact-frames=\""<<object.frames.intact
+               <<"\" breaking-frames=\""<<object.frames.breaking<<"\" broken-frames=\""<<object.frames.broken<<"\" single-delay=\""<<object.single_breaking_delay<<"\">\n";
+            write_room_object(out,object.object);
+            for (const auto& entry:{std::pair<const char*,const RoomSprite*>{"intact",&object.intact},{"breaking",&object.breaking},{"broken",&object.broken}}) {
+                out<<'<'<<entry.first;write_room_sprite(out,*entry.second);out<<"/>\n";
+            }
+            out<<"</breakable>\n";
+        }
+        out<<"</breakables>\n";
     }
-    out<<"</custom-objects>\n</dredmor-session>\n";
+    out<<"</dredmor-session>\n";
     if (!out) throw std::runtime_error("cannot write session save");
 }
 Session Session::load(std::istream& input,std::shared_ptr<const std::vector<ItemDefinition>> definitions,
@@ -246,18 +280,26 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     }
     if (version=="4" || version=="5" || version=="6" || version=="7") for (const auto& node:child(root,"custom-objects").children) {
         if (node.tag!="object" || session.custom_objects_.size()>=10000) throw std::runtime_error("invalid saved custom object list");
-        const auto kind=attribute_number<unsigned>(node,"kind"),push=attribute_number<unsigned>(node,"push");
-        if (kind>1 || push>255) throw std::runtime_error("invalid saved custom object type/push");
-        CustomRoomObject object;object.kind=static_cast<CustomRoomKind>(kind);object.can_push=push;
-        object.position={attribute_number<int>(node,"x"),attribute_number<int>(node,"y")};
-        if (object.position.x<0 || object.position.y<0 || object.position.x>=session.world_.width() || object.position.y>=session.world_.height())
-            throw std::runtime_error("saved custom object outside room");
-        object.name=attribute(node,"name");object.description=attribute(node,"description");object.room_local_id=attribute(node,"id");
-        object.blocks_movement=flag(node,"movement");object.blocks_vision=flag(node,"vision");object.frame=attribute_number<std::uint32_t>(node,"frame");
-        object.playing=flag(node,"playing");object.looping=flag(node,"looping");
-        object.sprite.image=attribute(node,"image");object.sprite.series=attribute(node,"series");
-        object.sprite.first=attribute_number<int>(node,"first");object.sprite.count=attribute_number<int>(node,"count");object.sprite.rate=attribute_number<int>(node,"rate");
+        auto object=read_room_object(node,session.world_);
+        if (object.kind==CustomRoomKind::breakable || (object.kind==CustomRoomKind::pedestal && version!="7")) throw std::runtime_error("invalid saved custom object kind");
         session.custom_objects_.push_back(std::move(object));
+    }
+    if (root.first("breakables")) {
+        if (version!="7") throw std::runtime_error("breakables require save version seven");
+        for (const auto& node:child(root,"breakables").children) {
+            if (node.tag!="breakable" || node.children.size()!=4 || session.breakables_.size()>=10000) throw std::runtime_error("invalid saved breakable list");
+            BreakableRoomObject object;object.object=read_room_object(child(node,"object"),session.world_);
+            object.intact=read_room_sprite(child(node,"intact"));object.breaking=read_room_sprite(child(node,"breaking"));object.broken=read_room_sprite(child(node,"broken"));
+            object.hits_needed=attribute_number<int>(node,"hits-needed");object.hits_taken=attribute_number<int>(node,"hits-taken");
+            object.frames={attribute_number<std::uint16_t>(node,"intact-frames"),attribute_number<std::uint16_t>(node,"breaking-frames"),attribute_number<std::uint16_t>(node,"broken-frames")};
+            object.single_breaking_delay=attribute_number<std::uint16_t>(node,"single-delay");
+            const bool broken=object.hits_taken>=object.hits_needed;
+            if (object.object.kind!=CustomRoomKind::breakable || !object.frames.intact || !object.frames.breaking || !object.frames.broken ||
+                object.single_breaking_delay!=(object.frames.breaking==1?10:0) || object.object.playing || object.object.looping ||
+                !same_sprite(object.object.sprite,broken?object.broken:object.intact) ||
+                (broken && object.object.frame!=std::uint32_t(object.frames.broken-1))) throw std::runtime_error("invalid saved breakable state");
+            session.breakables_.push_back(std::move(object));
+        }
     }
     Inventory::Bag bag{};Inventory::Belt belt{};
     auto validate_item=[&](const XmlNode& node) {

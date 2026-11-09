@@ -17,7 +17,7 @@ struct RoomDefinition {
     XmlNode source;
     // Conservative developer-room collision import. Liquids/doors/blockers stay
     // blocked until their interactions are implemented; unknown symbols fail.
-    // false leaves custom collision to Session, retaining the same preview spawn.
+    // false leaves custom/pedestal collision to Session, retaining the same preview spawn.
     World instantiate(bool custom_blockers=true) const;
     // Original numeric cell/door/wall arrays, before scripts and population.
     RoomStamp numeric_template() const;

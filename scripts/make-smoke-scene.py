@@ -17,9 +17,11 @@ def png(width,height,color):
     raw=(b'\0'+bytes(color)*width)*height
     return b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',width,height,8,6,0,0,0))+chunk(b'IDAT',zlib.compress(raw))+chunk(b'IEND',b'')
 
-def sprite():
-    payload=b'SPR'+struct.pack('<HHH',2,64,64)
-    for color in [(40,180,150),(180,90,40)]:
+def sprite(frames=2):
+    payload=b'SPR'+struct.pack('<HHH',frames,64,64)
+    colors=[(40,180,150),(180,90,40)]
+    for index in range(frames):
+        color=colors[index%len(colors)]
         payload+=struct.pack('<H',100)+b'\0\0\0'+bytes(color)+bytes(762)+bytes([1])*4096
     return payload
 
@@ -30,6 +32,7 @@ if __name__=='__main__':
     p.add_argument('--inventory',action='store_true',help='Explicit synthetic cap pickup/equipment fixture')
     p.add_argument('--artifact',action='store_true',help='Artifact instance in the inventory fixture')
     p.add_argument('--objects',action='store_true',help='Synthetic persisted SPR/PNG-series room objects')
+    p.add_argument('--breakables',action='store_true',help='Synthetic breakable and pedestal interaction fixture')
     args=p.parse_args();out=args.output.resolve();out.mkdir(parents=True,exist_ok=True)
     (out/'atlas.png').write_bytes(png(384,640,(70,80,95,255)))
     (out/'hero.png').write_bytes(png(64,64,(40,180,150,255)))
@@ -45,6 +48,7 @@ if __name__=='__main__':
     if args.inventory and (not args.content_source or args.combat): p.error('--inventory requires --content-source and excludes --combat')
     if args.artifact and not args.inventory:p.error('--artifact requires --inventory')
     if args.objects and (not args.content_source or args.inventory or args.combat):p.error('--objects requires --content-source and excludes inventory/combat')
+    if args.breakables and (not args.content_source or args.inventory or args.combat or args.objects):p.error('--breakables requires --content-source and excludes inventory/combat/objects')
     if args.content_source:
         root=out/'installation';shutil.copytree(args.content_source,root,dirs_exist_ok=True)
         (root/'tilesets').mkdir(exist_ok=True);(root/'sprites/hero').mkdir(parents=True,exist_ok=True)
@@ -71,4 +75,17 @@ if __name__=='__main__':
             for i,color in enumerate([(40,80,200,255),(200,80,40,255)]):(root/f'dungeon/frames{i:04d}.png').write_bytes(png(32,32,color))
             scene.update(data_root=str(root),room_objects='Starting Room',smoke_objects=True,
                          smoke_expected='{"turn":1,"x":1,"y":1}')
+        if args.breakables:
+            (root/'game/rooms.xml').write_text('''<roomdb><room name="Starting Room" width="5" height="4">
+<row text="#####"/><row text="#.1.#"/><row text="#..2#"/><row text="#####"/>
+<custombreakable at="1" png="dungeon/intact.spr" breaking="dungeon/breaking.spr" broken="dungeon/broken.spr" hitsNeededToBreak="2" name="Fixture fragile"/>
+<pedestal at="2" name="Fixture pedestal" text="Synthetic text"/></room></roomdb>''')
+            # Different frame counts prove expansion precedence and fallback.
+            (root/'dungeon/intact.spr').write_bytes(sprite(1));(root/'dungeon/breaking.spr').write_bytes(sprite(1))
+            for layer in ['expansion2','expansion3']:(root/layer/'dungeon').mkdir(parents=True,exist_ok=True)
+            (root/'expansion2/dungeon/intact.spr').write_bytes(sprite(2));(root/'expansion3/dungeon/intact.spr').write_bytes(sprite(3))
+            (root/'expansion2/dungeon/broken.spr').write_bytes(sprite(4))
+            (root/'dungeon/podium_scroll.png').write_bytes(png(32,32,(70,80,95,255)))
+            scene.update(data_root=str(root),room_objects='Starting Room',smoke_breakables=True,
+                         smoke_expected='{"turn":2,"x":1,"y":1}')
     (out/'scene.json').write_text(json.dumps(scene)+'\n')

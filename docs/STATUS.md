@@ -30,7 +30,7 @@ Verified:
 - Room-placement collision: 69,632 original executions match.
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
-- Eighteen local CTest groups pass, including deterministic session and save/load tests.
+- Twenty local CTest groups pass, including deterministic session and save/load tests.
 - Actual macos-15 arm64 CI run 42624802836 passed all thirty-one checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
@@ -293,3 +293,19 @@ AttackSomehow matches1,024 original cases /4,580 requested hits; pedestal creati
 matches1,024 original cases. Sprite/place/id/trigger/transient-animation boundaries
 are explicit. Eighteen local groups pass. Session/native ownership and interaction
 for these new record types are next; full content execution remains unfinished.
+
+Breakables/pedestals now have Session ownership/collision and optional savev7
+state; older v7 files omit the new data. Bump/explicit adjacent strike uses the
+provisional turn policy, with ordered hit/broken events and enemy routes updating
+afterbreak. Lazy sprite callbacks run after appearance gates and fail atomically.
+Native rendering selects saved frames, plays transient breaking animations, and
+validates all three sprite counts before loading state. New native fixture covers
+partial hits/save/reload, resource/count failure rollback, break/passability and
+pedestal collision. Twenty local groups and256 supplied starting characters pass.
+
+Original fixed startup mount requests match26 recorded calls. Directory lookup
+uses expansion3→expansion2→expansion→loose precedence (core ZIP wouldprepend, but
+is absent in supplied installation). All13 breakable sprite files resolve, five
+through expansion2. Native room/monster sprites and installation hero/atlas now
+use this lookup; native fixture proves differing overlay framecounts/fallback.
+Packed core ZIP and mod mounts remain unsupported. New integration awaits MacCI.

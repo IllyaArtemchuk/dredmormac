@@ -134,7 +134,8 @@ World RoomDefinition::instantiate(bool custom_blockers) const {
     std::vector<Position> coordinate_blockers;
     std::function<void(const XmlNode&)> annotations=[&](const XmlNode& node) {
         const auto at=node.attribute("at");
-        const bool blocker=(custom_blockers && node.tag=="customblocker") || node.tag=="custombreakable" || node.tag=="pedestal" || node.tag=="element";
+        const auto tag=ascii_lower(node.tag);
+        const bool blocker=(custom_blockers && (tag=="customblocker" || tag=="custombreakable" || tag=="pedestal")) || tag=="element";
         if (at.size()==1) {if (blocker) blocked.insert(at[0]);else floor.insert(at[0]);}
         if (blocker && node.integer("x") && node.integer("y")) coordinate_blockers.push_back({*node.integer("x"),*node.integer("y")});
         for (const auto& child:node.children) annotations(child);

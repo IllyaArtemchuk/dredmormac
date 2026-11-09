@@ -2,6 +2,7 @@
 #include "dredmor/generation.hpp"
 #include "dredmor/xml.hpp"
 #include <variant>
+#include <functional>
 
 namespace dredmor {
 using RoomAttributes=std::map<std::string,std::string,std::less<>>;
@@ -92,6 +93,8 @@ struct BreakableHit {
 BreakableRoomDefinition read_breakable_room_object(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room);
 std::optional<BreakableRoomObject> create_breakable_room_object(const BreakableRoomDefinition& definition,
     Position origin,DarwinRandom& random,BreakableFrames frames={});
+std::optional<BreakableRoomObject> create_breakable_room_object(const BreakableRoomDefinition& definition,
+    Position origin,DarwinRandom& random,const std::function<BreakableFrames(const BreakableRoomDefinition&)>& resources);
 // Basic custom breakables contain no item. Trigger/animation dispatch belongs to
 // the owner; this applies the original hit count, frame and collision transition.
 BreakableHit hit_breakable(BreakableRoomObject& object);

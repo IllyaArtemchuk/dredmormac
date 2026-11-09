@@ -21,7 +21,7 @@ struct Actor {
     bool alive() const { return health>0; }
 };
 struct GroundItem { InventoryItem item;Position position; };
-enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken };
+enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken };
 struct TurnEvent {
     EventKind kind;
     std::uint64_t actor=0,target=0;
@@ -38,8 +38,14 @@ public:
     const std::vector<Actor>& enemies() const { return enemies_; }
     const std::vector<GroundItem>& ground_items() const { return ground_; }
     const std::vector<CustomRoomObject>& custom_objects() const { return custom_objects_; }
+    const std::vector<BreakableRoomObject>& breakables() const { return breakables_; }
     bool passable(Position position) const;
     std::optional<std::size_t> create_custom_object(const CustomRoomDefinition& definition,Position origin={0,0});
+    std::optional<std::size_t> create_pedestal(const RoomPedestalRecord& definition,Position origin={0,0});
+    std::optional<std::size_t> create_breakable(const BreakableRoomDefinition& definition,Position origin={0,0},BreakableFrames frames={});
+    std::optional<std::size_t> create_breakable(const BreakableRoomDefinition& definition,Position origin,
+        const std::function<BreakableFrames(const BreakableRoomDefinition&)>& resources);
+    bool strike_breakable(std::size_t index);
     TrapSelection select_trap_candidate(const std::vector<TrapCandidate>& pool,SpawnDepthContext depth,float deviation);
     const std::vector<TurnEvent>& events() const { return events_; }
     const Progression& progression() const { return progression_; }
@@ -75,6 +81,7 @@ private:
     std::vector<Actor> enemies_;
     std::vector<GroundItem> ground_;
     std::vector<CustomRoomObject> custom_objects_;
+    std::vector<BreakableRoomObject> breakables_;
     std::vector<TurnEvent> events_;
     Inventory inventory_;
     Equipment equipment_;
@@ -98,6 +105,7 @@ private:
     void currency_transfer_impl(std::int32_t amount,CurrencyOperation operation);
     void pickup_impl();
     void pickup_currency();
+    bool hit_breakable_impl(std::size_t index);
 };
 Actor make_player(const ClassRanks& ranks,std::string name="Player");
 }

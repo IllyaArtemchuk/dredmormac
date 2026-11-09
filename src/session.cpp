@@ -59,6 +59,7 @@ Actor* Session::enemy_at(Position position,std::uint64_t excluding) {
 bool Session::passable(Position position) const {
     if (!world_.passable(position)) return false;
     for (const auto& object:custom_objects_) if (object.blocks_movement && same(object.position,position)) return false;
+    for (const auto& object:breakables_) if (object.object.blocks_movement && same(object.object.position,position)) return false;
     return true;
 }
 TrapSelection Session::select_trap_candidate(const std::vector<TrapCandidate>& pool,SpawnDepthContext depth,float deviation) {
@@ -71,6 +72,40 @@ std::optional<std::size_t> Session::create_custom_object(const CustomRoomDefinit
     if (object->position.x<0 || object->position.y<0 || object->position.x>=world_.width() || object->position.y>=world_.height())
         throw std::invalid_argument("custom object outside session world");
     custom_objects_.push_back(std::move(*object));random_.libc=candidate;return custom_objects_.size()-1;
+}
+std::optional<std::size_t> Session::create_pedestal(const RoomPedestalRecord& definition,Position origin) {
+    auto candidate=random_.libc;auto object=create_room_pedestal(definition,origin,candidate);
+    if (!object) {random_.libc=candidate;return std::nullopt;}
+    if (custom_objects_.size()>=10000) throw std::runtime_error("session custom object limit exceeded");
+    if (object->position.x<0 || object->position.y<0 || object->position.x>=world_.width() || object->position.y>=world_.height())
+        throw std::invalid_argument("pedestal outside session world");
+    custom_objects_.push_back(std::move(*object));random_.libc=candidate;return custom_objects_.size()-1;
+}
+std::optional<std::size_t> Session::create_breakable(const BreakableRoomDefinition& definition,Position origin,BreakableFrames frames) {
+    return create_breakable(definition,origin,[frames](const auto&){return frames;});
+}
+std::optional<std::size_t> Session::create_breakable(const BreakableRoomDefinition& definition,Position origin,
+    const std::function<BreakableFrames(const BreakableRoomDefinition&)>& resources) {
+    auto candidate=random_.libc;auto object=create_breakable_room_object(definition,origin,candidate,resources);
+    if (!object) {random_.libc=candidate;return std::nullopt;}
+    if (breakables_.size()>=10000) throw std::runtime_error("session breakable limit exceeded");
+    const auto p=object->object.position;
+    if (p.x<0 || p.y<0 || p.x>=world_.width() || p.y>=world_.height()) throw std::invalid_argument("breakable outside session world");
+    breakables_.push_back(std::move(*object));random_.libc=candidate;return breakables_.size()-1;
+}
+bool Session::hit_breakable_impl(std::size_t index) {
+    if (index>=breakables_.size()) throw std::out_of_range("invalid breakable index");
+    const auto result=hit_breakable(breakables_[index]);
+    for (const auto& event:result.triggers) events_.push_back({event=="hit"?EventKind::object_hit:EventKind::object_broken,player_.id,index+1,breakables_[index].hits_taken});
+    return result.handled;
+}
+bool Session::strike_breakable(std::size_t index) {
+    if (index>=breakables_.size()) throw std::out_of_range("invalid breakable index");
+    if (!player_.alive()) return false;const auto p=breakables_[index].object.position;
+    if (std::abs(p.x-player_.position.x)+std::abs(p.y-player_.position.y)!=1) return false;
+    if (world_.turn()==std::numeric_limits<std::uint64_t>::max()) throw std::overflow_error("turn counter exhausted");
+    auto next=*this;next.events_.clear();if (!next.hit_breakable_impl(index)) return false;
+    next.world_.step(Action::wait);next.enemy_turns();*this=std::move(next);return true;
 }
 std::uint64_t Session::spawn_enemy(Actor enemy) {
     if (!passable(enemy.position) || same(enemy.position,player_.position) || enemy_at(enemy.position) ||
@@ -223,6 +258,12 @@ void Session::step_impl(Action action) {
     events_.clear();if (!player_.alive()) return;
     if (world_.turn()==std::numeric_limits<std::uint64_t>::max()) throw std::overflow_error("turn counter exhausted");
     const auto destination=target(player_.position,action);
+    if (action!=Action::wait && world_.passable(destination)) for (std::size_t index=0;index<breakables_.size();++index) {
+        const auto& object=breakables_[index].object;
+        if (object.blocks_movement && same(object.position,destination) && hit_breakable_impl(index)) {
+            world_.step(Action::wait);enemy_turns();return;
+        }
+    }
     if (action!=Action::wait && !passable(destination)) {events_.push_back({EventKind::blocked,player_.id});return;}
     if (action!=Action::wait) if (auto* enemy=enemy_at(destination)) {
         attack(player_,*enemy);world_.step(Action::wait);enemy_turns();return;

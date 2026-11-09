@@ -531,3 +531,33 @@ Next: Session ownership/collision/save/native rendering and hit handling, ordere
 room content execution, full monster/trap/horde/element constructors/interactions.
 Private breakable-and-pedestal-records.txt/breakable-runtime.txt/breakable-attack.txt
 exports. Do not commit original resources or private analysis output.
+
+Session owns breakables separately and pedestals in custom_objects(kind3). Bump
+hits blocked breakables on passable base tiles; explicit strike_breakable requires
+adjacent player. Handled hits consume provisional wait/enemy turn; object_hit/
+object_broken events retain order. Enemy pathfinding respects both classes.
+create_breakable accepts frame metadata or lazy resource callback invoked only
+after appearance gate; failures preserve RNG/session. Optional savev7 <breakables>
+retains base object/sprite triples/framecounts/hits/delay with strict state checks;
+customkind3 onlyv7, breakablekind2 onlyinside breakable records. Earlier saves read.
+Twenty local groups pass, including new breakable-session/resources tests;256
+supplied starting characters still pass with unchanged integration digest.
+Native RoomView builds supported visual records in relative source order (other
+record constructors/interveningRNG still omitted), caches intact/breaking/broken,
+draws static savedframes and transient PlayOnBob-style request on presentation
+clock. Frame counts validate before load commit. Smoke fixture does hit→wait,
+partial save/reload, invalid brokenpath/count rollback, finalhit/open/move and
+pedestal collision. CMake adds native-breakable pair; current source awaits CI.
+
+Resource lookup discovered actual missing direct expansion sprite paths. Original
+SDL_main fragmentb6b6d..b6e8f withESI=b69c1 records26 PHYSFS_mount1c03d0 requests:
+expansion3/2/1 game→/layer/ plus dungeon/items/skills/sprites/sfx/tilesets/ui append;
+then dredmorcore.zip→/ prepend; then.→/ append. No coreZIP in suppliedinstallation.
+resources.hpp/cpp implements directory mounts with expansion3→2→1→loose lookup,
+canonical containment and backslash normalization. Packed coreZIP/modmounts remain
+unsupported, explicit guard ifcoreZIPexists. verify_resource_mounts.py matchesall26
+originalrequests andindependentlookup of13 breakablesprites (5expansionresolutions).
+Native object/monster and installation hero/atlas use resolver. Fixture root has
+intact1frame,exp2intact2,exp3intact3; broken4onlyexp2,breaking1onlyloose, proving
+precedence/fallback onMac. Next: validate MacCI then full ordered content execution,
+monster/trap/horde/element constructors and gameplay scripts/spells/fulllevels.

@@ -8,18 +8,18 @@
 #include "dredmor/content.hpp"
 #include "dredmor/character.hpp"
 #include "dredmor/sprite.hpp"
+#include "dredmor/resources.hpp"
 #include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <chrono>
 #include <iomanip>
 #include <climits>
+#include <type_traits>
 
 static std::filesystem::path roomResource(const std::filesystem::path& root,const std::string& relative) {
     if (root.empty() || relative.empty()) throw std::runtime_error("room object resource needs a data root/path");
-    const auto path=std::filesystem::canonical(root/relative);const auto within=path.lexically_relative(root);
-    if (within.empty() || *within.begin()=="..") throw std::runtime_error("room object resource escapes data root");
-    return path;
+    return dredmor::resolve_directory_resource(root,relative);
 }
 
 @interface SpriteImage : NSObject {
@@ -30,6 +30,10 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
 - (instancetype)initWithPath:(NSString*)path;
 - (instancetype)initWithRoomSprite:(const dredmor::RoomSprite&)sprite root:(const std::filesystem::path&)root;
 - (NSImage*)frameAt:(uint64_t)milliseconds;
+- (NSImage*)frameAtIndex:(uint32_t)index;
+- (NSUInteger)frameCount;
+- (uint64_t)duration;
+- (void)setSingleFrameDelay:(uint16_t)delay;
 @end
 @implementation SpriteImage
 - (instancetype)initWithPath:(NSString*)path {
@@ -83,7 +87,31 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
     if (!_sprite.frames.empty()) return _images[_sprite.frame_at(milliseconds)];
     return _images[_seriesDelay?(milliseconds/_seriesDelay)%_images.count:0];
 }
+- (NSImage*)frameAtIndex:(uint32_t)index { return _images[MIN(NSUInteger(index),_images.count-1)]; }
+- (NSUInteger)frameCount { return _images.count; }
+- (uint64_t)duration {
+    if (_sprite.frames.empty()) return MAX(uint64_t(1),_seriesDelay)*_images.count;
+    uint64_t result=0;for (const auto& frame:_sprite.frames) result+=MAX(uint64_t(1),uint64_t(frame.delay_ms));return result;
+}
+- (void)setSingleFrameDelay:(uint16_t)delay {
+    if (_images.count!=1) throw std::runtime_error("single-frame delay requires one frame");
+    if (_sprite.frames.empty()) _seriesDelay=delay;else _sprite.frames[0].delay_ms=delay;
+}
 @end
+
+static NSArray<SpriteImage*> *breakableSprites(const dredmor::RoomSprite& intact,const dredmor::RoomSprite& breaking,
+    const dredmor::RoomSprite& broken,const std::filesystem::path& root) {
+    NSMutableArray<SpriteImage*> *images=[NSMutableArray array];
+    for (const auto* sprite:{&intact,&breaking,&broken}) {
+        SpriteImage *image=[[SpriteImage alloc] initWithRoomSprite:*sprite root:root];
+        if (!image || ![image frameCount] || [image frameCount]>65535) throw std::runtime_error("invalid breakable sprite frames");
+        [images addObject:image];
+    }
+    return images;
+}
+static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
+    return {static_cast<uint16_t>([images[0] frameCount]),static_cast<uint16_t>([images[1] frameCount]),static_cast<uint16_t>([images[2] frameCount])};
+}
 
 @interface RoomView : NSView<DredmorInventoryOwner> {
     std::unique_ptr<dredmor::Session> _session;
@@ -94,6 +122,8 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
     SpriteImage *_hero;
     NSMutableDictionary<NSNumber*,SpriteImage*> *_enemyImages;
     NSArray<SpriteImage*> *_objectImages;
+    NSArray<NSArray<SpriteImage*>*> *_breakableImages;
+    NSMutableArray<NSDictionary*> *_breakAnimations;
     NSTimer *_animationTimer;
     NSTimeInterval _animationStart;
     DredmorInventoryController *_inventoryController;
@@ -114,6 +144,8 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
 - (BOOL)smokeArtifact;
 - (BOOL)smokeSkillSelection;
 - (BOOL)smokeCustomObjects;
+- (BOOL)smokeBreakables;
+- (void)recordBreakableAnimations;
 @end
 
 @implementation RoomView
@@ -153,11 +185,29 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
             _session->character_profile(ranks,std::make_shared<const std::vector<dredmor::ItemDefinition>>(_content->items()),
                 std::move(skillRanks),std::make_shared<const std::vector<dredmor::AbilityDefinition>>(_content->abilities()));
         }
+        NSMutableArray<NSArray<SpriteImage*>*> *breakables=[NSMutableArray array];
         if (scene[@"room_objects"]) {
             if (!_content || ![scene[@"room_objects"] isKindOfClass:NSString.class]) throw std::runtime_error("room objects need a content room name");
             const auto& room=_content->room([scene[@"room_objects"] UTF8String]);
-            for (const auto& definition:room.custom_objects()) _session->create_custom_object(definition);
+            // Preview builds supported visual records in relative source order.
+            // Other constructors/RNG and full population still belong to level generation.
+            for (const auto& record:room.records()) std::visit([&](const auto& definition) {
+                using T=std::decay_t<decltype(definition)>;
+                if constexpr (std::is_same_v<T,dredmor::CustomRoomDefinition>) _session->create_custom_object(definition);
+                else if constexpr (std::is_same_v<T,dredmor::RoomPedestalRecord>) _session->create_pedestal(definition);
+                else if constexpr (std::is_same_v<T,dredmor::BreakableRoomDefinition>) {
+                    NSArray<SpriteImage*> *prepared=nil;
+                    const auto created=_session->create_breakable(definition,{0,0},[&](const auto& value) {
+                        prepared=breakableSprites(value.intact,value.breaking.value_or(value.intact),value.broken,_dataRoot);return breakableFrames(prepared);
+                    });
+                    if (created) {
+                        const auto delay=_session->breakables()[*created].single_breaking_delay;
+                        if (delay) [prepared[1] setSingleFrameDelay:delay];[breakables addObject:prepared];
+                    }
+                }
+            },record);
         }
+        _breakableImages=breakables;_breakAnimations=[NSMutableArray array];
         NSMutableArray<SpriteImage*> *objects=[NSMutableArray array];
         for (const auto& object:_session->custom_objects()) {
             SpriteImage *image=[[SpriteImage alloc] initWithRoomSprite:object.sprite root:_dataRoot];
@@ -273,6 +323,43 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
     std::ostringstream before;_session->save(before);_session->step(dredmor::Action::east);std::ostringstream after;_session->save(after);
     return before.str()==after.str() && !_session->events().empty() && _session->events()[0].kind==dredmor::EventKind::blocked;
 }
+- (BOOL)smokeBreakables {
+    NSURL *url=[NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:
+        [NSUUID.UUID.UUIDString stringByAppendingString:@".dredmor-save"]]];
+    try {
+        if (_session->breakables().size()!=1 || _breakableImages.count!=1 || _session->custom_objects().size()!=1) return NO;
+        const auto& object=_session->breakables()[0];
+        if (object.hits_taken!=1 || object.object.frame!=1 || !_session->world().passable(object.object.position) || _session->passable(object.object.position) ||
+            [_breakableImages[0][0] frameCount]!=3 || [_breakableImages[0][1] frameCount]!=1 || [_breakableImages[0][2] frameCount]!=4 || [_breakableImages[0][1] duration]!=10)
+            return NO;
+        std::ostringstream before;_session->save(before);NSArray *oldImages=_breakableImages;
+        std::vector<std::string> invalid;
+        auto path=before.str();auto start=path.find("<broken image=\"");
+        if (start==std::string::npos) return NO;start+=std::string("<broken image=\"").size();const auto end=path.find('"',start);
+        path.replace(start,end-start,"../unavailable-resource.spr");invalid.push_back(std::move(path));
+        auto counts=before.str();start=counts.find("intact-frames=\"3\"");if (start==std::string::npos) return NO;
+        counts.replace(start,std::string("intact-frames=\"3\"").size(),"intact-frames=\"4\"");invalid.push_back(std::move(counts));
+        for (const auto& bytes:invalid) {
+            NSData *data=[NSData dataWithBytes:bytes.data() length:bytes.size()];
+            if (![data writeToURL:url options:NSDataWritingAtomic error:nullptr]) return NO;
+            bool rejected=false;try { [self loadFromURL:url]; } catch(const std::exception&) {rejected=true;}
+            std::ostringstream after;_session->save(after);if (!rejected || after.str()!=before.str() || oldImages!=_breakableImages) return NO;
+        }
+        [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];
+        if (![self smokeSaveLoad]) return NO;
+        NSEvent *right=[NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:0 timestamp:0
+            windowNumber:self.window.windowNumber context:nil characters:@"\uf703" charactersIgnoringModifiers:@"\uf703" isARepeat:NO keyCode:124];
+        [self keyDown:right];
+        const auto& broken=_session->breakables()[0];
+        if (broken.hits_taken!=2 || broken.object.frame!=3 || broken.object.playing || broken.object.looping ||
+            !_session->passable(broken.object.position) || _breakAnimations.count!=1) return NO;
+        [self display];[self keyDown:right];
+        return _session->player().position.x==2 && _session->player().position.y==1 && !_session->passable({3,2});
+    } catch (const std::exception& error) {
+        fprintf(stderr,"native breakable smoke failed: %s\n",error.what());
+        [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];return NO;
+    }
+}
 - (void)saveToURL:(NSURL*)url {
     std::ostringstream output;_session->save(output);
     const auto bytes=output.str();
@@ -303,9 +390,7 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
         if (_content) {
             const auto definition=_content->make_monster(enemy.name,enemy.position,dredmor::Difficulty::medium);
             if (definition.sprite.empty()) throw std::runtime_error("saved monster has no idle sprite");
-            const auto path=std::filesystem::canonical(_dataRoot/definition.sprite);
-            const auto relative=path.lexically_relative(_dataRoot);
-            if (relative.empty() || *relative.begin()=="..") throw std::runtime_error("monster sprite escapes data root");
+            const auto path=roomResource(_dataRoot,definition.sprite);
             images[@(enemy.id)]=[[SpriteImage alloc] initWithPath:[NSString stringWithUTF8String:path.c_str()]];
         } else {
             SpriteImage *image=_enemyImages[@(enemy.id)];
@@ -319,7 +404,16 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
         if (!image) throw std::runtime_error("cannot prepare saved room object sprite");
         [objects addObject:image];
     }
-    _session=std::move(loaded);_enemyImages=images;_objectImages=objects;[_inventoryController refresh];self.needsDisplay=YES;
+    NSMutableArray<NSArray<SpriteImage*>*> *breakables=[NSMutableArray array];
+    for (const auto& object:loaded->breakables()) {
+        NSArray<SpriteImage*> *prepared=breakableSprites(object.intact,object.breaking,object.broken,_dataRoot);
+        const auto frames=breakableFrames(prepared);
+        if (frames.intact!=object.frames.intact || frames.breaking!=object.frames.breaking || frames.broken!=object.frames.broken)
+            throw std::runtime_error("saved breakable frames do not match resources");
+        if (object.single_breaking_delay) [prepared[1] setSingleFrameDelay:object.single_breaking_delay];[breakables addObject:prepared];
+    }
+    _session=std::move(loaded);_enemyImages=images;_objectImages=objects;_breakableImages=breakables;[_breakAnimations removeAllObjects];
+    [_inventoryController refresh];self.needsDisplay=YES;
 }
 - (void)showFailure:(const std::exception&)error {
     NSAlert *alert=[NSAlert new];alert.messageText=@"Cannot complete action";
@@ -445,10 +539,18 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
             else if ([event.charactersIgnoringModifiers isEqualToString:@"."]) action=Action::wait;
             else { [super keyDown:event]; return; }
     }
-    try { _session->step(action); }
+    try { _session->step(action);[self recordBreakableAnimations]; }
     catch (const std::exception& e) { fprintf(stderr,"turn failed: %s\n",e.what()); }
     [_inventoryController refresh];
     self.needsDisplay=YES;
+}
+- (void)recordBreakableAnimations {
+    for (const auto& event:_session->events()) if (event.kind==dredmor::EventKind::object_broken) {
+        const auto index=event.target-1;
+        if (index>=_session->breakables().size() || index>=_breakableImages.count) throw std::runtime_error("breakable animation index invalid");
+        const auto position=_session->breakables()[index].object.position;
+        [_breakAnimations addObject:@{@"sprite":_breakableImages[index][1],@"x":@(position.x),@"y":@(position.y),@"start":@(NSProcessInfo.processInfo.systemUptime)}];
+    }
 }
 - (void)drawRect:(NSRect)dirtyRect {
     [[NSColor colorWithWhite:0.06 alpha:1] setFill]; NSRectFill(self.bounds);
@@ -467,11 +569,24 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
                  fromRect:source operation:NSCompositingOperationSourceOver fraction:1
            respectFlipped:YES hints:nil];
     }
-    for (std::size_t i=0;i<_session->custom_objects().size();++i) {
-        const auto& object=_session->custom_objects()[i];NSImage *sprite=[_objectImages[i] frameAt:animationTime];
+    auto drawObject=[&](dredmor::Position position,NSImage *sprite) {
         const CGFloat width=sprite.size.width*cell/32,height=sprite.size.height*cell/32;
-        [sprite drawInRect:NSMakeRect(20+object.position.x*cell+(cell-width)/2,20+(object.position.y+1)*cell-height,width,height)
+        [sprite drawInRect:NSMakeRect(20+position.x*cell+(cell-width)/2,20+(position.y+1)*cell-height,width,height)
             fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1 respectFlipped:YES hints:nil];
+    };
+    for (std::size_t i=0;i<_session->custom_objects().size();++i) {
+        const auto& object=_session->custom_objects()[i];
+        drawObject(object.position,object.playing?[_objectImages[i] frameAt:animationTime]:[_objectImages[i] frameAtIndex:object.frame]);
+    }
+    for (std::size_t i=0;i<_session->breakables().size();++i) {
+        const auto& object=_session->breakables()[i];const NSUInteger sprite=object.hits_taken>=object.hits_needed?2:0;
+        drawObject(object.object.position,[_breakableImages[i][sprite] frameAtIndex:object.object.frame]);
+    }
+    for (NSDictionary *animation in [_breakAnimations copy]) {
+        SpriteImage *sprite=animation[@"sprite"];
+        const auto elapsed=static_cast<uint64_t>((NSProcessInfo.processInfo.systemUptime-[animation[@"start"] doubleValue])*1000);
+        if (elapsed>=[sprite duration]) [_breakAnimations removeObjectIdenticalTo:animation];
+        else drawObject({[animation[@"x"] intValue],[animation[@"y"] intValue]},[sprite frameAt:elapsed]);
     }
     // Item icon rendering and original item placement remain separate work.
     // This marker exposes explicit developer-scene drops to the pickup control.
@@ -528,7 +643,7 @@ static NSDictionary *sceneFromInstallation(const std::filesystem::path& selected
     auto path=[&](const std::filesystem::path& value) { return [NSString stringWithUTF8String:value.c_str()]; };
     NSMutableDictionary *scene=[@{@"name":@"Starting Room",@"policy":@"provisional-preview",@"rows":rows,
         @"collision":[NSString stringWithUTF8String:world.room_text().c_str()],
-        @"atlas":path(root/"tilesets/basic.png"),@"hero":path(root/"sprites/hero/hero_idle_d.spr"),
+        @"atlas":path(roomResource(root,"tilesets/basic.png")),@"hero":path(roomResource(root,"sprites/hero/hero_idle_d.spr")),
         @"data_root":path(root),@"seed":@(seed),@"starting_loadout":@YES,@"room_objects":@"Starting Room",
         @"floor_crop":@[@0,@192,@32,@32],@"wall_crop":@[@0,@96,@32,@32]} mutableCopy];
     if (selectSkills) {
@@ -630,6 +745,7 @@ int main(int argc,const char**argv) {
                     ([scene[@"smoke_inventory"] boolValue] && ![view smokeInventory]) ||
                     ([scene[@"smoke_artifact"] boolValue] && ![view smokeArtifact]) ||
                     ([scene[@"smoke_objects"] boolValue] && ![view smokeCustomObjects]) ||
+                    ([scene[@"smoke_breakables"] boolValue] && ![view smokeBreakables]) ||
                     ![view smokeSaveLoad] || ![view smokeSkillSelection]) {
                     fprintf(stderr,"native smoke failed: %s\n",[[view snapshot] UTF8String]); std::exit(1);
                 }

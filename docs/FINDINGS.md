@@ -1092,3 +1092,36 @@ with sprite/place/id boundaries and unchanged MT. Eighteen local groups pass;
 session/save/native integration of these new types remains next. Artifact factory
 run42624802836 passed all31 native checks/package; older ownership run cancelled
 whilequeued, successful descendant validates all prior artifact changes.
+
+## Owning breakables and directory resources
+
+Session now owns breakable objects and pedestal visuals, applies collision in
+player/enemy routing, and emits ordered hit/broken events. The cardinal bump/
+adjacent strike scheduling is provisional, like existing combat turns; original
+movement queue/AI/script execution is not claimed. Resource callbacks occur after
+appearance gates; callback/placement failures leave session/RNG unchanged. Savev7
+adds optional breakable objects with three sprite records, framecounts/hits/delay
+and strict validation; absent data migrates toempty. Pedestals usecustomkind3.
+Native previews build supported visual records in relative XML order, omitting
+intervening unsupported constructors/RNG, so whole-room parity is not claimed.
+Native draws saved static frames and records transient breaking animations using
+the existing presentation clock. Original visual scheduling remains unverified.
+Loads validate all sprite counts/paths before session/cache replacement. New smoke
+fixture tests partial hit/save/reload, both badpath and framecount rollback, final
+break/animation/passability/movement, and pedestal collision. Twenty local groups
+and256 supplied starting characters pass; native validation pending push.
+
+The supplied breakable XML references13 unique sprite files; five are expansion2
+assets without a direct root path. Actual startup fragmentb6b6d..b6e8f (ESI=b69c1)
+executes26 fixed PHYSFS_mount1c03d0 calls. Expansion3, expansion2, expansion game
+folders mount at/layer/, their dungeon/items/skills/sprites/sfx/tilesets/ui folders
+at corresponding root namespaces with append1. Then dredmorcore.zip mounts root
+with prepend0, and. appends root. Thus with no coreZIP (the supplied installation)
+directory precedence is expansion3,2,1,loose. ResourceMount plans matchall26 actual
+requests with a recording/success PHYSFS boundary; this excludes fullstartup/I/O.
+Directory resolver independently finds all13 source breakable files, five through
+expansion2. Native object/monster/installation hero+atlas loading uses this lookup.
+Synthetic native breakable fixture has conflicting framecounts in three layers
+and one asset only in expansion2, proving lookup on Mac. Core ZIP/mod mounts remain
+unsupported; requesting packed installations fails explicitly instead of using
+incorrect loose precedence. Original resources and mount disassembly stay private.

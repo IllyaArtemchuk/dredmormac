@@ -171,6 +171,13 @@ BreakableHit hit_breakable(BreakableRoomObject& object) {
     } else next.object.frame=std::uint32_t(std::min(next.hits_taken,int(next.frames.intact)-1));
     object=std::move(next);return result;
 }
+std::optional<BreakableRoomObject> create_breakable_room_object(const BreakableRoomDefinition& definition,
+    Position origin,DarwinRandom& random,const std::function<BreakableFrames(const BreakableRoomDefinition&)>& resources) {
+    auto candidate=random;if (!appears(definition.placement.percent,candidate)) {random=candidate;return std::nullopt;}
+    if (!resources) throw std::invalid_argument("breakable resource resolver required");
+    const auto frames=resources(definition);auto accepted=definition;accepted.placement.percent=100;
+    auto result=create_breakable_room_object(accepted,origin,candidate,frames);random=candidate;return result;
+}
 RoomPedestalRecord read_room_pedestal(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room) {
     if (lower(node.tag)!="pedestal") throw std::invalid_argument("expected pedestal");
     auto candidate=room;RoomPedestalRecord result;result.placement=placement(node,markers,candidate);

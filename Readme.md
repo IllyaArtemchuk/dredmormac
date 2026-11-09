@@ -168,4 +168,14 @@ Ordered room records include typed breakables and pedestals. Compare primitives
 with `verify_breakable.py ORIGINAL_BINARY build/dredmor-breakable --content DATA_ROOT
 --out PRIVATE_REPORT.json` and `verify_pedestal.py ORIGINAL_BINARY build/dredmor-pedestal
 --out PRIVATE_REPORT.json`. Constructor/hit state matches explicit sprite/event
-boundaries; their owning session/native interaction remains under development.
+boundaries. Session ownership, collision, saving and native drawing are integrated;
+the provisional cardinal movement policy strikes breakables on bump. Original
+scheduling and script execution remain unfinished.
+
+Directory resource lookup preserves the original expansion3, expansion2,
+expansion, loose-file precedence. `verify_resource_mounts.py ORIGINAL_BINARY
+build/dredmor-resources --content DATA_ROOT --out PRIVATE_REPORT.json` compares
+startup mount requests and supplied sprite lookup. Packed core ZIP installations
+and runtime mod mounts are not implemented; the supplied installation uses loose
+files. Native breakable smoke also verifies layer precedence and atomic resource
+validation during save loading.
