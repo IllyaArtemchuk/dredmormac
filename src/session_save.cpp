@@ -260,7 +260,9 @@ CustomRoomObject read_room_object(const XmlNode& node,const World& world) {
 }
 void Session::save(std::ostream& out) const {
     bool scheduled=!player_.triggers.empty();for (const auto& actor:enemies_) scheduled=scheduled || !actor.triggers.empty();
-    out<<"<dredmor-session version=\""<<(!player_buffs_.empty()?9:scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
+    bool gated=false;auto gates=[&](const Actor& actor){for (const auto& trigger:actor.triggers) gated=gated || trigger.requires_buff || trigger.forbids_buff || !trigger.required_buff.empty() || !trigger.forbidden_buff.empty();};
+    gates(player_);for (const auto& actor:enemies_) gates(actor);
+    out<<"<dredmor-session version=\""<<(gated?10:!player_buffs_.empty()?9:scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
        <<"\" content=\""<<signature(definitions_)<<"\"";
     if (player_facing_!=2) out<<" facing=\""<<player_facing_<<"\"";
     out<<">\n<room>"<<escape(world_.room_text())<<"</room>\n";
@@ -314,7 +316,9 @@ void Session::save(std::ostream& out) const {
                 if (trigger.spell>=spells_->size()) throw std::runtime_error("invalid scheduled spell index");
                 out<<"<trigger owner=\""<<actor.id<<"\" caster=\""<<trigger.caster<<"\" spell=\""<<trigger.spell
                    <<"\" remaining=\""<<trigger.remaining<<"\" percent=\""<<trigger.percent<<"\" repeat=\""<<trigger.repeat
-                   <<"\" parent=\""<<escape(trigger.parent)<<"\"/>\n";
+                   <<"\" parent=\""<<escape(trigger.parent)<<"\"";
+                if (gated) out<<" requires=\""<<trigger.requires_buff<<"\" forbids=\""<<trigger.forbids_buff<<"\" required-name=\""<<escape(trigger.required_buff)<<"\" forbidden-name=\""<<escape(trigger.forbidden_buff)<<"\"";
+                out<<"/>\n";
             }
         };
         write(player_);for (const auto& actor:enemies_) write(actor);
@@ -357,7 +361,8 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     if (input.bad()) throw std::runtime_error("cannot read session save");
     const auto root=parse_xml(content,"session save");
     const auto version=attribute(root,"version");
-    const bool modern=version=="7" || version=="8" || version=="9";
+    const bool modern=version=="7" || version=="8" || version=="9" || version=="10";
+    if (version=="10" && !root.first("scheduled-spells")) throw std::runtime_error("version ten requires gated spell state");
     if (version=="8" && !root.first("scheduled-spells")) throw std::runtime_error("version eight requires scheduled spell state");
     if (version=="9" && !root.first("player-buffs")) throw std::runtime_error("version nine requires active buff state");
     if (root.tag!="dredmor-session" || (version!="1" && version!="2" && version!="3" && version!="4" && version!="5" && version!="6" && !modern)) throw std::runtime_error("unsupported session save version");
@@ -393,7 +398,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     }
     if (!session.next_actor_ || session.next_actor_<=*actors.rbegin()) throw std::runtime_error("invalid saved actor sequence");
     if (root.first("scheduled-spells")) {
-        if ((version!="8" && version!="9") || !session.spells_ || !root.first("spell-rules")) throw std::runtime_error("scheduled spells require version eight or nine and matching rules");
+        if ((version!="8" && version!="9" && version!="10") || !session.spells_ || !root.first("spell-rules")) throw std::runtime_error("scheduled spells require matching rules and a supported version");
         std::size_t count=0;
         for (const auto& node:child(root,"scheduled-spells").children) {
             if (node.tag!="trigger" || !node.children.empty() || ++count>4096*513) throw std::runtime_error("invalid scheduled spell list");
@@ -401,6 +406,8 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
             ScheduledSpell trigger;trigger.caster=attribute_number<std::uint64_t>(node,"caster");
             trigger.spell=attribute_number<std::size_t>(node,"spell");trigger.remaining=attribute_number<std::int32_t>(node,"remaining");
             trigger.percent=attribute_number<std::int32_t>(node,"percent");trigger.repeat=flag(node,"repeat");trigger.parent=attribute(node,"parent");
+            if (version=="10") {trigger.requires_buff=flag(node,"requires");trigger.forbids_buff=flag(node,"forbids");trigger.required_buff=attribute(node,"required-name");trigger.forbidden_buff=attribute(node,"forbidden-name");}
+            else if (node.attributes.count("requires") || node.attributes.count("forbids") || node.attributes.count("required-name") || node.attributes.count("forbidden-name")) throw std::runtime_error("trigger buff gates require version ten");
             if (!actors.count(owner) || (trigger.caster && !actors.count(trigger.caster)) || trigger.spell>=session.spells_->size()) throw std::runtime_error("invalid scheduled spell identity");
             auto& actor=session.actor_by_id(owner);
             if (actor.triggers.size()>=4096) throw std::runtime_error("scheduled spell capacity exceeded");
@@ -408,7 +415,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
         }
     }
     if (root.first("player-buffs")) {
-        if (version!="9" || !session.spells_ || !root.first("spell-rules") || !child(root,"spell-rules").attributes.count("buffs")) throw std::runtime_error("active buffs require version nine and matching rules");
+        if ((version!="9" && version!="10") || !session.spells_ || !root.first("spell-rules") || !child(root,"spell-rules").attributes.count("buffs")) throw std::runtime_error("active buffs require matching rules and a supported version");
         for (const auto& node:child(root,"player-buffs").children) {
             if (node.tag!="buff" || !node.children.empty() || session.player_buffs_.size()>=4096) throw std::runtime_error("invalid saved buff list");
             ActiveBuff buff;buff.spell=attribute_number<std::size_t>(node,"spell");buff.buff=attribute_number<std::size_t>(node,"definition");buff.remaining=attribute_number<std::int32_t>(node,"remaining");

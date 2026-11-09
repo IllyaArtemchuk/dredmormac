@@ -87,3 +87,9 @@
   other upkeep/status callbacks, icon resource aliases and large equal-name sort
   ties remain outside the verified scope. Relative turn ordering is measured;
   the full action queue remains provisional. Save9 is port-specific.
+
+- Immediate/deferred trigger buff-name conditions now have2048 original sequence
+  comparisons. Immediate gates inspect the caster; scheduled gates inspect the
+  owner after chance. Generic requirebuff9c remains unsupported. Monster active
+  buff state is not implemented. Save10 retains gated queue state, separately
+  from the original game's save format.

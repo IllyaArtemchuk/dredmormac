@@ -76,6 +76,8 @@ if __name__=='__main__':
 <spell name="Fixture scheduled leaf" type="target"><effect type="heal" amount="1"/><effect type="spellpoints" amount="-1"/></spell>
 <spell name="Fixture active buff" type="self"><buff time="1" manaUpkeep="2" allowstacking="0" icon="dungeon/trap_hidden.png"><primarybuff id="0" amount="1"/><secondarybuff id="0" amount="2"/><resistbuff toxic="3"/></buff></spell>
 <spell name="Fixture buff rebuild" type="self"><buff time="0" icon="dungeon/origin.spr"/></spell>
+<spell name="Fixture gated" type="self"><effect type="trigger" amount="1" spell="Fixture gate resource" requireBuffOnTrigger="1" requireBuffOnTriggerName="Fixture active buff"/></spell>
+<spell name="Fixture gate resource" type="target"><effect type="spellpoints" amount="-1"/></spell>
 </spellDB>''')
             (root/'game/manTemplateDB.xml').write_text('''<templatedb><template width="1" height="1" name="7" affectsPlayer="1"><row text="#"/></template></templatedb>''')
             (root/'dungeon/trap.spr').write_bytes(sprite());(root/'dungeon/origin.spr').write_bytes(sprite())

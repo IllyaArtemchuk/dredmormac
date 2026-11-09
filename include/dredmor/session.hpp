@@ -19,6 +19,8 @@ struct ScheduledSpell {
     std::size_t spell=0;
     std::uint64_t caster=0;
     std::string parent;
+    bool requires_buff=false,forbids_buff=false;
+    std::string required_buff,forbidden_buff;
 };
 struct ActiveBuff {
     std::size_t spell=0,buff=0;
@@ -169,6 +171,7 @@ private:
     void update_player_buffs_impl();
     const BuffDefinition& buff_definition(const ActiveBuff& buff) const;
     std::string buff_icon(const ActiveBuff& buff) const;
+    bool actor_has_buff(const Actor& actor,const std::string& name) const;
     void validate_player_buff(const BuffDefinition& definition) const;
 };
 Actor make_player(const ClassRanks& ranks,std::string name="Player");

@@ -626,9 +626,10 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
         _session->step(dredmor::Action::wait);
         if (_session->player_buffs()[0].remaining!=0 || _session->player_buffs()[0].upkeep_remaining!=1 || ![self smokeSaveLoad]) return fail("buff save");
         if (!schedule("Fixture active buff") || _session->player_buffs().size()!=1 || _session->player_buffs()[0].remaining!=1 || _session->player_buffs()[0].upkeep_remaining!=1) return fail("buff refresh");
+        if (!schedule("Fixture gated") || _session->player().triggers.size()!=1 || ![self smokeSaveLoad]) return fail("gated save");
         _session->step(dredmor::Action::wait);_session->step(dredmor::Action::wait);
         if (!_session->player_buffs().empty() || _session->player().primary!=primary || _session->player().secondary!=secondary ||
-            _session->player().health!=buffHealth || _session->player().mana!=buffMana-1 || _session->player().resistance[7]!=resistance[7]+3) return fail("buff expiration");
+            _session->player().health!=buffHealth || _session->player().mana!=buffMana-2 || _session->player().resistance[7]!=resistance[7]+3 || !_session->player().triggers.empty()) return fail("buff expiration");
         if (!schedule("Fixture buff rebuild") || _session->player().resistance!=resistance) return fail("buff subsequent rebuild");
         return YES;
     } catch(const std::exception& error) {

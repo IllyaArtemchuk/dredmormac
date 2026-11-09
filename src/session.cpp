@@ -290,9 +290,17 @@ void Session::apply_spell_effects(const SpellDefinition& spell,Position target,s
             throw std::invalid_argument("spell effect execution is not implemented: "+effect.type);
         for (const auto& attribute:effect.source.attributes) {
             auto key=attribute.first;for (auto& c:key) if (c>='A' && c<='Z') c+=32;
-            if (key.rfind("requirebuff",0)==0 && legacy_integer(attribute.second)) throw std::invalid_argument("spell buff gate execution is not implemented");
+            if (key=="requirebuff" && legacy_integer(attribute.second)) throw std::invalid_argument("spell generic buff gate execution is not implemented");
         }
         if (effect.type=="trigger" || effect.type=="dot") {
+            bool require_gate=false,forbid_gate=false;std::string required,forbidden;
+            if (effect.type=="trigger") for (const auto& attribute:effect.source.attributes) {
+                auto key=attribute.first;for (auto& c:key) if (c>='A' && c<='Z') c+=32;
+                if (key=="requirebuffontrigger") require_gate=legacy_integer(attribute.second)!=0;
+                else if (key=="requirebuffonnottrigger") forbid_gate=legacy_integer(attribute.second)!=0;
+                else if (key=="requirebuffontriggername") required=attribute.second;
+                else if (key=="requirebuffonnottriggername") forbidden=attribute.second;
+            }
             const SpellDefinition* child=nullptr;
             if (spells_) for (const auto& candidate:*spells_) if (candidate.name==effect.spell) {child=&candidate;break;}
             // ApplyEffectAt returns immediately for a missing child, skipping
@@ -309,7 +317,10 @@ void Session::apply_spell_effects(const SpellDefinition& spell,Position target,s
                     if (effect.type=="dot" && effect.resistable && random_.libc.next()/42949673<victim.secondary[11]) return false;
                     if (!effect.affects_corpses && !victim.alive()) return false;
                     if (victim.triggers.size()>=4096) throw std::runtime_error("scheduled spell capacity exhausted");
-                    victim.triggers.push_back({effect.amount,effect.percent,effect.type=="dot",static_cast<std::size_t>(child-spells_->data()),source->id,spell.name});
+                    ScheduledSpell scheduled;scheduled.remaining=effect.amount;scheduled.percent=effect.percent;scheduled.repeat=effect.type=="dot";
+                    scheduled.spell=static_cast<std::size_t>(child-spells_->data());scheduled.caster=source->id;scheduled.parent=spell.name;
+                    scheduled.requires_buff=require_gate;scheduled.forbids_buff=forbid_gate;scheduled.required_buff=required;scheduled.forbidden_buff=forbidden;
+                    victim.triggers.push_back(std::move(scheduled));
                     return true;
                 };
                 // Trigger44 attaches to the last eligible tile object (reverse
@@ -322,6 +333,7 @@ void Session::apply_spell_effects(const SpellDefinition& spell,Position target,s
                 continue;
             }
             if (random_.libc.next()/21474837>effect.percent) continue;
+            if ((forbid_gate && actor_has_buff(*source,forbidden)) || (require_gate && !actor_has_buff(*source,required))) continue;
             cast_spell_recursive(*child,source->position,target,source->id,true,depth+1,remaining);continue;
         }
         if (effect.primary_scale< -1 || effect.primary_scale>=6 || (effect.primary_scale==-1 && (effect.secondary_scale<0 || effect.secondary_scale>=24)))
@@ -376,6 +388,7 @@ void Session::update_triggers_impl(Actor& actor,std::size_t& remaining) {
         actor.triggers[i].remaining=count;const auto trigger=actor.triggers[i];
         if ((!trigger.repeat && count!=0) || (trigger.repeat && !actor.alive())) continue;
         if (random_.libc.next()/21474837>trigger.percent) continue;
+        if ((trigger.forbids_buff && actor_has_buff(actor,trigger.forbidden_buff)) || (trigger.requires_buff && !actor_has_buff(actor,trigger.required_buff))) continue;
         if (!spells_ || trigger.spell>=spells_->size()) throw std::runtime_error("scheduled spell rules unavailable");
         cast_spell_recursive((*spells_)[trigger.spell],player_.position,actor.position,trigger.caster,true,0,remaining);
     }

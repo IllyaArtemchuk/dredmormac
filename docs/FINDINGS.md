@@ -1558,3 +1558,30 @@ They must not be inferred from these comparisons. Unsupported buff families fail
 atomically. Native trap smoke now also tests active buff apply/refresh, mana
 upkeep, mid-buff save/reload, expiry residue and a subsequent rebuild. All27 local
 groups pass. Current active-buff source awaits MacCI; full game remains incomplete.
+
+
+Active player-buff sourcec5e7daf passed actual macos-15 arm64 run42719251155,
+job129508693431: all46 checks and relocated packaged-app smoke. Native active
+buff application, refresh, mana upkeep, pending save/reload, expiry residue and
+subsequent rebuilding passed. Original1024 full player sequences also match.
+
+Trigger44 now honors requireBuffOnTrigger/requireBuffOnNotTrigger and their names.
+Immediate casts consume chance first and inspect caster buffs. Deferred triggers
+store flags/names, consume chance at firing and inspect owner buffs. Missing buff
+conditions suppress the cast; zero-count entries still expire. Names refer to
+parent spell names rather than buff tags or icons. Dot43 retains its original
+default gates instead of copying trigger-only fields. Generic requirebuff9c
+remains explicitly unsupported. Monster buff application is still unavailable;
+monster buff vectors are consequently empty in the supported session state.
+verify_trigger_gates.py matches2048 actual original immediate/deferred sequences,
+including owner/caster differences, required/forbidden/both conditions, absent or
+empty names, percent-1/0/1/50/99/100/101, per-pass global player MP, trigger counts
+and libc state. Original buff-name fixtures, virtual identities, strings/lists/
+allocation are supplied boundaries. Real lookup/dispatch/resource arithmetic and
+UpdateTriggers execute. Port save/resume is inserted before firing.
+Save10 preserves gated queue fields and compatible active-buff state; versions1..9
+remain readable. Downgraded gated saves and malformed flags/identities reject.
+Tests also cover active buffs expiring before the player's gated trigger pass.
+Native trap smoke now saves/reloads a pending gated resource spell while its
+required buff is active, then checks upkeep, firing and expiry. All28 local
+groups pass. Current trigger-gate source awaits MacCI. Full game remains unfinished.

@@ -9,6 +9,11 @@ std::int32_t add(std::int32_t a,std::int32_t b) {const auto bits=std::uint32_t(a
 bool same(Position a,Position b) {return a.x==b.x && a.y==b.y;}
 std::string lower(std::string value) {for (auto& c:value) if (c>='A' && c<='Z') c+=32;return value;}
 }
+bool Session::actor_has_buff(const Actor& actor,const std::string& name) const {
+    if (actor.id!=player_.id) return false; // Monster-owned buffs are not yet supported.
+    for (const auto& buff:player_buffs_) if (spells_->at(buff.spell).name==name) return true;
+    return false;
+}
 const BuffDefinition& Session::buff_definition(const ActiveBuff& buff) const {
     if (!spells_ || buff.spell>=spells_->size() || buff.buff>=spells_->at(buff.spell).buffs.size()) throw std::invalid_argument("active buff rules unavailable");
     return spells_->at(buff.spell).buffs[buff.buff];
