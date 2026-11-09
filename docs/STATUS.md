@@ -189,3 +189,11 @@ normal sampling now matches8,384 original calls/cache states and mixed MT draws
 with a host log boundary. Savev5 retains the Gaussian cache; v1..4 migrate. All
 14 local groups and28,550 existing RNG outputs pass. New sampler/save Mac CI is
 pending. Random content selection and complete gameplay remain unfinished.
+
+Normal/save run42611259389 passed all25 native checks and packaging. Random trap
+selection matches1,024 original calls/states (529 fallbacks); session save/reload
+retains future selections. Trap metadata matches1,024 original callback fixtures /
+1,366 nodes and all53 supplied definitions. Fixed child trap level overrides and
+retained trigger/spell/charge/mount/facing fields. Fourteen local groups pass;
+new trap selection/metadata source awaits Mac CI. Activation/full gameplay remain
+unfinished.

@@ -324,3 +324,26 @@ target with libc bucket0..19; alternate>=0 samples again at that mean without+1.
 Clamp1..20, discard one unconditional pool pick, then up to101 picks: accept
 !special && level==target or unconditional attempt101. Debug is not checked.
 Then actual loot/factory/population integration; full level remains incomplete.
+
+Normal/save run42611259389 passed25 native checks/package. select_trap now matches
+1,024 full GetRandomTrap calls (529 fallback101), with actual normal/MT and tweak/
+log/rand boundaries. Compares selected index/target/attempts/libc/cache/nextMT8.
+Session::select_trap_candidate owns this state; save tests compare20 future calls
+across reload. Fourteen local groups pass. New trap source awaits native CI.
+ItemDefinition.trap adds measured trigger/mount/facing/charge/spell/origin/target
+metadata. Critical fix: <trap level> overrides item-root level (shared field238).
+verify_trap_definitions.py matches actual entryCtor55a4c + trapXMLcallback4f7d0 in
+1,024 fixtures/1,366 nodes and independently checks53 supplied traps. Callback
+userdata must point to a counter, not null (tail increments it). Private
+item-parser.txt/item-entry-defaults.txt give complete parser and entry defaults.
+Enum trigger once0/charges1/other2; mount floor0/wall1/other2; facing south0/west1/
+north2/east3, unknown retains previous; missing origin retains previous, other
+trap fields reset from each child. Full trigger/casting/disarm remains pending.
+Next: actual loot/item factory and trap activation, ordered population, full-level
+session/native integration. loot-factory.txt has factory18ac20 and spawns. Factory
+type literals: artifact,zorkmids,misc,reagent,component,potion,wand,weapon,bolts,
+armour,trap; unknown random types return null. Non-random subtype bypasses type
+except artifact/zorkmids/misc and calls CreateItem(name). Misc lockpick/lockpicks
+map0, spores1. Quantity>1 overrides count and enables stacking; <=1 keeps ctor
+defaults. Artifact path's decompiler has a suspicious weapon loop; inspect actual
+instructions before implementing it. Keep all supplied data/outputs private.

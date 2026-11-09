@@ -1,4 +1,5 @@
 #include "dredmor/items.hpp"
+#include "dredmor/legacy_number.hpp"
 #include <charconv>
 #include <stdexcept>
 
@@ -62,7 +63,23 @@ ItemDefinition read_item(const XmlNode& source) {
         }
         else if (tag=="gem") item.kind=ItemKind::gem;
         else if (tag=="mushroom") item.kind=ItemKind::mushroom;
-        else if (tag=="trap") item.kind=ItemKind::trap;
+        else if (tag=="trap") {
+            item.kind=ItemKind::trap;auto trap=item.trap.value_or(TrapDefinition{});
+            const auto trigger=attr(child,"trigger"),mount=attr(child,"originmount"),facing=attr(child,"originfacing");
+            trap.trigger=trigger=="once"?TrapTrigger::once:trigger=="charges"?TrapTrigger::charges:TrapTrigger::repeat;
+            trap.mount=mount=="wall"?TrapMount::wall:mount=="floor"?TrapMount::floor:TrapMount::ceiling;
+            if (facing=="north") trap.facing=TrapFacing::north;
+            if (facing=="south") trap.facing=TrapFacing::south;
+            if (facing=="west") trap.facing=TrapFacing::west;
+            if (facing=="east") trap.facing=TrapFacing::east;
+            trap.spell=attr(child,"casts");trap.charges=legacy_integer(attr(child,"charges","0"));
+            trap.target_is_caster=legacy_integer(attr(child,"targetiscaster","0"))!=0;
+            for (const auto& value:child.attributes) {
+                if (lower(value.first)=="level") item.level=legacy_integer(value.second);
+                if (lower(value.first)=="origin") trap.origin=value.second;
+            }
+            item.trap=std::move(trap);
+        }
         else if (tag=="toolkit") item.kind=ItemKind::toolkit;
         else if (tag=="price") item.price=integer(child,"amount");
         else if (tag=="description") item.description=attr(child,"text");

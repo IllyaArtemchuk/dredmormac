@@ -53,6 +53,9 @@ bool Session::passable(Position position) const {
     for (const auto& object:custom_objects_) if (object.blocks_movement && same(object.position,position)) return false;
     return true;
 }
+TrapSelection Session::select_trap_candidate(const std::vector<TrapCandidate>& pool,SpawnDepthContext depth,float deviation) {
+    return select_trap(pool,random_,depth,deviation);
+}
 std::optional<std::size_t> Session::create_custom_object(const CustomRoomDefinition& definition,Position origin) {
     auto candidate=random_.libc;auto object=create_custom_room_object(definition,origin,candidate);
     if (!object) {random_.libc=candidate;return std::nullopt;}

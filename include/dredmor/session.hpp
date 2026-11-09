@@ -4,6 +4,7 @@
 #include "dredmor/random.hpp"
 #include "dredmor/world.hpp"
 #include "dredmor/room_records.hpp"
+#include "dredmor/selection.hpp"
 #include <memory>
 
 namespace dredmor {
@@ -37,6 +38,7 @@ public:
     const std::vector<CustomRoomObject>& custom_objects() const { return custom_objects_; }
     bool passable(Position position) const;
     std::optional<std::size_t> create_custom_object(const CustomRoomDefinition& definition,Position origin={0,0});
+    TrapSelection select_trap_candidate(const std::vector<TrapCandidate>& pool,SpawnDepthContext depth,float deviation);
     const std::vector<TurnEvent>& events() const { return events_; }
     const Progression& progression() const { return progression_; }
     const Equipment& equipment() const { return equipment_; }

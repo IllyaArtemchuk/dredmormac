@@ -1,4 +1,5 @@
 #include "dredmor/random.hpp"
+#include "dredmor/selection.hpp"
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
@@ -19,6 +20,19 @@ int main() {
         check(rejected && !normal.state().available && normal.state().spare==1.25f && before.words==random.state().words && before.index==random.state().index);
         GameRandom streams;streams.seed(0);streams.normal.sample(0,1,streams.mt);streams.seed(12345);
         check(bits(streams.normal.sample(0,1,streams.mt))==expected[1] && streams.mt.u32()==3992670690U);
+        streams={};streams.seed(0);auto selected=select_trap({{2,false,true}},streams,{0,false,-1},1.4f);
+        check(selected.index==0 && selected.target_level==2 && selected.attempts==1 && streams.libc.state()==28925691U);
+        check(streams.normal.state().available && bits(streams.normal.state().spare)==0x400d94ca && streams.mt.u32()==3071714933U);
+        streams={};streams.seed(0);selected=select_trap({{0,true,true}},streams,{0,false,-1},1.4f);
+        check(selected.target_level==2 && selected.attempts==101 && streams.libc.state()==629636832U);
+        streams={};streams.seed(0);selected=select_trap({{4,false,true}},streams,{0,true,-1},0);
+        check(selected.target_level==4 && selected.attempts==1 && streams.libc.state()==822784415U && streams.normal.state().available);
+        streams={};streams.seed(0);selected=select_trap({{5,false,true}},streams,{0,true,5},0);
+        check(selected.target_level==5 && !streams.normal.state().available && streams.libc.state()==28925691U);
+        auto unchanged=streams;rejected=false;
+        try {select_trap({},streams,{0,false,-1},1.4f);} catch(const std::invalid_argument&) {rejected=true;}
+        check(rejected && streams.libc.state()==unchanged.libc.state() && streams.mt.state().words==unchanged.mt.state().words);
+        check(streams.mt.state().index==unchanged.mt.state().index && streams.normal.state().available==unchanged.normal.state().available && bits(streams.normal.state().spare)==bits(unchanged.normal.state().spare));
         std::cout<<"original normal goldens, cached samples across reseeds, restore and atomic resource guards passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

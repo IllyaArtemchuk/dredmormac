@@ -17,6 +17,17 @@ struct ItemModifiers {
     SecondaryStats secondary{};
     Damage damage{},resistance{};
 };
+enum class TrapTrigger {once,charges,repeat};
+enum class TrapMount {floor,wall,ceiling};
+enum class TrapFacing {south,west,north,east};
+struct TrapDefinition {
+    TrapTrigger trigger=TrapTrigger::repeat;
+    TrapMount mount=TrapMount::ceiling;
+    TrapFacing facing=TrapFacing::south;
+    int charges=0;
+    bool target_is_caster=false;
+    std::string spell,origin;
+};
 struct ItemDefinition {
     std::string name,icon,description;
     ItemKind kind=ItemKind::unknown;
@@ -25,6 +36,7 @@ struct ItemDefinition {
     int wand_min_charge=1,wand_max_charge=10,builtin_subtype=-1;
     Damage weapon_damage{};
     ItemModifiers modifiers;
+    std::optional<TrapDefinition> trap;
     XmlNode source; // Preserve unsupported effects; never silently discard them.
     bool can_equip(EquipmentSlot slot) const;
 };

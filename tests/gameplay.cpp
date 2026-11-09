@@ -40,6 +40,13 @@ int main() {
         const auto trap=read_item(parse_xml("<item name='Fixture trap'><trap/></item>"));
         const auto toolkit=read_item(parse_xml("<item name='Fixture toolkit'><toolkit/></item>"));
         check(static_cast<unsigned>(trap.kind)==12 && static_cast<unsigned>(toolkit.kind)==11);
+        check(trap.trap && trap.trap->trigger==TrapTrigger::repeat && trap.trap->mount==TrapMount::ceiling && trap.trap->facing==TrapFacing::south);
+        const auto typed_trap=read_item(parse_xml("<item name='Typed trap' level='4'><trap LEVEL=' 7tail' trigger='charges' originMount='wall' originFacing='north' origin='fixture.spr' casts='Fixture Spell' charges=' 3x' targetiscaster='-1'/></item>"));
+        check(typed_trap.level==7 && typed_trap.trap->trigger==TrapTrigger::charges && typed_trap.trap->mount==TrapMount::wall && typed_trap.trap->facing==TrapFacing::north);
+        check(typed_trap.trap->charges==3 && typed_trap.trap->target_is_caster && typed_trap.trap->spell=="Fixture Spell" && typed_trap.trap->origin=="fixture.spr");
+        const auto repeated_trap=read_item(parse_xml("<item name='Repeated trap' level='4'><trap level='8' originFacing='west' origin='first' charges='3' casts='first'/><trap/></item>"));
+        check(repeated_trap.level==8 && repeated_trap.trap->facing==TrapFacing::west && repeated_trap.trap->origin=="first");
+        check(repeated_trap.trap->charges==0 && repeated_trap.trap->spell.empty() && repeated_trap.trap->trigger==TrapTrigger::repeat);
         Inventory tools;
         check(tools.insert({800,trap.kind,0,0,1,false}).position->location==InventoryLocation::belt);
         check(tools.insert({801,toolkit.kind,1,0,1,true}).position->location==InventoryLocation::bag);

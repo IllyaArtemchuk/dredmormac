@@ -806,3 +806,33 @@ Tests cover exact cache roundtrip, old-v4 normalization, malformed fields,
 original sampler goldens and reseeding/restore/atomic resource guard behavior.
 Fourteen local groups pass. Random content selectors will consume this state;
 the normal implementation alone does not populate a level.
+
+Normal/save run42611259389 (116e773) passed all twenty-five native checks and
+relocated signed package smoke, including original normal-sample goldens.
+
+## Random trap selection and item metadata
+
+select_trap matches1,024 full GetRandomTrap0x4e410 executions, including529 forced
+101st-attempt fallbacks. Actual original MT/box_muller execute; tweak deviation,
+double log and Darwin rand are supplied. Compares selected entry, clamped target,
+attempt count, libc/cache state and next eight MT outputs. Synthetic ordered pools
+exercise both depth branches, initial cached samples, special/debug flags and
+missing target levels. Pool registration and trap construction remain external.
+
+The function always samples normal at float(depth)+1 first. Alternate negative
+depth discards that target and uses libc bucket0..19; alternate nonnegative depth
+samples again at that mean without+1. Target clamps1..20. A libc pool draw is
+discarded before up to101 attempts, accepting nonspecial exact-level entries or
+the unconditional final attempt. Debug is not filtered. Session exposes this
+selection on its owned RNG; save/reload tests compare twenty subsequent selections
+and complete states, covering both cache transitions and alternate-depth branches.
+
+Trap levels were incorrectly left at the item-root value. The original child
+callback sets shared level0x238, and typed parsing now preserves that override.
+Trap trigger/charges, mounting/facing, spell/origin and target-is-caster are also
+retained. Actual entry constructor0x55a4c and full trap-child callback0x4f7d0 match
+1,024 fixtures /1,366 nodes with string/ASCII/atoi boundaries and a controlled
+parent level. Tests cover missing/repeated attributes, case-sensitive enum values,
+case-insensitive keys and prefix integers; overflow remains the stated port policy.
+All53 supplied traps pass independent metadata ingestion. Fourteen local groups
+pass. Trap activation, disarming, spell execution and full population are pending.

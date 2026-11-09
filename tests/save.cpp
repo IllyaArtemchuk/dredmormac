@@ -50,6 +50,15 @@ int main(int argc,char** argv) {
         auto cached=text;p=cached.find(empty_normal);
         check(p!=std::string::npos);cached.replace(p,empty_normal.size(),"normal-available=\"1\" normal-spare=\"1067450368\"");
         std::istringstream cache_input(cached);check(saved(Session::load(cache_input))==cached);
+        auto traps=fixture();std::vector<TrapCandidate> trap_pool;for (int level=1;level<=20;++level) trap_pool.push_back({level,false,true});
+        traps.select_trap_candidate(trap_pool,{0,false,-1},1.4f);
+        check(parse_xml(saved(traps)).first("random")->attribute("normal-available")=="1");
+        std::istringstream trap_input(saved(traps));auto trap_loaded=Session::load(trap_input);
+        for (int i=0;i<20;++i) {
+            const SpawnDepthContext depth{i%10,i%3==0,i%7-1};
+            const auto a=traps.select_trap_candidate(trap_pool,depth,1.4f),b=trap_loaded.select_trap_candidate(trap_pool,depth,1.4f);
+            check(a.index==b.index && a.target_level==b.target_level && a.attempts==b.attempts && saved(traps)==saved(trap_loaded));
+        }
         invalid=text;p=invalid.find("normal-available=\"0\"");invalid.replace(p,20,"normal-available=\"2\"");reject(invalid);
         invalid=text;p=invalid.find("normal-spare=\"0\"");invalid.replace(p,16,"normal-spare=\"4294967295\"");reject(invalid);
         invalid=text;p=invalid.find("index=\"624\"");check(p!=std::string::npos);invalid.replace(p,11,"index=\"626\"");reject(invalid);
