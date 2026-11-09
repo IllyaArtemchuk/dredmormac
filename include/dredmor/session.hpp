@@ -21,6 +21,7 @@ struct Actor {
     bool alive() const { return health>0; }
 };
 struct GroundItem { InventoryItem item;Position position; };
+struct RoomLootCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
 enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken };
 struct TurnEvent {
     EventKind kind;
@@ -59,6 +60,8 @@ public:
     std::uint64_t create_ground_artifact(std::uint32_t definition,int quality,const ArtifactWords& words,Position position);
     std::optional<std::uint64_t> create_ground_loot(const ItemFactoryTables& tables,const ItemFactoryContext& context,
         std::string_view type,std::string_view subtype,int quantity,bool artifact,Position position);
+    RoomLootCreation create_room_loot(const RoomLootRecord& record,const ItemFactoryTables& tables,
+        const ItemFactoryContext& context,Position origin={0,0});
     void give_currency(std::int32_t amount);
     void take_currency(std::int32_t amount);
     void step(Action action);
@@ -106,6 +109,8 @@ private:
     void pickup_impl();
     void pickup_currency();
     bool hit_breakable_impl(std::size_t index);
+    std::optional<std::uint64_t> create_ground_loot_impl(const ItemFactoryTables& tables,const ItemFactoryContext& context,
+        std::string_view type,std::string_view subtype,int quantity,bool artifact,Position position);
 };
 Actor make_player(const ClassRanks& ranks,std::string name="Player");
 }

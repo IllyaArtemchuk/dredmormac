@@ -15,6 +15,8 @@ struct InventoryItem {
     std::optional<std::int32_t> charges=std::nullopt;
     std::optional<std::int32_t> currency_value=std::nullopt;
     std::optional<Artifact> artifact=std::nullopt;
+    std::string room_local_id;
+    std::uint8_t can_push=1;
 };
 // Basic instance construction. Artifact/encrustment generation and rendering
 // are separate. Wand maxcharge is exclusive in the original constructor.

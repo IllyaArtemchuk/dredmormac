@@ -31,7 +31,7 @@ Verified:
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
 - Twenty local CTest groups pass, including deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42624802836 passed all thirty-one checks, including
+- Actual macos-15 arm64 CI run 42630170521 passed all thirty-five checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -309,3 +309,14 @@ is absent in supplied installation). All13 breakable sprite files resolve, five
 through expansion2. Native room/monster sprites and installation hero/atlas now
 use this lookup; native fixture proves differing overlay framecounts/fallback.
 Packed core ZIP and mod mounts remain unsupported. New integration awaits MacCI.
+
+Breakable/resource integration run42630170521 passed all35 Mac checks, including
+native interaction and packaging. Room loot now executes its appearance gate and
+actual item factory in Session/native supported-record order. All1,024 original
+record→factory comparisons match accepted/null results, coordinates, push/roomID,
+full artifact payload, unique flags and both RNG streams. Constructor, place/ID
+and library boundaries remain explicit; other room constructors are still skipped.
+Item room IDs/push survive ground, inventory, equipment and optional savev7
+metadata. Local rollback, container migration, malformed push and resumed mixed
+record/factory tests pass; all20 groups pass. Native inventory/artifact fixtures
+now use room-defined loot; this source awaits its own Mac CI run.

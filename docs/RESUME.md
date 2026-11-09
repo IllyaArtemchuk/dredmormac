@@ -561,3 +561,16 @@ Native object/monster and installation hero/atlas use resolver. Fixture root has
 intact1frame,exp2intact2,exp3intact3; broken4onlyexp2,breaking1onlyloose, proving
 precedence/fallback onMac. Next: validate MacCI then full ordered content execution,
 monster/trap/horde/element constructors and gameplay scripts/spells/fulllevels.
+
+Run42630170521 passed all35 Mac tests and package smoke. RoomLootRecord integration
+now lives in Session::create_room_loot: gate plus factory is atomic; accepted-null
+is distinguishable from rejected appearance. Item room_local_id/can_push persist
+in every container via optional savev7 attributes (oldv7 defaults empty/1). Native
+supported ordered records now include loot; inventory/artifact smoke uses actual
+room loot plus17 currency. GameContent::loot_context supplies gold/stddev/words;
+its words pointer borrows content lifetime. verify_room_loot.py reuses full artifact
+factory oracle with actual record/finalizer and placement/ID inputs;1024 cases match.
+Original artifact factory1024 regression cases still match. Report room-loot.json
+is private in analysis/. Current20 local groups pass; integration awaits MacCI.
+Next: remaining monster/trap/horde/element constructors and full ordered population,
+then complete level/session integration, scripts/spells/AI and visual comparison.

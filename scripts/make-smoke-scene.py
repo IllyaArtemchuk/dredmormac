@@ -57,7 +57,11 @@ if __name__=='__main__':
         (root/'dungeon').mkdir(exist_ok=True);(root/'dungeon/fixture.spr').write_bytes(sprite())
         if args.inventory:
             scene['data_root']=str(root)
-            scene['ground_items']=[dict(name='Fixture cap',x=2,y=1)]
+            (root/'game/rooms.xml').write_text('''<roomdb><room name="Starting Room" width="5" height="4">
+<row text="#####"/><row text="#.1.#"/><row text="#...#"/><row text="#####"/>
+<loot at="1" type="armour" subtype="Fixture cap" id="fixture-loot" can_push="0"/>
+</room></roomdb>''')
+            scene['room_objects']='Starting Room'
             scene['ground_currency']=[dict(amount=17,x=2,y=1)]
             scene['smoke_inventory']=True
             if args.artifact:

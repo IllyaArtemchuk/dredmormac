@@ -216,6 +216,11 @@ const ItemFactoryTables& GameContent::item_factory_tables() const {
     if (!item_factory_tables_) throw std::runtime_error("expansion item registration is not implemented");
     return *item_factory_tables_;
 }
+ItemFactoryContext GameContent::loot_context(SpawnDepthContext depth,std::size_t level_set,Difficulty difficulty) const {
+    ItemFactoryContext context;context.depth=depth;context.level_set=level_set;
+    context.gold_per_level=tweaks_.integer(difficulty,"gold drop per level");context.trap_deviation=tweaks_.real(difficulty,"box muller std dev");
+    context.artifact_words=&artifact_words_;return context;
+}
 const RoomDefinition& GameContent::room(std::string_view name) const {
     const RoomDefinition* result=nullptr;
     for (const auto& room:rooms_) if (room.name==name) {if (result) throw std::runtime_error("ambiguous room name");result=&room;}

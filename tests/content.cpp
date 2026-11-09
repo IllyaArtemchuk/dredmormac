@@ -16,6 +16,8 @@ int main(int argc,char** argv) {
         const auto& tables=content.item_factory_tables();
         check(tables.named[0].size()==4 && tables.named[0]==tables.named[1] && tables.named[0]==tables.named[2] && tables.named[3].empty());
         check(tables.food[0]==std::vector<std::uint32_t>({1,2}) && tables.armour[0]==std::vector<std::uint32_t>({0,3}));
+        const auto loot_context=content.loot_context({3,false,-1},2);
+        check(loot_context.gold_per_level==10 && loot_context.trap_deviation==1.4f && loot_context.level_set==2 && loot_context.depth.depth==3);
         const auto loadout=content.starting_loadout({6,5,4,3,2,1,0});
         const auto static_room=content.room("Starting Room").instantiate(),dynamic_room=content.room("Starting Room").instantiate(false);
         check(!static_room.passable({3,2}) && dynamic_room.passable({3,2}));

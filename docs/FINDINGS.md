@@ -1125,3 +1125,21 @@ Synthetic native breakable fixture has conflicting framecounts in three layers
 and one asset only in expansion2, proving lookup on Mac. Core ZIP/mod mounts remain
 unsupported; requesting packed installations fails explicitly instead of using
 incorrect loose precedence. Original resources and mount disassembly stay private.
+
+RoomLootRecord::CreateInLevel1a2c64 executes the appearance gate, full item factory
+18ac20 and base finalizer19f45c. A factory null still returns accepted1; appearance
+rejection returns0. Finalizer only touches nonnull: virtualplace+98, ID+c0, then
+zero-extends record byte14 into object push68. New verify_room_loot.py executes
+these actual functions around previously measured gear selectors/CreateArtifact,
+with gear/Buff constructors/destruction, place/ID, virtual text and library inputs
+supplied. All1024 fixtures match accepted/null, translated placement, full-byte
+push, ID, selected definition/quantity/artifact payload, unique flags, libc/cache
+and next8MT. Full constructors/global object IDs/level registration/scheduling are
+excluded. Existing1024 artifact factory regression cases still match.
+Session integration commits gate/factory/RNG/metadata together and rolls back on
+placement/factory exceptions. Item metadata travels with pickup/equip/unequip and
+optional savev7 attributes, defaulting empty/1 for previous files. Native supported
+record order now includes loot; skipped constructors still prevent whole-room
+parity. Inventory/artifact fixture now uses a source room loot record and checks
+identity/push through equipment. Twenty local groups pass. Prior breakable/resource
+run42630170521 passed all35 actual Mac checks including packaging.

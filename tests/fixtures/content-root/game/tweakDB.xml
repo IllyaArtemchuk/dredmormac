@@ -1,4 +1,6 @@
 <tweakDB><tweak name="experience n" ival="10"/>
+<tweak name="gold drop per level" ival="10"/>
+<tweak name="box muller std dev" fval="1.4"/>
 <tweak name="monster HP global scale" fval="1"/>
 <tweak name="monster additional HP percent per level" fval="0.1"/>
 <tweak name="monster additional HP per level" fval="3"/>

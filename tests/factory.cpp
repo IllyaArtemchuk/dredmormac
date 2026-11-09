@@ -83,6 +83,32 @@ int main() {
         check(rejected);
         GameRandom plain;plain.seed(1);auto plain_armour=make_loot_item(gear,gear_tables,gear_context,"armour","random",1,false,1,plain);
         check(plain_armour && plain_armour->definition==3 && !plain_armour->artifact); // Root artifact flag alone does not generate in this route.
-        std::cout<<"loot lookup ordering, full-session atomic failures, currency pickup and resumed mixed factory RNG passed\n";
+        // Room records own appearance gates and preserve identity through every container.
+        std::istringstream room_map("#####\n#@..#\n#...#\n#####\n");Session room(World::read(room_map),make_player({3,2,2}),1);
+        room.equipment_profile({3,2,2},gear_definitions);RoomLootRecord record;
+        record.placement.relative={2,1};record.placement.percent=-1;record.type="unknown";record.subtype="random";
+        const auto rejected_before=saved(room);auto created=room.create_room_loot(record,gear_tables,gear_context);
+        check(!created.accepted && !created.instance && room.ground_items().empty() && saved(room)!=rejected_before);
+        record.placement.percent=100;const auto null_before=saved(room);created=room.create_room_loot(record,gear_tables,gear_context);
+        check(created.accepted && !created.instance && saved(room)==null_before);
+        record.type="armour";record.subtype="Ordinary cap";record.placement.id="room<&\"id";record.placement.can_push=0;
+        record.placement.relative={0,0};const auto invalid_before=saved(room);rejected=false;
+        try {room.create_room_loot(record,gear_tables,gear_context);} catch(const std::invalid_argument&) {rejected=true;}
+        check(rejected && saved(room)==invalid_before);
+        record.placement.relative={2,1};created=room.create_room_loot(record,gear_tables,gear_context);
+        check(created.accepted && created.instance && room.ground_items().back().item.room_local_id==record.placement.id);
+        room.step(Action::east);room.pickup();check(room.inventory().bag()[0]->can_push==0);
+        check(room.equip(*created.instance,EquipmentSlot::head));
+        check(room.equipment().slots()[0]->room_local_id==record.placement.id);
+        std::istringstream room_input(saved(room));auto room_copy=Session::load(room_input,gear_definitions);check(saved(room_copy)==saved(room));
+        check(room_copy.unequip(EquipmentSlot::head) && room.unequip(EquipmentSlot::head));
+        check(room_copy.inventory().bag()[0]->room_local_id==record.placement.id && saved(room_copy)==saved(room));
+        auto overflow=saved(room);const auto push_at=overflow.find("push=\"0\"");check(push_at!=std::string::npos);
+        overflow.replace(push_at,8,"push=\"256\"");rejected=false;
+        try {std::istringstream input(overflow);Session::load(input,gear_definitions);} catch(const std::runtime_error&) {rejected=true;}
+        check(rejected);
+        record.type="artifact";record.subtype="ignored";record.artifact=true;record.placement.percent=50;
+        for (int i=0;i<8;++i) {room.create_room_loot(record,gear_tables,gear_context);room_copy.create_room_loot(record,gear_tables,gear_context);check(saved(room)==saved(room_copy));}
+        std::cout<<"loot ordering, atomic failures, currency, room gates/metadata and resumed mixed factory RNG passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

@@ -125,6 +125,7 @@ void write_item(std::ostream& out,const InventoryItem& item,const std::string& e
        <<"\" weapon=\""<<item.weapon_type<<"\" quantity=\""<<item.quantity<<"\" stackable=\""<<item.stackable<<"\"";
     if (item.charges) out<<" charges=\""<<*item.charges<<"\"";
     if (item.currency_value) out<<" currency=\""<<*item.currency_value<<"\"";
+    if (!item.room_local_id.empty() || item.can_push!=1) out<<" room-id=\""<<escape(item.room_local_id)<<"\" push=\""<<unsigned(item.can_push)<<"\"";
     out<<' '<<extra;
     if (!item.artifact) {out<<"/>\n";return;}
     const auto& artifact=*item.artifact;
@@ -148,6 +149,8 @@ InventoryItem read_item_instance(const XmlNode& node) {
         if (item.kind!=ItemKind::currency) throw std::runtime_error("unexpected saved currency value");
     }
     if (item.kind==ItemKind::currency && !item.currency_value) throw std::runtime_error("saved currency value missing");
+    if (node.attributes.count("room-id")) item.room_local_id=attribute(node,"room-id");
+    if (node.attributes.count("push")) item.can_push=attribute_number<std::uint8_t>(node,"push");
     if (!node.children.empty()) {
         if (node.children.size()!=1 || node.children[0].tag!="artifact" ||
             (item.kind!=ItemKind::weapon && item.kind!=ItemKind::armour)) throw std::runtime_error("invalid saved artifact payload");
@@ -306,6 +309,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
         if (node.tag!="item") throw std::runtime_error("invalid saved item node");
         auto item=read_item_instance(node);
         if (item.artifact && version!="7") throw std::runtime_error("artifact payload requires save version seven");
+        if (version!="7" && (node.attributes.count("room-id") || node.attributes.count("push"))) throw std::runtime_error("item room metadata requires save version seven");
         if (legacy_types) {
             const auto kind=static_cast<std::uint32_t>(item.kind);
             if (kind==11) item.kind=ItemKind::trap;

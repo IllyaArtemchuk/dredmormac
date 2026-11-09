@@ -86,13 +86,21 @@ class Factory(GeometryOracle):
             for index in range(3):self.string(array+index*4,f'W{pool}_{index}')
             self.write(self.original.address(symbol),array,array+12,array+12,0)
         types=self.allocate(8);self.string(types,kind);self.string(types+4,subtype)
-        pointer=self.original.call('__Z35CreateItemFromTypeAndSubtypeStringsSsSsP5Levelib',types,types+4,level,quantity,artifact,budget=5000000)
-        if pointer not in self.object_entries:raise AssertionError('artifact factory returned no constructed gear')
-        if len(self.constructed)!=1+len(self.destroyed) or pointer in self.destroyed:raise AssertionError('discarded weapon lifecycle differs')
+        pointer=self.invoke_factory(types,level,quantity,artifact)
+        return self.capture_result(pointer,entries)
+
+    def invoke_factory(self,types,level,quantity,artifact):
+        return self.original.call('__Z35CreateItemFromTypeAndSubtypeStringsSsSsP5Levelib',types,types+4,level,quantity,artifact,budget=5000000)
+
+    def capture_result(self,pointer,entries):
+        if pointer and pointer not in self.object_entries:raise AssertionError('artifact factory returned unknown gear')
+        if len(self.constructed)!=int(bool(pointer))+len(self.destroyed) or (pointer and pointer in self.destroyed):raise AssertionError('discarded weapon lifecycle differs')
         self.total_constructors+=len(self.constructed);self.total_discarded+=len(self.destroyed)
-        selected=self.indices[self.object_entries[pointer]];item_kind=self.read(pointer+0x74)[0]
-        stack,amount=self.read(pointer+0x98,2);present=self.read(pointer+(0x1c8 if item_kind==1 else 0x3b4))[0]
-        result=list(map(str,[selected,item_kind,amount,stack,present]))
+        if pointer:
+            selected=self.indices[self.object_entries[pointer]];item_kind=self.read(pointer+0x74)[0]
+            stack,amount=self.read(pointer+0x98,2);present=self.read(pointer+(0x1c8 if item_kind==1 else 0x3b4))[0]
+            result=list(map(str,[selected,item_kind,amount,stack,present]))
+        else:present=0;result=['-1','0','0','0','0']
         if present:
             header=pointer+(0x1cc if item_kind==1 else 0x1c8);buff=self.read(header+0x1c)[0]
             result.extend([self.value(header).encode().hex() or '-',self.value(header+8).encode().hex() or '-',self.value(buff+0x1ac).encode().hex() or '-',str(self.read(header+0x14)[0])])

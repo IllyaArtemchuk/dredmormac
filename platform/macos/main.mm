@@ -189,12 +189,14 @@ static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
         if (scene[@"room_objects"]) {
             if (!_content || ![scene[@"room_objects"] isKindOfClass:NSString.class]) throw std::runtime_error("room objects need a content room name");
             const auto& room=_content->room([scene[@"room_objects"] UTF8String]);
-            // Preview builds supported visual records in relative source order.
+            // Preview builds supported objects/loot in relative source order.
             // Other constructors/RNG and full population still belong to level generation.
             for (const auto& record:room.records()) std::visit([&](const auto& definition) {
                 using T=std::decay_t<decltype(definition)>;
                 if constexpr (std::is_same_v<T,dredmor::CustomRoomDefinition>) _session->create_custom_object(definition);
                 else if constexpr (std::is_same_v<T,dredmor::RoomPedestalRecord>) _session->create_pedestal(definition);
+                else if constexpr (std::is_same_v<T,dredmor::RoomLootRecord>)
+                    _session->create_room_loot(definition,_content->item_factory_tables(),_content->loot_context());
                 else if constexpr (std::is_same_v<T,dredmor::BreakableRoomDefinition>) {
                     NSArray<SpriteImage*> *prepared=nil;
                     const auto created=_session->create_breakable(definition,{0,0},[&](const auto& value) {
@@ -505,13 +507,16 @@ static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
     const auto primary=_session->player().primary;const auto secondary=_session->player().secondary;
     [self pickUpItems:nil];[self showInventory:nil];
     if ([self inventoryRows].count!=1 || _session->player().zorkmids!=17) return NO;
+    if (_session->inventory().bag()[0]->room_local_id!="fixture-loot" || _session->inventory().bag()[0]->can_push!=0) return NO;
     [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];
     [_inventoryController equipSelection:nil];
-    if (!_session->equipment().slots()[0] || _session->inventory().bag()[0]) return NO;
+    if (!_session->equipment().slots()[0] || _session->inventory().bag()[0] ||
+        _session->equipment().slots()[0]->room_local_id!="fixture-loot" || _session->equipment().slots()[0]->can_push!=0) return NO;
     [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];
     [_inventoryController unequipSelection:nil];
     [_inventoryController close];
     return !_session->equipment().slots()[0] && _session->inventory().bag()[0].has_value() &&
+        _session->inventory().bag()[0]->room_local_id=="fixture-loot" && _session->inventory().bag()[0]->can_push==0 &&
         primary==_session->player().primary && secondary==_session->player().secondary;
 }
 - (BOOL)smokeSkillSelection {

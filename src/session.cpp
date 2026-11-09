@@ -181,11 +181,23 @@ void Session::currency_transfer_impl(std::int32_t amount,CurrencyOperation opera
 }
 std::optional<std::uint64_t> Session::create_ground_loot(const ItemFactoryTables& tables,const ItemFactoryContext& context,
     std::string_view type,std::string_view subtype,int quantity,bool artifact,Position position) {
+    auto next=*this;const auto result=next.create_ground_loot_impl(tables,context,type,subtype,quantity,artifact,position);*this=std::move(next);return result;
+}
+std::optional<std::uint64_t> Session::create_ground_loot_impl(const ItemFactoryTables& tables,const ItemFactoryContext& context,
+    std::string_view type,std::string_view subtype,int quantity,bool artifact,Position position) {
     if (!definitions_) throw std::invalid_argument("loot creation needs item definitions");
-    auto next=*this;const auto identifier=next_item_instance();static const std::vector<AbilityDefinition> empty;
-    auto item=make_loot_item(*definitions_,tables,context,type,subtype,quantity,artifact,identifier,next.random_,skills_,abilities_?*abilities_:empty,&next.factory_state_);
-    if (!item) {*this=std::move(next);return std::nullopt;}
-    next.drop(*item,position);*this=std::move(next);return identifier;
+    const auto identifier=next_item_instance();static const std::vector<AbilityDefinition> empty;
+    auto item=make_loot_item(*definitions_,tables,context,type,subtype,quantity,artifact,identifier,random_,skills_,abilities_?*abilities_:empty,&factory_state_);
+    if (!item) return std::nullopt;drop(*item,position);return identifier;
+}
+RoomLootCreation Session::create_room_loot(const RoomLootRecord& record,const ItemFactoryTables& tables,
+    const ItemFactoryContext& context,Position origin) {
+    auto next=*this;const auto plan=plan_room_population(RoomPopulationRecord{record},origin,next.random_.libc);RoomLootCreation result;
+    if (plan.request==PopulationRequest::loot) {
+        result.accepted=true;result.instance=next.create_ground_loot_impl(tables,context,plan.type,plan.subtype,plan.amount,plan.artifact,plan.position);
+        if (result.instance) {next.ground_.back().item.room_local_id=record.placement.id;next.ground_.back().item.can_push=record.placement.can_push;}
+    }
+    *this=std::move(next);return result;
 }
 void Session::give_currency(std::int32_t amount) {auto next=*this;next.currency_transfer_impl(amount,CurrencyOperation::give);*this=std::move(next);}
 void Session::take_currency(std::int32_t amount) {auto next=*this;next.currency_transfer_impl(amount,CurrencyOperation::take);*this=std::move(next);}
