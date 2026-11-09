@@ -81,13 +81,14 @@ build/macos-arm64/DredmorMac.app/Contents/MacOS/DredmorMac
 # Or supply an original .app / Contents/MacOS folder / prepared scene as an argument.
 ```
 
-Arrow keys move or attack; `.` waits. Command-S saves the current port session;
+Arrow keys move or attack; `.` waits; G picks up and I opens inventory.
+Select an item and target slot, then Equip; select equipped gear to Unequip.
+Command-S saves the current port session;
 Command-O loads a port save for the same prepared room. Malformed saves fail
 before replacing the current state. These saves are not original .sav files.
 Closing the window quits. The UI remains a developer room/encounter view.
 
-Direct installation startup is newly added and awaiting its synthetic native
-fixture check. The current preview still omits original room scripts, population
+Direct installation startup passes its synthetic native fixture check. The current preview still omits original room scripts, population
 and decoration.
 
 Actual standard macos-15 arm64 runs compile with AppleClang and test the native

@@ -18,7 +18,9 @@
   its first-frame fallback and rejects unsupported layouts/trailers.
 - AppKit frontend compiles and runs on actual arm64 macOS CI; its synthetic
   window/input smoke passes. Original-asset visual fidelity and full gameplay
-  validation remain pending. The UI remains a room/encounter view, not original UI.
+  validation remain pending. The UI remains a developer room/encounter view with
+  native inventory controls, not original UI. Ground item markers are provisional;
+  explicit developer item placement does not implement original population.
 - Distance routine matches sampled original i386 execution, including wraparound.
   Unusual floating-point rounding modes have not been compared.
 - RNG interfaces match sampled original outputs and double bits. Separate Darwin

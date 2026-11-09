@@ -310,3 +310,12 @@ GameContent in process. No arguments shows an AppKit installation picker; .app,
 data directory and prepared JSON are accepted. Failed interactive loads show an
 error and permit another selection. Original data is read in place, not copied.
 The synthetic installation startup fixture is pending native execution.
+
+Run 42586734212 (941ecac) passed all sixteen checks and packaged app smoke,
+including direct installation startup from synthetic XML/SPR/PNG content.
+Native inventory controller exposes bag/belt/equipped items, target slot and
+Equip/Unequip callbacks to the existing core. G picks up at the player position;
+I opens the inventory. Explicit ground_items in developer scenes use typed item
+definitions and remain separate from original room scripts/population. A new
+native synthetic-window check drives pickup/table selection/equip/unequip and
+then full save/reload. Its actual Mac execution is pending.

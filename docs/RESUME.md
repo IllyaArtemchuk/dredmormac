@@ -75,4 +75,11 @@ from provisional instantiate collision. scripts/verify_templates.py compares all
 Native startup selection is added: no arguments opens a file/folder picker;
 argument can be original .app, data directory, or prepared scene JSON. A new
 synthetic-content installation fixture exercises direct loading, movement and
-save/load. Its actual native CI execution is pending the next push.
+save/load. Its actual native CI execution passed in run 42586734212 (16 checks).
+
+Native inventory controller is separate in platform/macos/InventoryController.*.
+RoomView supplies bag/belt/equipment rows and core transfer callbacks. G picks up;
+I opens inventory, with slot selection and Equip/Unequip controls. Explicit scene
+ground_items are a developer fixture facility, not original room population.
+New native-inventory smoke picks up a synthetic cap, drives table selection and
+both transfer buttons, checks restored stats, then runs save/load. Pending push.

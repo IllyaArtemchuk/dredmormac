@@ -1,5 +1,6 @@
 #import <Cocoa/Cocoa.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
+#import "InventoryController.h"
 #include <dispatch/dispatch.h>
 #include <cstring>
 #include <cstdlib>
@@ -48,7 +49,7 @@
 }
 @end
 
-@interface RoomView : NSView {
+@interface RoomView : NSView<DredmorInventoryOwner> {
     std::unique_ptr<dredmor::Session> _session;
     std::unique_ptr<dredmor::GameContent> _content;
     std::filesystem::path _dataRoot;
@@ -58,6 +59,7 @@
     NSMutableDictionary<NSNumber*,SpriteImage*> *_enemyImages;
     NSTimer *_animationTimer;
     NSTimeInterval _animationStart;
+    DredmorInventoryController *_inventoryController;
     NSRect _floorCrop,_wallCrop;
 }
 - (instancetype)initWithScene:(NSDictionary*)scene;
@@ -69,6 +71,9 @@
 - (BOOL)smokeSaveLoad;
 - (void)saveDocument:(id)sender;
 - (void)openDocument:(id)sender;
+- (void)showInventory:(id)sender;
+- (void)pickUpItems:(id)sender;
+- (BOOL)smokeInventory;
 @end
 
 @implementation RoomView
@@ -132,6 +137,28 @@
             if (!sprite) return nil;
             _enemyImages[@(identifier)]=sprite;
         }
+        if (scene[@"ground_items"] && ![scene[@"ground_items"] isKindOfClass:NSArray.class]) return nil;
+        std::uint64_t instance=1;
+        for (id value in scene[@"ground_items"]) {
+            if (!_content || ![value isKindOfClass:NSDictionary.class] || ![value[@"name"] isKindOfClass:NSString.class] ||
+                ![value[@"x"] isKindOfClass:NSNumber.class] || ![value[@"y"] isKindOfClass:NSNumber.class])
+                throw std::runtime_error("developer ground items require content and valid positions");
+            const std::string name=[value[@"name"] UTF8String];
+            std::optional<std::size_t> index;
+            for (std::size_t i=0;i<_content->items().size();++i) if (_content->items()[i].name==name) {
+                if (index) throw std::runtime_error("ambiguous developer ground item");index=i;
+            }
+            if (!index) throw std::runtime_error("developer ground item not found");
+            const auto& definition=_content->items()[*index];
+            dredmor::InventoryItem item;item.instance=instance++;item.kind=definition.kind;
+            item.definition=static_cast<std::uint32_t>(*index);item.weapon_type=definition.weapon_type;
+            if (value[@"quantity"]) {
+                if (![value[@"quantity"] isKindOfClass:NSNumber.class]) throw std::runtime_error("invalid ground quantity");
+                item.quantity=[value[@"quantity"] intValue];
+            }
+            item.stackable=[value[@"stackable"] boolValue];
+            _session->drop(item,{[value[@"x"] intValue],[value[@"y"] intValue]});
+        }
         _animationStart=NSProcessInfo.processInfo.systemUptime;
         __weak RoomView *weakSelf=self;
         _animationTimer=[NSTimer scheduledTimerWithTimeInterval:1.0/60 repeats:YES block:^(NSTimer *timer) {
@@ -143,7 +170,7 @@
     return self;
 }
 - (BOOL)acceptsFirstResponder { return YES; }
-- (void)dealloc { [_animationTimer invalidate]; }
+- (void)dealloc { [_animationTimer invalidate];[_inventoryController close]; }
 - (BOOL)isFlipped { return YES; }
 - (NSString*)snapshot { return [NSString stringWithUTF8String:_session->world().snapshot().c_str()]; }
 - (BOOL)hasLivingEnemies {
@@ -190,10 +217,10 @@
             images[@(enemy.id)]=image;
         }
     }
-    _session=std::move(loaded);_enemyImages=images;self.needsDisplay=YES;
+    _session=std::move(loaded);_enemyImages=images;[_inventoryController refresh];self.needsDisplay=YES;
 }
 - (void)showFailure:(const std::exception&)error {
-    NSAlert *alert=[NSAlert new];alert.messageText=@"Cannot complete file operation";
+    NSAlert *alert=[NSAlert new];alert.messageText=@"Cannot complete action";
     alert.informativeText=[NSString stringWithUTF8String:error.what()];[alert runModal];
 }
 - (void)saveDocument:(id)sender {
@@ -231,6 +258,55 @@
         [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];return NO;
     }
 }
+- (NSArray<NSDictionary*>*)inventoryRows {
+    NSMutableArray<NSDictionary*> *rows=[NSMutableArray array];
+    auto append=[&](const dredmor::InventoryItem& item,NSString *location,BOOL equipped,NSUInteger slot) {
+        NSString *name=_content && item.definition<_content->items().size()?
+            [NSString stringWithUTF8String:_content->items()[item.definition].name.c_str()]:
+            [NSString stringWithFormat:@"Item %u",item.definition];
+        [rows addObject:@{@"name":name,@"quantity":@(item.quantity),@"location":location,@"equipped":@(equipped),
+            @"instance":@(item.instance),@"slot":@(slot)}];
+    };
+    const auto& inventory=_session->inventory();
+    for (std::size_t i=0;i<inventory.bag().size();++i) if (inventory.bag()[i])
+        append(*inventory.bag()[i],[NSString stringWithFormat:@"Bag %zu",i+1],NO,i);
+    for (std::size_t i=0;i<inventory.belt().size();++i) if (inventory.belt()[i])
+        append(*inventory.belt()[i],[NSString stringWithFormat:@"Belt %zu",i+1],NO,i);
+    NSArray<NSString*> *slots=@[@"Head",@"Left hand",@"Right hand",@"Left ring",@"Right ring",@"Chest",
+        @"Legs",@"Feet",@"Ranged",@"Neck",@"Hands",@"Waist"];
+    for (std::size_t i=0;i<12;++i) if (_session->equipment().slots()[i])
+        append(*_session->equipment().slots()[i],slots[i],YES,i);
+    return rows;
+}
+- (BOOL)equipInventoryInstance:(uint64_t)instance slot:(NSInteger)slot {
+    try {const bool result=_session->equip(instance,static_cast<dredmor::EquipmentSlot>(slot));self.needsDisplay=YES;return result;}
+    catch (const std::exception& error) { [self showFailure:error];return NO; }
+}
+- (BOOL)unequipInventorySlot:(NSInteger)slot {
+    try {const bool result=_session->unequip(static_cast<dredmor::EquipmentSlot>(slot));self.needsDisplay=YES;return result;}
+    catch (const std::exception& error) { [self showFailure:error];return NO; }
+}
+- (void)showInventory:(id)sender {
+    if (!_inventoryController) _inventoryController=[[DredmorInventoryController alloc] initWithOwner:self];
+    [_inventoryController refresh];[_inventoryController showWindow:nil];
+}
+- (void)pickUpItems:(id)sender {
+    try { _session->pickup();[_inventoryController refresh];self.needsDisplay=YES; }
+    catch (const std::exception& error) { [self showFailure:error]; }
+}
+- (BOOL)smokeInventory {
+    const auto primary=_session->player().primary;const auto secondary=_session->player().secondary;
+    [self pickUpItems:nil];[self showInventory:nil];
+    if ([self inventoryRows].count!=1) return NO;
+    [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];
+    [_inventoryController equipSelection:nil];
+    if (!_session->equipment().slots()[0] || _session->inventory().bag()[0]) return NO;
+    [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];
+    [_inventoryController unequipSelection:nil];
+    [_inventoryController close];
+    return !_session->equipment().slots()[0] && _session->inventory().bag()[0].has_value() &&
+        primary==_session->player().primary && secondary==_session->player().secondary;
+}
 - (void)keyDown:(NSEvent*)event {
     using dredmor::Action;
     Action action;
@@ -240,11 +316,14 @@
         case 125: action=Action::south; break;
         case 126: action=Action::north; break;
         default:
-            if ([event.charactersIgnoringModifiers isEqualToString:@"."]) action=Action::wait;
+            if ([event.charactersIgnoringModifiers.lowercaseString isEqualToString:@"g"]) { [self pickUpItems:nil];return; }
+            else if ([event.charactersIgnoringModifiers.lowercaseString isEqualToString:@"i"]) { [self showInventory:nil];return; }
+            else if ([event.charactersIgnoringModifiers isEqualToString:@"."]) action=Action::wait;
             else { [super keyDown:event]; return; }
     }
     try { _session->step(action); }
     catch (const std::exception& e) { fprintf(stderr,"turn failed: %s\n",e.what()); }
+    [_inventoryController refresh];
     self.needsDisplay=YES;
 }
 - (void)drawRect:(NSRect)dirtyRect {
@@ -264,6 +343,12 @@
                  fromRect:source operation:NSCompositingOperationSourceOver fraction:1
            respectFlipped:YES hints:nil];
     }
+    // Item icon rendering and original item placement remain separate work.
+    // This marker exposes explicit developer-scene drops to the pickup control.
+    [[NSColor colorWithRed:.95 green:.7 blue:.15 alpha:1] setFill];
+    for (const auto& ground:_session->ground_items())
+        [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(20+(ground.position.x+.35)*cell,
+            20+(ground.position.y+.35)*cell,cell*.3,cell*.3)] fill];
     for (const auto& enemy:_session->enemies()) if (enemy.alive()) {
         NSImage *sprite=[_enemyImages[@(enemy.id)] frameAt:animationTime];
         const CGFloat width=sprite.size.width*cell/32,height=sprite.size.height*cell/32;
@@ -277,7 +362,7 @@
     [hero drawInRect:NSMakeRect(20+(p.x-.5)*cell,20+(p.y-1)*cell,cell*2,cell*2)
              fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1
        respectFlipped:YES hints:nil];
-    NSString *status=[NSString stringWithFormat:@"Turn %llu · HP %d/%d · Mana %d/%d\nArrows move/attack · . waits · ⌘S saves · ⌘O loads%@",
+    NSString *status=[NSString stringWithFormat:@"Turn %llu · HP %d/%d · Mana %d/%d\nArrows move/attack · . waits · G picks up · I inventory · ⌘S/⌘O%@",
                        (unsigned long long)world.turn(),_session->player().health,_session->player().secondary[0],
                        _session->player().mana,_session->player().secondary[1],_session->player().alive()?@"":@" · You have died"];
     [status drawAtPoint:NSMakePoint(20,self.bounds.size.height-55)
@@ -286,11 +371,14 @@
 }
 @end
 
-@interface AppDelegate : NSObject<NSApplicationDelegate>
+@interface AppDelegate : NSObject<NSApplicationDelegate,NSWindowDelegate>
 @property(strong) NSWindow *window;
 @end
 @implementation AppDelegate
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication*)sender { return YES; }
+- (void)windowWillClose:(NSNotification*)notification {
+    if (notification.object==self.window) [NSApp terminate:nil];
+}
 @end
 
 static NSDictionary *sceneFromInstallation(const std::filesystem::path& selected) {
@@ -363,12 +451,17 @@ int main(int argc,const char**argv) {
         NSMenuItem *open=[fileMenu addItemWithTitle:@"Load Session…" action:@selector(openDocument:) keyEquivalent:@"o"];
         NSMenuItem *save=[fileMenu addItemWithTitle:@"Save Session…" action:@selector(saveDocument:) keyEquivalent:@"s"];
         open.target=view;save.target=view;fileMenuItem.submenu=fileMenu;app.mainMenu=menu;
+        NSMenuItem *gameMenuItem=[NSMenuItem new];[menu addItem:gameMenuItem];
+        NSMenu *gameMenu=[[NSMenu alloc] initWithTitle:@"Character"];
+        NSMenuItem *inventory=[gameMenu addItemWithTitle:@"Inventory…" action:@selector(showInventory:) keyEquivalent:@"i"];
+        inventory.target=view;gameMenuItem.submenu=gameMenu;
         static AppDelegate *delegate;
         delegate=[AppDelegate new]; app.delegate=delegate;
         delegate.window=[[NSWindow alloc] initWithContentRect:view.frame
             styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskResizable
             backing:NSBackingStoreBuffered defer:NO];
         delegate.window.title=@"DredmorMac — Room preview";
+        delegate.window.delegate=delegate;
         delegate.window.contentMinSize=NSMakeSize(300,360);
         delegate.window.contentView=view;
         [delegate.window center]; [delegate.window makeKeyAndOrderFront:nil];
@@ -385,7 +478,8 @@ int main(int argc,const char**argv) {
                     characters:@"." charactersIgnoringModifiers:@"." isARepeat:NO keyCode:47];
                 [view keyDown:right]; [view keyDown:wait]; [view displayIfNeeded];
                 if (![[view snapshot] isEqualToString:expectedSnapshot] || ([scene[@"smoke_combat"] boolValue] && [view hasLivingEnemies]) ||
-                    ([scene[@"smoke_animation"] boolValue] && ![view hasAnimatedHero]) || ![view smokeSaveLoad]) {
+                    ([scene[@"smoke_animation"] boolValue] && ![view hasAnimatedHero]) ||
+                    ([scene[@"smoke_inventory"] boolValue] && ![view smokeInventory]) || ![view smokeSaveLoad]) {
                     fprintf(stderr,"native smoke failed: %s\n",[[view snapshot] UTF8String]); std::exit(1);
                 }
                 puts("native smoke: animated SPR, draw, movement, combat and atomic save/load passed");

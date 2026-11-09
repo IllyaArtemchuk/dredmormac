@@ -75,7 +75,7 @@ if(APPLE)
   enable_language(OBJCXX)
   set(CMAKE_OBJCXX_STANDARD 17)
   set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
-  add_executable(DredmorMac MACOSX_BUNDLE platform/macos/main.mm)
+  add_executable(DredmorMac MACOSX_BUNDLE platform/macos/main.mm platform/macos/InventoryController.mm)
   target_link_libraries(DredmorMac PRIVATE dredmor_core "-framework Cocoa" "-framework UniformTypeIdentifiers")
   target_compile_options(DredmorMac PRIVATE -fobjc-arc)
   set_target_properties(DredmorMac PROPERTIES
@@ -104,5 +104,12 @@ if(APPLE)
     add_test(NAME native-installation-window COMMAND $<TARGET_FILE:DredmorMac>
       ${CMAKE_BINARY_DIR}/native-installation/installation --smoke-test)
     set_tests_properties(native-installation-window PROPERTIES FIXTURES_REQUIRED native-installation TIMEOUT 15)
+    add_test(NAME native-inventory-fixture COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-inventory
+      --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --inventory)
+    set_tests_properties(native-inventory-fixture PROPERTIES FIXTURES_SETUP native-inventory)
+    add_test(NAME native-inventory-window COMMAND $<TARGET_FILE:DredmorMac>
+      ${CMAKE_BINARY_DIR}/native-inventory/scene.json --smoke-test)
+    set_tests_properties(native-inventory-window PROPERTIES FIXTURES_REQUIRED native-inventory TIMEOUT 15)
   endif()
 endif()

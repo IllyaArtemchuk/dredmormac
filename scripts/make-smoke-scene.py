@@ -26,6 +26,7 @@ def sprite():
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('output',type=Path);p.add_argument('--combat',action='store_true')
     p.add_argument('--content-source',type=Path,help='Synthetic XML fixtures for direct installation loading')
+    p.add_argument('--inventory',action='store_true',help='Explicit synthetic cap pickup/equipment fixture')
     args=p.parse_args();out=args.output.resolve();out.mkdir(parents=True,exist_ok=True)
     (out/'atlas.png').write_bytes(png(384,640,(70,80,95,255)))
     (out/'hero.png').write_bytes(png(64,64,(40,180,150,255)))
@@ -38,9 +39,14 @@ if __name__=='__main__':
         scene['enemies']=[dict(name='Synthetic enemy',x=2,y=1,image=str(out/'hero.png'),animation=str(out/'hero.spr'))]
         scene['smoke_expected']='{"turn":2,"x":1,"y":1}'
         scene['smoke_combat']=True
-    (out/'scene.json').write_text(json.dumps(scene)+'\n')
+    if args.inventory and (not args.content_source or args.combat): p.error('--inventory requires --content-source and excludes --combat')
     if args.content_source:
         root=out/'installation';shutil.copytree(args.content_source,root,dirs_exist_ok=True)
         (root/'tilesets').mkdir(exist_ok=True);(root/'sprites/hero').mkdir(parents=True,exist_ok=True)
         (root/'tilesets/basic.png').write_bytes(png(384,640,(70,80,95,255)))
         (root/'sprites/hero/hero_idle_d.spr').write_bytes(sprite())
+        if args.inventory:
+            scene['data_root']=str(root)
+            scene['ground_items']=[dict(name='Fixture cap',x=2,y=1)]
+            scene['smoke_inventory']=True
+    (out/'scene.json').write_text(json.dumps(scene)+'\n')
