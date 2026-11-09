@@ -233,22 +233,44 @@ bool Session::cast_spell(const SpellDefinition& spell,Position origin,Position t
 bool Session::cast_spell_impl(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire) {
     std::size_t remaining=4096;return cast_spell_recursive(spell,origin,target,caster,allow_haywire,0,remaining);
 }
+void Session::player_facing(int direction) {
+    if (direction<0 || direction>3) throw std::invalid_argument("invalid player facing");
+    player_facing_=direction;
+}
 bool Session::cast_spell_recursive(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire,
     std::size_t depth,std::size_t& remaining) {
     if (depth>=64 || !remaining) throw std::runtime_error("spell recursion execution budget exhausted");
     --remaining;
+    const bool maneuver=spell.type=="template";
     if (spell.type=="self") target=origin;
     else if (spell.type=="adjacent") {
         const auto dx=std::uint32_t(target.x)-std::uint32_t(origin.x),dy=std::uint32_t(target.y)-std::uint32_t(origin.y);
         const auto bits=dx*dx+dy*dy;std::int32_t distance;std::memcpy(&distance,&bits,4);if (distance>=2) return false;
-    } else if (spell.type!="target" && spell.type!="targetfloor") throw std::invalid_argument("spell dispatch is not implemented: "+spell.type);
-    if (target.x<0 || target.y<0 || target.x>=world_.width() || target.y>=world_.height()) return false;
+    } else if (spell.type!="target" && spell.type!="targetfloor" && !maneuver) throw std::invalid_argument("spell dispatch is not implemented: "+spell.type);
+    if (!maneuver && (target.x<0 || target.y<0 || target.x>=world_.width() || target.y>=world_.height())) return false;
     for (const auto& node:spell.source.children) if (node.tag!="effect" && node.tag!="anim" && node.tag!="impact" && node.tag!="description" && node.tag!="requirements")
         throw std::invalid_argument("spell child execution is not implemented: "+node.tag);
     for (const auto& attribute:spell.source.attributes) {
         auto key=attribute.first;for (auto& c:key) if (c>='A' && c<='Z') c+=32;
         if ((key=="mine" || key=="attack") && legacy_integer(attribute.second)) throw std::invalid_argument("spell mine/attack dispatch is not implemented");
+        if (maneuver && key=="affectonlyhittables" && legacy_integer(attribute.second)) throw std::invalid_argument("maneuver affectOnlyHittables dispatch is not implemented");
     }
+    if (maneuver) {
+        if (!spell.maneuvers) throw std::invalid_argument("maneuver templates are unavailable");
+        if (spell.effects.empty()) throw std::invalid_argument("empty maneuver attack dispatch is not implemented");
+        int id=-1,anchored=0;
+        for (const auto& a:spell.source.attributes) {
+            auto key=a.first;for (auto& c:key) if (c>='A' && c<='Z') c+=32;
+            if (key=="templateid") id=legacy_integer(a.second);else if (key=="anchored") anchored=legacy_integer(a.second);
+        }
+        const auto plan=plan_maneuver(*spell.maneuvers,id,anchored,player_facing_,origin,target,random_.libc);
+        for (auto point:plan.targets) if (point.x>=0 && point.y>=0 && point.x<world_.width() && point.y<world_.height())
+            apply_spell_effects(spell,point,caster,true,depth,remaining);
+        return plan.accepted;
+    }
+    apply_spell_effects(spell,target,caster,allow_haywire || spell.type=="self" || spell.type=="adjacent",depth,remaining);return true;
+}
+void Session::apply_spell_effects(const SpellDefinition& spell,Position target,std::uint64_t caster,bool allow_haywire,std::size_t depth,std::size_t& remaining) {
     Actor* source=nullptr;if (!caster || caster==player_.id) source=&player_;
     else for (auto& enemy:enemies_) if (enemy.id==caster) {source=&enemy;break;}
     if (!source) throw std::invalid_argument("spell caster not found");
@@ -265,7 +287,7 @@ bool Session::cast_spell_recursive(const SpellDefinition& spell,Position origin,
             // ApplyEffectAt returns immediately for a missing child, skipping
             // later effects. Immediate triggers always consume their own roll,
             // including percent100, and start at the caster's current position.
-            if (!child) return true;
+            if (!child) return;
             if (effect.amount) throw std::invalid_argument("delayed trigger execution is not implemented");
             if (random_.libc.next()/21474837>effect.percent) continue;
             cast_spell_recursive(*child,source->position,target,source->id,true,depth+1,remaining);continue;
@@ -290,7 +312,7 @@ bool Session::cast_spell_recursive(const SpellDefinition& spell,Position origin,
         if (!effect.affects_caster && source->id==victim->id) continue;
         SpellDamageInput input;input.haywire=source->secondary[5];input.resist=victim->secondary[11];input.armour=victim->secondary[10];
         input.scaling_attribute=effect.primary_scale==-1?source->secondary[effect.secondary_scale]:source->primary[effect.primary_scale];
-        input.allow_haywire=allow_haywire || spell.type=="self" || spell.type=="adjacent";
+        input.allow_haywire=allow_haywire;
         input.force_unresisted=effect.unblockable!=0;input.damage=effect.damage;input.scaling=effect.scaling;input.resistance=victim->resistance;
         const auto result=resolve_spell_damage(input,[&]{return random_.libc.next();});
         events_.push_back({EventKind::spell_damage,source->id,victim->id,result.total,result.haywire,result.resisted});
@@ -302,7 +324,6 @@ bool Session::cast_spell_recursive(const SpellDefinition& spell,Position origin,
             }
         }
     }
-    return true;
 }
 std::vector<std::size_t> Session::detect_traps() {
     std::vector<std::size_t> visible;
@@ -413,6 +434,7 @@ void Session::step_impl(Action action) {
     const auto outcome=world_.step(action);
     if (outcome==Outcome::blocked) { events_.push_back({EventKind::blocked,player_.id});return; }
     player_.position=world_.player();
+    if (outcome==Outcome::moved) player_facing_=action==Action::north?2:action==Action::south?0:action==Action::west?1:3;
     if (outcome==Outcome::moved) events_.push_back({EventKind::moved,player_.id});
     if (outcome==Outcome::moved) pickup_currency();
     if (outcome==Outcome::moved) activate_traps_impl(player_);

@@ -80,6 +80,8 @@ public:
     // Low-level cast: no mana/cooldown/turn scheduling. Unsupported dispatch or
     // effects fail atomically while the remaining spell engine is implemented.
     bool cast_spell(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster=0,bool allow_haywire=true);
+    int player_facing() const {return player_facing_;}
+    void player_facing(int direction);
     void spell_profile(std::shared_ptr<const std::vector<SpellDefinition>> definitions) {spells_=std::move(definitions);}
     std::vector<std::size_t> detect_traps();
     void give_currency(std::int32_t amount);
@@ -99,6 +101,7 @@ public:
                         std::shared_ptr<const std::vector<AbilityDefinition>> abilities={},
                         std::shared_ptr<const std::vector<SpellDefinition>> spells={});
 private:
+    int player_facing_=2;
     MonsterSpawnState monster_state_;
     friend class CharacterBuilder;
     World world_;
@@ -138,6 +141,7 @@ private:
     bool cast_spell_impl(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire);
     bool cast_spell_recursive(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire,
         std::size_t depth,std::size_t& remaining);
+    void apply_spell_effects(const SpellDefinition& spell,Position target,std::uint64_t caster,bool allow_haywire,std::size_t depth,std::size_t& remaining);
     void activate_traps_impl(Actor& actor);
 };
 Actor make_player(const ClassRanks& ranks,std::string name="Player");

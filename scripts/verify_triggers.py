@@ -14,9 +14,9 @@ class Triggers(Cast):
         array=self.allocate(max(4,len(rows)*0x11c))
         for index,(kind,value,percent,self_flag) in enumerate(rows):
             effect=array+index*0x11c;self.original.call('__ZN11spellEffectC2Ev',effect)
-            self.write(effect,{'damage':0,'heal':2,'trigger':44}[kind]);self.write(effect+0xcc,percent);self.write(effect+0x84,self_flag)
+            self.write(effect,{'damage':0,'heal':2,'spellpoints':37,'trigger':44}[kind]);self.write(effect+0xcc,percent);self.write(effect+0x84,self_flag)
             if kind=='trigger':self.string(effect+0x100,value)
-            elif kind=='heal':self.write(effect+0xd0,value)
+            elif kind in ['heal','spellpoints']:self.write(effect+0xd0,value)
             else:self.write(effect+8,value);self.write(effect+0x88,1)
         self.write(spell+0x11c,array,array+len(rows)*0x11c,array+len(rows)*0x11c)
 

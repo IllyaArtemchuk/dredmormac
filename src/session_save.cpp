@@ -119,6 +119,23 @@ std::uint64_t spell_signature(const std::shared_ptr<const std::vector<SpellDefin
     }
     return hash?hash:1;
 }
+std::uint64_t maneuver_signature(const std::shared_ptr<const std::vector<SpellDefinition>>& definitions) {
+    if (!definitions) return 0;
+    std::uint64_t hash=14695981039346656037ull;std::map<const std::vector<ManeuverTemplate>*,std::size_t> groups;
+    auto add=[&](const std::string& text){for (unsigned char c:text) {hash^=c;hash*=1099511628211ull;}hash^=0;hash*=1099511628211ull;};
+    std::function<void(const XmlNode&)> node=[&](const XmlNode& n){add(n.tag);add(n.text);for (const auto& a:n.attributes) {add(a.first);add(a.second);}for (const auto& c:n.children) node(c);};
+    for (const auto& spell:*definitions) if (spell.maneuvers) {
+        add(spell.name);const auto inserted=groups.emplace(spell.maneuvers.get(),groups.size());add(std::to_string(inserted.first->second));
+        if (inserted.second) {
+            add(std::to_string(spell.maneuvers->size()));
+            for (const auto& t:*spell.maneuvers) {
+                add(std::to_string(t.id));add(std::to_string(t.width));add(std::to_string(t.height));add(std::to_string(t.affects_player));node(t.source);
+                for (auto cell:t.cells) add(std::to_string(cell));
+            }
+        }
+    }
+    return groups.empty()?0:hash?hash:1;
+}
 void write_actor(std::ostream& out,std::string_view tag,const Actor& actor) {
     out<<'<'<<tag<<" id=\""<<actor.id<<"\" name=\""<<escape(actor.name)<<"\" sprite=\""<<escape(actor.sprite)
        <<"\" x=\""<<actor.position.x<<"\" y=\""<<actor.position.y<<"\" hp=\""<<actor.health
@@ -234,7 +251,9 @@ CustomRoomObject read_room_object(const XmlNode& node,const World& world) {
 }
 void Session::save(std::ostream& out) const {
     out<<"<dredmor-session version=\"7\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
-       <<"\" content=\""<<signature(definitions_)<<"\">\n<room>"<<escape(world_.room_text())<<"</room>\n";
+       <<"\" content=\""<<signature(definitions_)<<"\"";
+    if (player_facing_!=2) out<<" facing=\""<<player_facing_<<"\"";
+    out<<">\n<room>"<<escape(world_.room_text())<<"</room>\n";
     write_actor(out,"player",player_);out<<"<enemies>\n";for (const auto& enemy:enemies_) write_actor(out,"enemy",enemy);out<<"</enemies>\n";
     out<<"<progress level=\""<<progression_.level<<"\" xp=\""<<progression_.experience<<"\" lifetime=\""<<progression_.lifetime_experience
        <<"\" score=\""<<progression_.score_experience<<"\" points=\""<<progression_.unspent_points<<"\"/>\n";
@@ -277,7 +296,11 @@ void Session::save(std::ostream& out) const {
     out<<"</skills>\n<custom-objects>\n";
     for (const auto& object:custom_objects_) write_room_object(out,object);
     out<<"</custom-objects>\n";
-    if (spells_) out<<"<spell-rules content=\""<<spell_signature(spells_)<<"\"/>\n";
+    if (spells_) {
+        out<<"<spell-rules content=\""<<spell_signature(spells_)<<"\"";const auto maneuvers=maneuver_signature(spells_);
+        if (maneuvers) out<<" maneuvers=\""<<maneuvers<<"\"";
+        out<<"/>\n";
+    }
     if (!breakables_.empty()) {
         out<<"<breakables>\n";
         for (const auto& object:breakables_) {
@@ -307,12 +330,19 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     if (root.first("spell-rules")) {
         if (version!="7" || !spells || attribute_number<std::uint64_t>(child(root,"spell-rules"),"content")!=spell_signature(spells))
             throw std::runtime_error("save spell content does not match loaded definitions");
+        const auto& rules=child(root,"spell-rules");
+        if (rules.attributes.count("maneuvers") && attribute_number<std::uint64_t>(rules,"maneuvers")!=maneuver_signature(spells))
+            throw std::runtime_error("save maneuver content does not match loaded definitions");
     }
     const auto turn=attribute_number<std::uint64_t>(root,"turn");
     if (turn==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("saved turn counter exhausted");
     std::istringstream rows(child(root,"room").text);auto world=World::restore(rows,turn);auto player=read_actor(child(root,"player"),version=="6" || version=="7",version=="7");
     if (player.position.x!=world.player().x || player.position.y!=world.player().y) throw std::runtime_error("saved player/room position mismatch");
     Session session(std::move(world),player,0,attribute_number<int>(root,"experience-n"));
+    if (root.attributes.count("facing")) {
+        if (version!="7") throw std::runtime_error("saved facing requires version seven");
+        session.player_facing(attribute_number<int>(root,"facing"));
+    }
     session.definitions_=std::move(definitions);session.spells_=std::move(spells);session.next_actor_=attribute_number<std::uint64_t>(root,"next-actor");
     std::set<std::uint64_t> actors={player.id},items;
     for (const auto& node:child(root,"enemies").children) {

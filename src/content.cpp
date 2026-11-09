@@ -216,8 +216,13 @@ GameContent GameContent::load(const std::filesystem::path& root,bool expansions)
     currency.name="Zorkmids";currency.icon="items/cash0.png";content.items_.push_back(std::move(currency));
     if (!found_tweaks) throw std::runtime_error("base tweakDB.xml is required");
     content.monsters_=load_monsters(content.catalog_);
+    std::vector<ManeuverTemplate> maneuvers;
+    for (const auto& entry:content.catalog_.entries()) if (entry.node->tag=="template" && entry.database->layer=="base" && entry.database->source.filename()=="manTemplateDB.xml")
+        maneuvers.push_back(read_maneuver_template(*entry.node));
+    const auto maneuver_rules=maneuvers.empty()?std::shared_ptr<const std::vector<ManeuverTemplate>>{}:
+        std::make_shared<const std::vector<ManeuverTemplate>>(std::move(maneuvers));
     for (const auto& entry:content.catalog_.entries()) if (entry.node->tag=="spell" && entry.database->source.filename()=="spellDB.xml") {
-        auto spell=read_spell(*entry.node);spell.layer=entry.database->layer;content.spells_.push_back(std::move(spell));
+        auto spell=read_spell(*entry.node);spell.layer=entry.database->layer;spell.maneuvers=maneuver_rules;content.spells_.push_back(std::move(spell));
     }
     if (!expansions) content.monster_tables_=build_base_monster_tables(content.catalog_,content.monsters_);
     return content;

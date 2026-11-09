@@ -56,3 +56,11 @@
   requests. Session/native trap ownership, origin rendering/collision and automatic basic
   damage casts now exist. Other spell effects, disarm UI, full destruction queues,
   actual VFX/audio and original scheduling remain unfinished/unverified.
+
+- Immediate spell triggers, spellpoints and template AoE are now integrated with
+  controlled original comparisons. Deferred triggers, full buffs and remaining
+  spell families are pending. Missing maneuver-row cells normalize empty; effects
+  outside map bounds are skipped because the original can read invalid memory.
+  These policies are explicit deviations. Original template VFX and playback are
+  not yet reproduced. Facing on successful moves uses recovered direction values;
+  other original facing transitions and animation remain pending.

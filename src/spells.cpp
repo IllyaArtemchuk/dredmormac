@@ -28,6 +28,56 @@ std::int32_t resolve_spellpoints(std::int32_t current,std::int32_t maximum,std::
 namespace {
 std::string lower(std::string value) {for (auto& c:value) if (c>='A' && c<='Z') c+=32;return value;}
 }
+ManeuverTemplate read_maneuver_template(const XmlNode& node) {
+    if (lower(node.tag)!="template") throw std::invalid_argument("expected maneuver template");
+    ManeuverTemplate result;result.source=node;result.id=-1;result.affects_player=false;
+    for (const auto& a:node.attributes) {
+        const auto key=lower(a.first);const auto value=legacy_integer(a.second);
+        if (key=="name") result.id=value;else if (key=="width") result.width=value;else if (key=="height") result.height=value;
+        else if (key=="affectsplayer") result.affects_player=value!=0;
+    }
+    if (result.width<1 || result.height<1 || result.width>256 || result.height>256) throw std::invalid_argument("maneuver template dimensions outside budget");
+    for (const auto& row:node.children) if (lower(row.tag)=="row") {
+        std::string text;for (const auto& a:row.attributes) if (lower(a.first)=="text") text=a.second;
+        for (int x=0;x<result.width;++x) {
+            // The original leaves missing cells uninitialized. Supplied
+            // template22 has three such cells; the port normalizes them empty.
+            const char c=std::size_t(x)<text.size()?text[x]:'.';
+            if (c!='.' && c!='@' && c!='#') throw std::invalid_argument("unknown maneuver template cell");
+            result.cells.push_back(c=='@'?1:c=='#'?2:0);
+        }
+    }
+    if (result.cells.size()!=std::size_t(result.width)*result.height) throw std::invalid_argument("maneuver row count mismatch");
+    return result;
+}
+ManeuverPlan plan_maneuver(const std::vector<ManeuverTemplate>& templates,int id,int anchored,int facing,
+    Position origin,Position target,DarwinRandom& random) {
+    if (facing<0 || facing>3) throw std::invalid_argument("invalid maneuver facing");
+    auto candidate=random;const ManeuverTemplate* selected=nullptr;
+    if (id==-1) {
+        if (templates.empty() || templates.size()>0x7ffffffeU) throw std::invalid_argument("invalid random maneuver pool");
+        selected=&templates[candidate.bounded(static_cast<std::uint32_t>(templates.size()))];
+    } else for (const auto& entry:templates) if (entry.id==id) selected=&entry;
+    ManeuverPlan result;if (!selected) return result;
+    const auto& entry=*selected;
+    if (entry.width<1 || entry.height<1 || entry.width>256 || entry.height>256 || entry.cells.size()!=std::size_t(entry.width)*entry.height)
+        throw std::invalid_argument("invalid maneuver cells");
+    const auto marker=std::find(entry.cells.begin(),entry.cells.end(),2);
+    if (marker!=entry.cells.end()) {
+        result.accepted=true;const int anchor_x=int(marker-entry.cells.begin())%entry.width,anchor_y=int(marker-entry.cells.begin())/entry.width;
+        const auto base=anchored==1?origin:target;
+        auto add=[](int a,int b) {const auto bits=std::uint32_t(a)+std::uint32_t(b);std::int32_t value;std::memcpy(&value,&bits,4);return value;};
+        for (int x=0;x<entry.width;++x) for (int y=entry.height-1;y>=0;--y) {
+            const auto cell=entry.cells[std::size_t(y)*entry.width+x];if (cell!=1 && !(cell==2 && entry.affects_player)) continue;
+            const int dx=x-anchor_x,dy=y-anchor_y;int rx=dx,ry=dy;
+            if (anchored && facing!=2) {
+                if (facing==0) ry=-dy;else if (facing==1) {rx=dy;ry=dx;}else {rx=-dy;ry=dx;}
+            }
+            result.targets.push_back({add(base.x,rx),add(base.y,ry)});
+        }
+    }
+    random=candidate;return result;
+}
 SpellEffectDefinition read_spell_effect(const XmlNode& node) {
     if (lower(node.tag)!="effect") throw std::invalid_argument("expected spell effect");
     SpellEffectDefinition result;result.source=node;

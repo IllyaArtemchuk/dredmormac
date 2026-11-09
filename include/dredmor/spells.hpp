@@ -1,7 +1,20 @@
 #pragma once
 #include "dredmor/items.hpp"
+#include "dredmor/world.hpp"
+#include "dredmor/random.hpp"
+#include <memory>
 
 namespace dredmor {
+struct ManeuverTemplate {
+    int id=0,width=0,height=0;
+    bool affects_player=true;
+    std::vector<std::uint8_t> cells;
+    XmlNode source;
+};
+struct ManeuverPlan {bool accepted=false;std::vector<Position> targets;};
+ManeuverTemplate read_maneuver_template(const XmlNode& node);
+ManeuverPlan plan_maneuver(const std::vector<ManeuverTemplate>& templates,int id,int anchored,int facing,
+    Position origin,Position target,DarwinRandom& random);
 struct SpellEffectDefinition {
     std::string type="damage",spell,taxa,buff_tag;
     Damage damage{};
@@ -16,6 +29,7 @@ struct SpellDefinition {
     std::string name,type,layer;
     std::vector<SpellEffectDefinition> effects;
     XmlNode source;
+    std::shared_ptr<const std::vector<ManeuverTemplate>> maneuvers;
 };
 // Generic effect fields and damage scaling. Unknown properties and child
 // effects remain in source; parsing does not assert execution support.

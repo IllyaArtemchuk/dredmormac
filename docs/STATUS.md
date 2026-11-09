@@ -1,4 +1,4 @@
-# Status — 2026-11-09
+# Status — 2026-11-10
 
 Branch: implementation/native-foundation. Initial repository had only Readme.md.
 Overall implementation is incomplete. Milestone 1 has a working Ghidra/Unicorn
@@ -30,8 +30,8 @@ Verified:
 - Room-placement collision: 69,632 original executions match.
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
-- Twenty-two local CTest groups pass, including deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42642317094 passed all thirty-eight checks, including
+- Twenty-four local CTest groups pass, including deterministic session and save/load tests.
+- Actual macos-15 arm64 CI run 42689569756 passed all forty-two checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -580,3 +580,35 @@ clamps, global recipient and save/resume tests pass in23 local groups. Native tr
 fixture now spends3MP before triggering and restores1MP in its damage child, proving
 net2MP per activation through reload. Current mana source awaits MacCI. Immediate
 trigger run42688935604 is inprogress; full game remains unfinished.
+
+Immediate-trigger run42688935604 and mana run42689569756 passed42 Mac checks and
+packaging. Template AoE now loads all35 base manTemplateDB templates and executes
+ordered area effects, including nested trigger/damage/healing/mana. Planner matches
+4096 actual DoActualSpellLoop template dispatches; integrated AoE matches2048 actual
+full casts on safe interior coordinates. Ordered damage flags, HP/MP, libc, random
+selection, last matching explicit templateID, first anchor and coordinate wrapping
+are compared; identity/name, damage HP delivery, UI/library are boundaries. Records
+iterate x ascending/y descending. Anchored1 uses supplied origin; other anchored
+values use target. Anchored0 ignores facing. Facing2 is identity;0 mirrorsY;1 swaps
+x/y;3 maps(-y,x). These transforms were verified rather than replaced by rotations.
+Player::WalkTo11c6ee writes east3/west1/north2/south0; successful provisional moves
+now update a saved player-facing value (port default2 for older saves). Original
+animation/input queue and facing on attack/blocked paths remain unverified.
+Optional savev7 facing and spell-rules maneuvers hash preserve orientation and
+raw/typed template rules; old saves lacking these fields migrate default/current
+rules. Changed rule cells or invalid facing reject before session replacement.
+Template22 has three short rows (7declared/6characters). Actual parser cf870 reads
+the terminating zero and leaves those cells unwritten; port normalizes missing
+cells empty. This is an explicit compatibility policy, not measured heap content.
+Unknown symbols/invalid dimensions fail; extra row characters are ignored like the
+original. Independent ingestion covers35 templates and notes3normalized cells.
+Actual template dispatch can call ApplyEffectAt outside the map and perform invalid
+reads (probe at9698b). Port clips those effect coordinates; coordinate comparison
+still covers outside/wrapping values, full-effect comparison excludes unsafe reads.
+Empty-effect maneuver attacks, affectOnlyHittables, buffs and visual playback stay
+unsupported. Session tests cover ordering, identities, facing, saves/changed rules,
+atomic failures and bounds; all24 groups pass. Existing4096 trigger chains,4096 mana
+arithmetic+4096 mixed resource casts still match after effect-loop refactor. Native
+trap fixture now triggers a template damage/mana child and saves its template hash.
+Current AoE source awaits MacCI. Next: scheduled effects/buffs, broader spell types,
+full population/scripts and complete generated-floor play.
