@@ -82,4 +82,12 @@ RoomView supplies bag/belt/equipment rows and core transfer callbacks. G picks u
 I opens inventory, with slot selection and Equip/Unequip controls. Explicit scene
 ground_items are a developer fixture facility, not original room population.
 New native-inventory smoke picks up a synthetic cap, drives table selection and
-both transfer buttons, checks restored stats, then runs save/load. Pending push.
+both transfer buttons, checks restored stats, then runs save/load. All eighteen checks passed in run 42587414308.
+
+Starting items: selection.cpp preserves original edible/booze sampling and rare
+fallback; verify_selection.py matches 2,048 original calls with a supplied rand
+boundary and null current level. verify_loadout.py matches 4,096 class/always
+loadout gates. Typed skill.loadouts and starting_loadout return plans only.
+Private starting-skills.txt has full BuildPlayerFromSkills/RebuildAttributes;
+loadout-rules.txt has skill callback, GiveStartingAbilities, GetRandomEdible/Booze,
+GiveAndEquipWeapon/Armour. Full starting grants and ability aggregation pending.

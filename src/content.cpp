@@ -1,4 +1,5 @@
 #include "dredmor/content.hpp"
+#include "dredmor/selection.hpp"
 #include <algorithm>
 #include <functional>
 #include <limits>
@@ -84,7 +85,11 @@ GameContent GameContent::load(const std::filesystem::path& root,bool expansions)
                 const auto value=category=="warrior"?0:category=="wizard"?1:category=="rogue"?2:-1;
                 const auto id=node.integer("id");
                 if (!id || *id<0 || value<0) throw std::runtime_error("invalid skill definition");
-                content.skills_.push_back({*id,node.attribute("name"),value,node});
+                SkillDefinition skill{*id,node.attribute("name"),value,node,{}};
+                for (const auto& child:node.children) if (child.tag=="loadout")
+                    skill.loadouts.push_back({child.attribute("type"),child.attribute("subtype"),
+                        child.integer("amount").value_or(1),child.integer("always").value_or(0)!=0});
+                content.skills_.push_back(std::move(skill));
             }
             if (database->source.filename()=="rooms.xml" && node.tag=="room") {
                 RoomDefinition room;room.name=node.attribute("name");room.layer=database->layer;room.source=node;
@@ -125,5 +130,14 @@ ClassRanks GameContent::starting_ranks(const std::vector<int>& skill_ids) const 
         ++ranks[found->category];
     }
     return ranks;
+}
+std::vector<StartingLoadout> GameContent::starting_loadout(const std::vector<int>& skill_ids) const {
+    const auto ranks=starting_ranks(skill_ids);std::vector<StartingLoadout> result;
+    // BuildPlayerFromSkills first writes selected IDs in database order, then
+    // visits their loadouts. User selection order does not reorder those grants.
+    for (const auto& skill:skills_) if (std::find(skill_ids.begin(),skill_ids.end(),skill.id)!=skill_ids.end())
+        for (const auto& item:skill.loadouts) if (loadout_allowed(ranks,skill.category,item.always))
+            result.push_back({skill.id,item});
+    return result;
 }
 }

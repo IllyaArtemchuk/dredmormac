@@ -20,7 +20,8 @@ struct ItemModifiers {
 struct ItemDefinition {
     std::string name,icon,description;
     ItemKind kind=ItemKind::unknown;
-    int price=0,level=0,weapon_type=-1,armour_type=-1,armour_ac=0,food_hp=0;
+    int price=0,level=0,weapon_type=-1,armour_type=-1,armour_ac=0,food_hp=0,food_mp=0;
+    bool special=false,debug=false;
     Damage weapon_damage{};
     ItemModifiers modifiers;
     XmlNode source; // Preserve unsupported effects; never silently discard them.

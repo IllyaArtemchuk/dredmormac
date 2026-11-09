@@ -57,4 +57,8 @@ std::int32_t DarwinRandom::next() {
     state_=static_cast<std::uint32_t>((std::uint64_t(state_)*16807u)%2147483647u);
     return static_cast<std::int32_t>(state_);
 }
+std::uint32_t DarwinRandom::bounded(std::uint32_t count) {
+    if (count-1U>=0x7ffffffeU) return 0;
+    return static_cast<std::uint32_t>(next())/(0x7fffffffU/count+1U);
+}
 }

@@ -34,6 +34,9 @@ public:
     explicit DarwinRandom(std::uint32_t seed=1):state_(seed) {}
     void seed(std::uint32_t value) { state_=value; }
     std::int32_t next();
+    // Original inline libc range mapping. Invalid bounds return zero without
+    // consuming the stream; a bound of one still consumes one draw.
+    std::uint32_t bounded(std::uint32_t count);
     std::uint32_t state() const { return state_; }
 private:
     std::uint32_t state_;

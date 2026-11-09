@@ -3,6 +3,7 @@
 #include "dredmor/random.hpp"
 #include "dredmor/monsters.hpp"
 #include "dredmor/equipment.hpp"
+#include "dredmor/selection.hpp"
 #include <iostream>
 #include <stdexcept>
 #define check(value) do { if (!(value)) throw std::runtime_error("gameplay assertion at line "+std::to_string(__LINE__)); } while(false)
@@ -33,8 +34,19 @@ int main() {
         auto item=read_item(parse_xml("<item name='Fixture'><armour type='head'/><secondaryBuff id='9' amount='2'/><secondarybuff id='9' amount='5'/><resistBuff toxic='3'/></item>"));
         check(item.modifiers.secondary[9]==5 && item.modifiers.resistance[7]==3);
         check(item.can_equip(EquipmentSlot::head) && !item.can_equip(EquipmentSlot::chest));
+        const auto meal=read_item(parse_xml("<item name='Fixture meal' special='1' debug='-2' level='3'><food hp='2' mp='4'/></item>"));
+        check(meal.kind==ItemKind::food && meal.special && meal.debug && meal.food_hp==2 && meal.food_mp==4 && meal.level==3);
         DarwinRandom darwin(1);
         for (auto expected:{16807,282475249,1622650073,984943658,1144108930}) check(darwin.next()==expected);
+        DarwinRandom bounded(1);check(bounded.bounded(0)==0 && bounded.state()==1);
+        check(bounded.bounded(0x7fffffff)==0 && bounded.state()==1);
+        check(bounded.bounded(1)==0 && bounded.state()==16807);
+        std::vector<FoodCandidate> pool={{0,1,false,false},{1,1,false,false}};
+        DarwinRandom selection(1);check(select_edible(pool,selection)==0 && selection.state()==16807);
+        selection.seed(1);check(select_booze(pool,selection)==1);
+        selection.seed(1);bool invalid_pool=false;
+        try {select_booze({{0,1,false,false}},selection);} catch(const std::invalid_argument&) {invalid_pool=true;}
+        check(invalid_pool && selection.state()==1);
         auto parent=read_monster(parse_xml("<monster name='Parent'><stats numFig='2' xpValue='5'/><damage crushing='1' acidic='2'/><idleSprite down='fixture.spr'/></monster>"));
         auto variant=read_monster(parse_xml("<monster name='Variant'><stats numRog='1' xpValue='10'/><damage acidic='0' voltaic='2'/></monster>"),&parent);
         check(variant.ranks==ClassRanks({2,0,1}) && variant.damage[0]==1 && variant.damage[10]==0 && variant.damage[6]==2);

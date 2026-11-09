@@ -34,6 +34,7 @@ ItemDefinition read_item(const XmlNode& source) {
     item.source=source;
     item.name=attr(source,"name");item.icon=attr(source,"iconfile");
     item.level=integer(source,"level");item.weapon_type=integer(source,"type",0);
+    item.special=integer(source,"special")!=0;item.debug=integer(source,"debug")!=0;
     if (item.name.empty()) throw std::runtime_error("item name missing");
     for (const auto& child:source.children) {
         const auto tag=lower(child.tag);
@@ -52,7 +53,7 @@ ItemDefinition read_item(const XmlNode& source) {
             else if (type=="hands") item.armour_type=10;
             else if (type=="waist") item.armour_type=11;
             else if (type=="sleeve") item.armour_type=12;
-        } else if (tag=="food") { item.kind=ItemKind::food;item.food_hp=integer(child,"hp"); }
+        } else if (tag=="food") { item.kind=ItemKind::food;item.food_hp=integer(child,"hp");item.food_mp=integer(child,"mp"); }
         else if (tag=="potion") item.kind=ItemKind::potion;
         else if (tag=="wand") item.kind=ItemKind::wand;
         else if (tag=="gem") item.kind=ItemKind::gem;

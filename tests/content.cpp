@@ -10,6 +10,9 @@ int main(int argc,char** argv) {
         check(world.width()==7 && world.height()==5 && !world.passable({3,2}));
         check(world.player().x==3 && world.player().y==1);
         check(content.starting_ranks({0,1,2,3,4,5,6})==dredmor::ClassRanks({3,2,2}));
+        const auto loadout=content.starting_loadout({6,5,4,3,2,1,0});
+        check(loadout.size()==2 && loadout[0].skill_id==0 && loadout[0].item.amount==1);
+        check(loadout[1].skill_id==1 && loadout[1].item.always && loadout[1].item.subtype=="Fixture");
         auto enemy=content.make_monster("Fixture variant",{2,1},dredmor::Difficulty::medium);
         check(enemy.health==11 && enemy.damage[0]==1 && enemy.experience_reward==10);
         check(content.tweaks().integer(dredmor::Difficulty::medium,"monster additional HP per level")==0);

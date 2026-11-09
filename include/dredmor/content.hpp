@@ -4,7 +4,9 @@
 #include "dredmor/generation.hpp"
 
 namespace dredmor {
-struct SkillDefinition { int id;std::string name;int category;XmlNode source; };
+struct SkillLoadout { std::string type,subtype;int amount=1;bool always=false; };
+struct StartingLoadout { int skill_id;SkillLoadout item; };
+struct SkillDefinition { int id;std::string name;int category;XmlNode source;std::vector<SkillLoadout> loadouts; };
 struct RoomDefinition {
     std::string name,layer;
     std::vector<std::string> rows;
@@ -27,6 +29,7 @@ public:
     const Tweaks& tweaks() const { return tweaks_; }
     Actor make_monster(std::string_view name,Position position,Difficulty difficulty,int dungeon_level=0) const;
     ClassRanks starting_ranks(const std::vector<int>& skill_ids) const;
+    std::vector<StartingLoadout> starting_loadout(const std::vector<int>& skill_ids) const;
 private:
     Catalog catalog_;
     std::vector<ItemDefinition> items_;

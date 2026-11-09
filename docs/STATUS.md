@@ -31,7 +31,7 @@ Verified:
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
 - Nine local CTest groups pass, including deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42586734212 passed all sixteen checks, including
+- Actual macos-15 arm64 CI run 42587414308 passed all eighteen checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -69,4 +69,8 @@ Obtain original gameplay captures for remaining parity comparisons. See RESUME.m
 Native startup now accepts the original .app or data directory directly, decoding
 SPR in process. No-argument launch opens an installation picker. The prepared-scene
 path remains supported. Synthetic installation startup CI passes. Native inventory/pickup/equip/unequip
-controls and their synthetic-window check are added; native execution is pending.
+controls and their synthetic-window check pass on actual Mac CI.
+
+Starting-item kernels: 2,048 original food selections/final RNG states and 4,096
+original class/always loadout decisions match. Typed filtered loadout plans exist;
+complete starting item instantiation, auto-equip and abilities remain pending.

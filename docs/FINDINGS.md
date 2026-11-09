@@ -319,3 +319,32 @@ I opens the inventory. Explicit ground_items in developer scenes use typed item
 definitions and remain separate from original room scripts/population. A new
 native synthetic-window check drives pickup/table selection/equip/unequip and
 then full save/reload. Its actual Mac execution is pending.
+
+Run 42587414308 (0c082aa) passed all eighteen checks and relocated package smoke,
+including synthetic native pickup, inventory table selection, equipment transfer
+buttons, restored stats, and save/reload. The prior inventory controller compile
+error was a collision with inherited NSWindowController.owner; renamed the weak
+callback property inventoryOwner and verified the fix on the actual Mac.
+
+## Starting item selection
+
+GetRandomEdible (0x4e1f0) and GetRandomBooze (0x4ecb0) match 2,048 original
+executions with a supplied, separately verified Darwin rand boundary. Compare
+chosen entry and complete final libc RNG state. Null current level sets booze
+target level one; box-muller target selection and food-table registration remain
+separate. The first booze search result is discarded; the second search allows
+special items and returns its 101st sample even when no eligibility condition
+passes. Tests include 256 target-missing fallback cases, up to 127 total draws.
+Edible excludes positive MP, special and debug; booze first excludes zero MP,
+special and debug. The second booze loop does not check special. Craft-output
+is a different field and is not substituted for debug. Invalid pools with no
+eligible first-stage candidate throw before consuming RNG rather than hang.
+
+BuildPlayerFromSkills loadout gate [0x11ba10,0x11ba99) matches 4,096 original
+fragment executions, without import replacements. A selected skill contributes
+its loadout when its class is tied for largest rank or always is nonzero. Typed
+loadouts preserve type/subtype/amount (default one)/always (default false) and
+original database ordering. GameContent::starting_loadout returns this filtered
+plan; it does not yet instantiate/grant items, auto-equip, add default clothes,
+roll four random food entries, or grant abilities. Original scripts reproduce
+food-selection.json and starting-loadout.json privately.
