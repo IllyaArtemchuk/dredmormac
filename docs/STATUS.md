@@ -18,6 +18,10 @@ Verified:
   mismatches; excludes abilities, equipment, buffs and polymorph.
 - Native catalog: all 40 databases / 4,882 records agree with independent XML
   parser counts. Base only: 17 databases / 3,565 records. No merge policy claimed.
+- Combat decision/arithmetic core: 4,101 original paths match fixed rand tapes.
+- Inventory: 3,840 original operations match all 57 slots after each operation.
+- Equipment eligibility: 684 original function executions match.
+- Typed metadata/modifiers parse for all 751 supplied item definitions.
 - Ghidra successfully imported/analyzed the game; reproducible targeted exports.
 - Original Starting Room and hero SPR prepare successfully from supplied data.
 - Embedded startup version 1.1.4 traced through the formatter's actual arguments.
@@ -35,10 +39,9 @@ Blockers and limits:
 - Combat uses a separate imported libc rand() stream; MT verification alone
   does not establish deterministic combat.
 
-Exact next action: inspect DoRandomize and the libc rand/srand import call sites;
-recover seed flow, draw order and the combat probability/damage transitions.
-Use controlled input tapes at declared libc boundaries to compare original
-combat arithmetic independently from the unverified libc PRNG implementation.
-Then implement equipment/ability aggregation around the verified stat pipeline.
+Current work: recover monster attribute/scaling rules and connect typed
+definitions, equipment and verified combat to a deterministic turn session.
+DoRandomize and seed flow are identified; decision/arithmetic combat rules are
+compared, while complete DoCombat, triggers and HP delivery remain unfinished.
 Obtain original room captures and native Mac build evidence when Mac access is
 available. See RESUME.md.

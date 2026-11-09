@@ -24,4 +24,21 @@ private:
     std::size_t index_ = 625;
     void twist();
 };
+// Portable model of Apple's published non-weak-seeding libc rand algorithm.
+// Kept separate from MT19937; actual Mac libc agreement is checked on macOS.
+class DarwinRandom {
+public:
+    explicit DarwinRandom(std::uint32_t seed=1):state_(seed) {}
+    void seed(std::uint32_t value) { state_=value; }
+    std::int32_t next();
+    std::uint32_t state() const { return state_; }
+private:
+    std::uint32_t state_;
+};
+struct GameRandom {
+    Random mt;
+    DarwinRandom libc;
+    void seed(std::uint32_t value) { libc.seed(value);mt.seed(value); }
+    void wizard_seed(std::uint32_t value) { if (value) { mt.seed(value);libc.seed(value); } }
+};
 }

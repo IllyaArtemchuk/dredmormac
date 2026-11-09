@@ -144,3 +144,37 @@ only genrand_int32. Their probability divisions use constants 0x147ae15 and
 0x28f5c29. Recover libc seed/draw semantics and call order before claiming
 deterministic combat. Combat rules have been decompiled, but are not yet
 implemented or verified as a complete transition.
+
+## Combat, inventory and wearable-slot recovery
+
+DoRandomize at 0xa2a60 seeds libc srand and MT19937 from SDL_GetTicks. Wizard
+key seeding at 0x1b1230 seeds both only when decoded key value is nonzero.
+DarwinRandom implements the mathematical Park–Miller stream described in Apple's
+published Libc rand.c (apple-oss-distributions/Libc, stdlib/FreeBSD/rand.c).
+Its agreement with the actual Mac libc remains pending; a Mac-only CTest compares
+36,864 actual libc outputs. Linux libc is deliberately not substituted.
+
+DoCombatDamage at 0xcea00: **4,101 original decision/arithmetic paths match**
+the replacement, with fixed rand return tapes supplied at imported boundary
+0x1cbf98. Probes stop before UI, recursive counterattack or HP delivery. Tests
+cover decision precedence, critical suppression of dodge/counter/block, random
+draw counts, physical/elemental reductions and no-effect cases. This is not yet
+a comparison of the complete combat transition, triggers, fumbles or HP mutation.
+Critical doubles melee power, not all weapon damage; block divides physical
+damage by four and elemental damage by two. Original damage-type name order was
+read from _damageNames at 0x2602a0 and is represented in combat.hpp.
+
+PushItemToInventory at 0x49960: **3,840 original placement/stack operations
+match all 57 slots after each operation**. Original placement fragment starts
+at 0x499a7 after collection bookkeeping and stops before destruction, teleport,
+recipe or full-inventory-message effects. Bag is 8x6 (48 slots), belt is nine
+slots. Existing belt stacks are checked first unless belt use is disabled,
+then bag stacks, then eligible empty belt slots, then empty bag slots.
+
+Both original CanEquipOnAnatomy functions were executed without import stubs:
+**684 decisions match**, including invalid types/slots. Typed item loading reads
+all **751 supplied item definitions**. The original XML callback uses ASCII
+case-insensitive tag/attribute comparisons and last-assignment wins for repeated
+primary/secondary buff IDs. The typed reader preserves these rules; unsupported
+effects remain in each definition's source tree. Integer syntax is stricter than
+original atoi for malformed input; supplied definitions parse successfully.

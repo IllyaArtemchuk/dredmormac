@@ -48,4 +48,9 @@ double Random::real53() {
     const auto b=u32() >> 6;
     return (a*67108864.0+b) * (1.0/9007199254740992.0);
 }
+std::int32_t DarwinRandom::next() {
+    if (state_==0) state_=123459876;
+    state_=static_cast<std::uint32_t>((std::uint64_t(state_)*16807u)%2147483647u);
+    return static_cast<std::int32_t>(state_);
+}
 }
