@@ -4,7 +4,7 @@ Branch: implementation/native-foundation. Initial repository had only Readme.md.
 Overall implementation is incomplete. Milestone 1 has a working Ghidra/Unicorn
 analysis toolchain, inventory and original-routine comparisons. Milestone 2 has
 original asset loading, provisional room preparation and movement/replay code;
-original gameplay comparison and native rendering validation remain pending.
+original gameplay comparison and original-asset visual fidelity remain pending.
 Data ingestion, RNG and character stat calculations are now implemented and checked.
 The integration session now connects combat, enemy turns, inventory, equipment,
 health/death, progression and a new port save/load format. Scheduling/AI and
@@ -27,10 +27,13 @@ Verified:
 - Typed metadata/modifiers parse for all 751 supplied item definitions.
 - Monster scaling: 2,048 original full-function fixtures / 61,440 fields match.
 - XP table: all 350 original thresholds in seven input configurations match.
-- Six local CTest groups pass, including deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42581482510 passed all nine checks, including
-  AppKit window input/drawing and real libc RNG agreement. Source is on the
-  implementation branch; original files remain private and outside GitHub.
+- Eight local CTest groups pass, including deterministic session and save/load tests.
+- Actual macos-15 arm64 CI run 42583263923 passed all twelve checks, including
+  native combat-window input, real libc RNG agreement, and relocated, ad-hoc
+  signed app packaging/smoke. Original files remain private and outside GitHub.
+- Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
+  expansion. Index-zero transparency and animation scheduling need original
+  visual comparison. Renderer uses all frames; synthetic animation CI is pending.
 - Ghidra successfully imported/analyzed the game; reproducible targeted exports.
 - Original Starting Room and hero SPR prepare successfully from supplied data.
 - Embedded startup version 1.1.4 traced through the formatter's actual arguments.
@@ -47,11 +50,11 @@ Blockers and limits:
 - Combat uses a separate imported libc rand() stream; MT verification alone
   does not establish deterministic combat.
 
-Current work: native scene renderer is being connected to the turn session and
-original content definitions, with combat-window CI and portable app packaging.
+Current work: native scene renderer is connected to the turn session and original
+content definitions. Combat-window CI and portable development app packaging pass.
+Adding direct SPR animation and native save/load controls.
 DoRandomize and seed flow are identified; decision/arithmetic combat rules are
 compared, while complete DoCombat/triggers and original HP/death side-effect
 comparisons remain unfinished. Session HP/death behavior exists but is not yet
 a full original transition comparison.
-Obtain original room captures and native Mac build evidence when Mac access is
-available. See RESUME.md.
+Obtain original gameplay captures for remaining parity comparisons. See RESUME.md.

@@ -237,3 +237,23 @@ destructor import thunk. RepairAllocatorReturns.java clears that annotation and
 call-flow overrides before export. Re-running general analysis immediately
 rediscovers it, so export directly after repair. Complete Tileset::Load,
 Level::Draw and Player::AllocatePoints exports are now available privately.
+
+Run 42583263923, commit c0816a61d8c4b377c6985b409d963f24e51fe135, passed
+all twelve tests, including native combat input/drawing. Packaging relocates Expat
+into Contents/Frameworks and rewrites its load path, then ad-hoc signs the nested
+library and application. Strict signature verification and packaged app smoke
+passed. Development artifact contains no original files; this is not a full game.
+
+## SPR asset decoding
+
+All 698 supplied SPR files have a nine-byte header (SPR, little-endian u16 frame
+count/width/height), followed by a u16 delay, 256 RGB triples and width*height
+indices per frame. No supplied files have trailers. There are 3,633 frames, 542
+multiframe files, maximum dimensions 128x160, and maximum decoded image payload
+786,432 bytes. All multiframe delays are positive. The C++ decoder bounds file
+and decoded sizes and preserves every palette/frame. Independent Python expansion
+matches dimensions, frame counts, delays and RGBA fingerprints for every file.
+Index zero is assumed transparent; original visual comparison remains pending.
+Native rendering selects frames with a presentation clock independent of session
+turn/RNG state. This timing policy is provisional, not original engine parity.
+Reproduce using scripts/compare-sprites.py DATA_ROOT --report PRIVATE_REPORT.

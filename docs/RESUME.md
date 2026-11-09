@@ -52,12 +52,13 @@ actual build/launch evidence; fix compile errors before declaring Mac support.
 Modern macOS cannot run the original i386 game, so native port testing and
 original gameplay capture may require different machines.
 
-`.github/workflows/native-macos.yml` is a manual arm64 build/native-window test
-handoff. It has not been pushed or executed. The runner-images documentation
-identifies standard macos-15 as arm64; no larger-runner labels are used. This
-workflow creates synthetic PNGs and a room, opens the native window, draws,
-injects movement/wait events and checks the state before exiting. Actual original
-asset/gameplay smoke testing remains separate and pending.
+`.github/workflows/native-macos.yml` runs on implementation-branch pushes and
+workflow_dispatch. Actual run 42583263923 passed all twelve checks on standard
+macos-15 arm64, including native combat and relocated/ad-hoc-signed package smoke.
+The development app artifact contains no original assets. Direct animated SPR
+loading now has local decoder tests and 698-file/3,633-frame palette comparisons;
+its new native synthetic animation smoke awaits the next push. Original asset
+visual comparison and full original gameplay parity remain pending.
 
 Continue from the ordered tasks. Source has no selected distribution license;
 do not import GPL code or publish releases without resolving project licensing.

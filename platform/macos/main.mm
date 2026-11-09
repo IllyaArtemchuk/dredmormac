@@ -3,22 +3,65 @@
 #include <cstring>
 #include <cstdlib>
 #include "dredmor/content.hpp"
+#include "dredmor/sprite.hpp"
 #include <memory>
 #include <sstream>
 #include <stdexcept>
+
+@interface SpriteImage : NSObject {
+    dredmor::Sprite _sprite;
+    NSArray<NSImage*> *_images;
+}
+- (instancetype)initWithPath:(NSString*)path;
+- (NSImage*)frameAt:(uint64_t)milliseconds;
+@end
+@implementation SpriteImage
+- (instancetype)initWithPath:(NSString*)path {
+    self=[super init];
+    if (self) {
+        if ([[path.pathExtension lowercaseString] isEqualToString:@"spr"]) {
+            _sprite=dredmor::Sprite::read(path.UTF8String);
+            NSMutableArray<NSImage*> *images=[NSMutableArray array];
+            for (auto& frame:_sprite.frames) {
+                NSBitmapImageRep *bitmap=[[NSBitmapImageRep alloc] initWithBitmapDataPlanes:nullptr
+                    pixelsWide:_sprite.width pixelsHigh:_sprite.height bitsPerSample:8 samplesPerPixel:4
+                    hasAlpha:YES isPlanar:NO colorSpaceName:NSDeviceRGBColorSpace
+                    bitmapFormat:NSBitmapFormatAlphaNonpremultiplied bytesPerRow:_sprite.width*4 bitsPerPixel:32];
+                if (!bitmap) throw std::runtime_error("cannot allocate sprite bitmap");
+                std::memcpy(bitmap.bitmapData,frame.rgba.data(),frame.rgba.size());
+                NSImage *image=[[NSImage alloc] initWithSize:NSMakeSize(_sprite.width,_sprite.height)];
+                [image addRepresentation:bitmap];[images addObject:image];
+                frame.rgba.clear();frame.rgba.shrink_to_fit();
+            }
+            _images=images;
+        } else {
+            NSImage *image=[[NSImage alloc] initWithContentsOfFile:path];
+            if (!image) throw std::runtime_error("cannot load scene image");
+            _images=@[image];
+        }
+    }
+    return self;
+}
+- (NSImage*)frameAt:(uint64_t)milliseconds {
+    return _images[_sprite.frames.empty()?0:_sprite.frame_at(milliseconds)];
+}
+@end
 
 @interface RoomView : NSView {
     std::unique_ptr<dredmor::Session> _session;
     std::unique_ptr<dredmor::GameContent> _content;
     NSArray<NSString*> *_rows;
     NSImage *_atlas;
-    NSImage *_hero;
-    NSMutableDictionary<NSNumber*,NSImage*> *_enemyImages;
+    SpriteImage *_hero;
+    NSMutableDictionary<NSNumber*,SpriteImage*> *_enemyImages;
+    NSTimer *_animationTimer;
+    NSTimeInterval _animationStart;
     NSRect _floorCrop,_wallCrop;
 }
 - (instancetype)initWithScene:(NSDictionary*)scene;
 - (NSString*)snapshot;
 - (BOOL)hasLivingEnemies;
+- (BOOL)hasAnimatedHero;
 @end
 
 @implementation RoomView
@@ -48,7 +91,8 @@
         for (id row in _rows)
             if (![row isKindOfClass:NSString.class] || [row length] != (NSUInteger)_session->world().width()) return nil;
         _atlas = [[NSImage alloc] initWithContentsOfFile:scene[@"atlas"]];
-        _hero = [[NSImage alloc] initWithContentsOfFile:scene[@"hero"]];
+        NSString *heroPath=[scene[@"hero_spr"] isKindOfClass:NSString.class]?scene[@"hero_spr"]:scene[@"hero"];
+        _hero = [[SpriteImage alloc] initWithPath:heroPath];
         if (!_atlas || !_hero) return nil;
         _floorCrop=NSMakeRect(0,192,32,32);_wallCrop=NSMakeRect(0,96,32,32);
         for (NSString *key in @[@"floor_crop",@"wall_crop"]) {
@@ -75,20 +119,30 @@
                 enemy.health=enemy.secondary[0]=1;enemy.secondary[2]=1;
             }
             const auto identifier=_session->spawn_enemy(std::move(enemy));
-            NSImage *sprite=[[NSImage alloc] initWithContentsOfFile:value[@"image"]];
+            NSString *spritePath=[value[@"animation"] isKindOfClass:NSString.class]?value[@"animation"]:value[@"image"];
+            SpriteImage *sprite=[[SpriteImage alloc] initWithPath:spritePath];
             if (!sprite) return nil;
             _enemyImages[@(identifier)]=sprite;
         }
+        _animationStart=NSProcessInfo.processInfo.systemUptime;
+        __weak RoomView *weakSelf=self;
+        _animationTimer=[NSTimer scheduledTimerWithTimeInterval:1.0/60 repeats:YES block:^(NSTimer *timer) {
+            RoomView *view=weakSelf;
+            if (!view) { [timer invalidate];return; }
+            view.needsDisplay=YES;
+        }];
     }
     return self;
 }
 - (BOOL)acceptsFirstResponder { return YES; }
+- (void)dealloc { [_animationTimer invalidate]; }
 - (BOOL)isFlipped { return YES; }
 - (NSString*)snapshot { return [NSString stringWithUTF8String:_session->world().snapshot().c_str()]; }
 - (BOOL)hasLivingEnemies {
     for (const auto& enemy:_session->enemies()) if (enemy.alive()) return YES;
     return NO;
 }
+- (BOOL)hasAnimatedHero { return [_hero frameAt:0]!=[_hero frameAt:100]; }
 - (void)keyDown:(NSEvent*)event {
     using dredmor::Action;
     Action action;
@@ -109,6 +163,7 @@
     [[NSColor colorWithWhite:0.06 alpha:1] setFill]; NSRectFill(self.bounds);
     [[NSGraphicsContext currentContext] setImageInterpolation:NSImageInterpolationNone];
     const auto& world=_session->world();
+    const uint64_t animationTime=static_cast<uint64_t>((NSProcessInfo.processInfo.systemUptime-_animationStart)*1000);
     const CGFloat cell=MIN((self.bounds.size.width-40)/world.width(),
                            (self.bounds.size.height-90)/world.height());
     for (int y=0;y<world.height();++y) for (int x=0;x<world.width();++x) {
@@ -122,7 +177,7 @@
            respectFlipped:YES hints:nil];
     }
     for (const auto& enemy:_session->enemies()) if (enemy.alive()) {
-        NSImage *sprite=_enemyImages[@(enemy.id)];
+        NSImage *sprite=[_enemyImages[@(enemy.id)] frameAt:animationTime];
         const CGFloat width=sprite.size.width*cell/32,height=sprite.size.height*cell/32;
         [sprite drawInRect:NSMakeRect(20+enemy.position.x*cell+(cell-width)/2,20+(enemy.position.y+1)*cell-height,width,height)
             fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1 respectFlipped:YES hints:nil];
@@ -130,7 +185,8 @@
         NSRectFill(NSMakeRect(20+enemy.position.x*cell,20+enemy.position.y*cell,cell*enemy.health/MAX(1,enemy.secondary[0]),3));
     }
     auto p=world.player();
-    [_hero drawInRect:NSMakeRect(20+(p.x-.5)*cell,20+(p.y-1)*cell,cell*2,cell*2)
+    NSImage *hero=[_hero frameAt:animationTime];
+    [hero drawInRect:NSMakeRect(20+(p.x-.5)*cell,20+(p.y-1)*cell,cell*2,cell*2)
              fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1
        respectFlipped:YES hints:nil];
     NSString *status=[NSString stringWithFormat:@"Turn %llu · HP %d/%d · Mana %d/%d\nArrow keys move or attack · . waits%@",
@@ -189,10 +245,11 @@ int main(int argc,const char**argv) {
                     characters:@"." charactersIgnoringModifiers:@"." isARepeat:NO keyCode:47];
                 [view keyDown:right]; [view keyDown:wait]; [view displayIfNeeded];
                 NSString *expected=[scene[@"smoke_expected"] isKindOfClass:NSString.class]?scene[@"smoke_expected"]:@"{\"turn\":2,\"x\":2,\"y\":1}";
-                if (![[view snapshot] isEqualToString:expected] || ([scene[@"smoke_combat"] boolValue] && [view hasLivingEnemies])) {
+                if (![[view snapshot] isEqualToString:expected] || ([scene[@"smoke_combat"] boolValue] && [view hasLivingEnemies]) ||
+                    ([scene[@"smoke_animation"] boolValue] && ![view hasAnimatedHero])) {
                     fprintf(stderr,"native smoke failed: %s\n",[[view snapshot] UTF8String]); std::exit(1);
                 }
-                puts("native smoke: window, draw, movement and wait passed");
+                puts("native smoke: window, animated SPR, draw, movement and wait passed");
                 [app terminate:nil];
             });
         }

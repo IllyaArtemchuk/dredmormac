@@ -68,7 +68,7 @@ def prepare(root, out, encounter=None):
     (out/'room.txt').write_text('\n'.join(collision)+'\n')
     scene = dict(name=room.get('name'),policy='provisional-preview',
                  rows=visual,collision='\n'.join(collision)+'\n',
-                 atlas=str(atlas),hero=str(out/'hero.png'),
+                 atlas=str(atlas),hero=str(out/'hero.png'),hero_spr=str(root/'sprites/hero/hero_idle_d.spr'),
                  floor_crop=[0,192,32,32],wall_crop=[0,96,32,32],data_root=str(root))
     if encounter:
         found=[]
@@ -88,7 +88,7 @@ def prepare(root, out, encounter=None):
                     if c=='.' and abs(x-hero_position[0])+abs(y-hero_position[1])==1]
         if not candidates: raise ValueError('no adjacent developer encounter spawn')
         x,y=candidates[0]
-        scene['enemies']=[dict(name=encounter,x=x,y=y,image=str(out/'encounter.png'))]
+        scene['enemies']=[dict(name=encounter,x=x,y=y,image=str(out/'encounter.png'),animation=str(image_path))]
     (out/'scene.json').write_text(json.dumps(scene,indent=2)+'\n')
     return scene
 
