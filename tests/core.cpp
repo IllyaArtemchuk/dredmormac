@@ -1,5 +1,8 @@
 #include "dredmor/world.hpp"
 #include "dredmor/distance.hpp"
+#include "dredmor/random.hpp"
+#include "dredmor/stats.hpp"
+#include <random>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -10,6 +13,30 @@ void check(bool condition) {
 int main() {
     using namespace dredmor;
     try {
+        check(dredmor::derive_primary({3,2,2}) == dredmor::PrimaryStats({10,9,9,12,12,11}));
+        auto stats=dredmor::derive_secondary({10,10,10,10,10,10});
+        check(stats[0]==20 && stats[1]==20 && stats[2]==1 && stats[3]==5);
+        check(stats[6]==5 && stats[7]==2 && stats[8]==2 && stats[9]==3);
+        dredmor::SecondaryStats flat{};
+        flat[0]=-100;flat[13]=-4;flat[14]=-5;flat[18]=-3;
+        auto percent=dredmor::default_percentages();percent[1]=150;
+        stats=dredmor::derive_secondary({10,10,10,10,10,10},flat,percent);
+        check(stats[0]==0 && stats[1]==30 && stats[13]==-4 && stats[14]==-5 && stats[18]==-3);
+        // Independent standard-library MT19937 checks run without game files.
+        for (auto seed : {0u,1u,5489u,0xffffffffu}) {
+            dredmor::Random rng(seed); std::mt19937 standard(seed);
+            for (int i=0;i<2000;++i) check(rng.u32()==standard());
+        }
+        dredmor::Random implicit, explicit_seed(5489u);
+        for (int i=0;i<1250;++i) check(implicit.u32()==explicit_seed.u32());
+        dredmor::Random array_seed;
+        array_seed.seed(std::vector<std::uint32_t>{0x123,0x234,0x345,0x456});
+        for (auto expected : {1067595299u,955945823u,477289528u,4107218783u})
+            check(array_seed.u32()==expected);
+        bool rejected_key=false;
+        try { array_seed.seed(std::vector<std::uint32_t>{}); }
+        catch (const std::invalid_argument&) { rejected_key=true; }
+        check(rejected_key);
         check(dredmor::distance(0,0,3,4) == 5);
         check(dredmor::distance(0,0,1,1) == 1);
         check(dredmor::distance(0,0,46341,0) == -2147483647-1);

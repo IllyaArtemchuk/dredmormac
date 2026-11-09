@@ -73,13 +73,22 @@ The basic tileset is 384x640; preview crops are provisional.
 - Ghidra 12.1.4 archive downloaded and SHA256 checked against GitHub release
   digest `ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db`.
   Python ZIP extraction did not preserve executable modes; relevant modes fixed.
-  Host Java 21 is a JRE, lacking javac. Ghidra cannot start with it. Attempts to
-  obtain a full JDK failed (package indexes unavailable, Adoptium API 403,
-  GitHub release repeated 504). Use the working Unicorn/Capstone fallback.
+  Initially could not start because the host Java installation lacks javac.
+  Download attempts failed (package indexes unavailable, Adoptium API 403,
+  GitHub release repeated 504). Subsequent inspection found jdk.compiler already
+  present in the runtime's module image. A local home/launcher invokes the real
+  compiler module; javac 21.0.13 works and Ghidra successfully imported, analyzed
+  and saved the supplied Mach-O. Reproduced with java-compiler-home.py and
+  analyze-original.sh. Missing external macOS libraries produce import warnings;
+  targeted decompilation works. An embedded-data PNG diagnostic did not prevent
+  analysis and export. Toolchain is now usable.
 - GameFrame `tests/run.sh --ghidra`: **407 passed, 28 failed**. Failures include
   absent xxd, image/catalog dependency, Frida export lookup and Ghidra/JDK.
-  Pillow subsequently installed; broad suite not rerun because Ghidra/JDK and
-  unrelated missing utilities remain unresolved. REA not configured.
+  Re-ran after compiler repair: **424 passed, 11 failed**, including successful
+  Ghidra imports, decompilation, labels and references. Remaining failures concern
+  xxd/installer extraction, Frida lookup, image catalog/rawimage and fill-gaps.
+  These are not passing checks and are not current project blockers. The
+  repository's own checks pass. REA not configured.
 - Open Dredmor checkout: `58cc5fd9342993bfad57d07a409e1158601b52f4`.
   Godot/GDScript engine, GPLv3 license text. Requires an original installation.
   Reviewed its project structure and asset/room handling as public reference.
@@ -93,3 +102,45 @@ Full gameplay reference needs a suitable legacy Mac environment or another
 user-supplied supported edition. Modern Apple Silicon cannot directly launch
 the supplied 32-bit executable. The new AppKit target needs a real Mac with
 Xcode tools for compilation, packaging and actual smoke testing.
+
+## Verified RNG and character calculations
+
+Recovered the MT19937 interfaces: init_genrand at 0x190800, genrand_int32 at
+0x190870, init_by_array at 0x190a00, res53 at 0x190b20, real3 at 0x190eb0,
+real2 at 0x191070, real1 at 0x191230 and int31 at 0x1913f0. The fixed-width
+replacement matches **28,550 original outputs**, covering the implicit default
+seed, six scalar seeds, four array seeds (including a 625-element key), twist
+boundaries and mixed integer/floating calls. Double returns are stored by a
+harness-generated x87 thunk and compared by all 64 bits. Output SHA256:
+`572bce3a419ccc13830e32e7e2cf1827ca60a22954fe87c757cb7af85b7638ba`.
+
+An initial oracle mismatch was traced to rewriting a cached emulator call site.
+Each floating routine now has its own immutable thunk. A regression test uses
+our own synthetic Mach-O/x87 functions, with no commercial bytes, to check
+alternating call targets. No gameplay fix was accepted based on the bad oracle.
+
+Player::RebuildAttributes is at 0x1218de. The original fragment [0x121f52,
+0x12218f) maps six primary values into 24 secondary fields, applies flat and
+percentage modifiers and clamps selected negatives. **2,568 original fragment
+executions / 61,632 fields match**. Cases include normal, boundary and full-int32
+inputs; integer wrapping and single-precision roundtrips are preserved.
+
+Also executed the entire original Player::RebuildAttributes, without import
+stubs, for **1,027 controlled fixtures / 30,810 fields**. Supplied seven selected
+skills, class/rank metadata, primary/secondary flat modifiers and percentages;
+ability database, equipment and buffs were empty, and polymorph was off. Six
+primary and 24 secondary outputs all match. This verifies the class-rank stat
+pipeline for that scope, not abilities, equipment or buff aggregation.
+
+The native Expat loader reads all **40 supplied XML databases / 4,882 records**,
+including nested monster variants. An independent ElementTree pass agrees with
+all document roots, top-level counts and per-kind counts. Base only: **17
+databases / 3,565 records**, including narrative text. Sources, duplicate names,
+attributes, ordering, content layers and variant ancestry are retained. No
+unverified expansion override/inheritance policy is applied.
+
+Combat routines at 0xc93d0, 0xc9490 and 0xcea00 call imported libc rand(), not
+only genrand_int32. Their probability divisions use constants 0x147ae15 and
+0x28f5c29. Recover libc seed/draw semantics and call order before claiming
+deterministic combat. Combat rules have been decompiled, but are not yet
+implemented or verified as a complete transition.

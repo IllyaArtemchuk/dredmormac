@@ -1,0 +1,6 @@
+<monDB>
+  <monster name="Fixture monster">
+    <stats xpValue="2"/>
+    <monster name="Fixture variant"><stats xpValue="7"/></monster>
+  </monster>
+</monDB>

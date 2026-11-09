@@ -1,4 +1,7 @@
 #import <Cocoa/Cocoa.h>
+#include <dispatch/dispatch.h>
+#include <cstring>
+#include <cstdlib>
 #include "dredmor/world.hpp"
 #include <memory>
 #include <sstream>
@@ -10,6 +13,7 @@
     NSImage *_hero;
 }
 - (instancetype)initWithScene:(NSDictionary*)scene;
+- (NSString*)snapshot;
 @end
 
 @implementation RoomView
@@ -30,6 +34,7 @@
 }
 - (BOOL)acceptsFirstResponder { return YES; }
 - (BOOL)isFlipped { return YES; }
+- (NSString*)snapshot { return [NSString stringWithUTF8String:_world->snapshot().c_str()]; }
 - (void)keyDown:(NSEvent*)event {
     using dredmor::Action;
     Action action;
@@ -80,7 +85,8 @@
 
 int main(int argc,const char**argv) {
     @autoreleasepool {
-        if (argc!=2) { fprintf(stderr,"Usage: DredmorMac scene.json\n"); return 2; }
+        const bool smoke=argc==3 && std::strcmp(argv[2],"--smoke-test")==0;
+        if (argc!=2 && !smoke) { fprintf(stderr,"Usage: DredmorMac scene.json [--smoke-test]\n"); return 2; }
         NSError *error=nil;
         NSData *data=[NSData dataWithContentsOfFile:[NSString stringWithUTF8String:argv[1]]];
         NSDictionary *scene=data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:&error] : nil;
@@ -89,21 +95,41 @@ int main(int argc,const char**argv) {
             || ![scene[@"atlas"] isKindOfClass:NSString.class] || ![scene[@"hero"] isKindOfClass:NSString.class]) {
             fprintf(stderr,"Invalid scene; run scripts/prepare_scene.py first\n"); return 1;
         }
+        NSApplication *app=[NSApplication sharedApplication];
+        [app setActivationPolicy:NSApplicationActivationPolicyRegular];
         RoomView *view=nil;
         try { view=[[RoomView alloc] initWithScene:scene]; }
         catch (const std::exception& e) { fprintf(stderr,"%s\n",e.what()); return 1; }
         if (!view) { fprintf(stderr,"Cannot load scene images\n"); return 1; }
-        NSApplication *app=[NSApplication sharedApplication];
-        [app setActivationPolicy:NSApplicationActivationPolicyRegular];
-        AppDelegate *delegate=[AppDelegate new]; app.delegate=delegate;
+        static AppDelegate *delegate;
+        delegate=[AppDelegate new]; app.delegate=delegate;
         delegate.window=[[NSWindow alloc] initWithContentRect:view.frame
             styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskResizable
             backing:NSBackingStoreBuffered defer:NO];
         delegate.window.title=@"DredmorMac — Room preview";
+        delegate.window.contentMinSize=NSMakeSize(300,360);
         delegate.window.contentView=view;
         [delegate.window center]; [delegate.window makeKeyAndOrderFront:nil];
         [delegate.window makeFirstResponder:view];
-        [app activateIgnoringOtherApps:YES]; [app run];
+        [app activateIgnoringOtherApps:YES];
+        if (smoke) {
+            // This mode is for the generated synthetic fixture, not game parity.
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW,NSEC_PER_SEC),dispatch_get_main_queue(),^{
+                NSEvent *right=[NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint
+                    modifierFlags:0 timestamp:0 windowNumber:delegate.window.windowNumber context:nil
+                    characters:@"\uf703" charactersIgnoringModifiers:@"\uf703" isARepeat:NO keyCode:124];
+                NSEvent *wait=[NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint
+                    modifierFlags:0 timestamp:0 windowNumber:delegate.window.windowNumber context:nil
+                    characters:@"." charactersIgnoringModifiers:@"." isARepeat:NO keyCode:47];
+                [view keyDown:right]; [view keyDown:wait]; [view displayIfNeeded];
+                if (![[view snapshot] isEqualToString:@"{\"turn\":2,\"x\":2,\"y\":1}"]) {
+                    fprintf(stderr,"native smoke failed: %s\n",[[view snapshot] UTF8String]); std::exit(1);
+                }
+                puts("native smoke: window, draw, movement and wait passed");
+                [app terminate:nil];
+            });
+        }
+        [app run];
     }
     return 0;
 }
