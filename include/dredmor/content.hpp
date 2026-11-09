@@ -20,6 +20,7 @@ struct RoomDefinition {
     // Original numeric cell/door/wall arrays, before scripts and population.
     RoomStamp numeric_template() const;
     std::vector<RoomElementDefinition> elements() const;
+    std::vector<CustomRoomDefinition> custom_objects() const;
 };
 class GameContent {
 public:

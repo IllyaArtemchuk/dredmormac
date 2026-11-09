@@ -254,3 +254,22 @@ Dispatch is case sensitive; unknown type still accepts but finalizes null. Vendi
 craft4/food1/bolt0/drink2/thrown3, portal0. Bookshelf contents override only when
 nonempty; DiggleGod receives name. No actual entities are constructed by plans.
 Next: other room records/constructor side effects and original room population.
+
+Element run42605231486 passed nativeCI/package. Custom definitions/entities are in
+room_records.* and RoomDefinition::custom_objects. verify_custom_objects.py runs
+actual record/Create, GameObj/Blocker/Engraving constructors, Build and both
+finalizers; 2,292 match with sprite/place/id/list and library boundaries. Report
+custom-objects.json privately; --content checks all992 definitions/346 rooms.
+Movement/vision overrides, push byte, labels/id, sprite calls, frame/animation
+flags, registration and appearance/RNG match. No extra constructor RNG observed
+outside supplied boundaries. Not yet owned/rendered by Session/native level.
+verify_room_sprites.py matches1,024 original SpritePropertySetFrom calls using the
+Points helper's synthetic BST chains (library erase supplied). Single png
+conflicts with series/Animate; fullseries consumes Animate but ignores its value
+because the SpriteRecord overload has null bool destination. Both custom Build
+functions set animation flags true regardless. Thirteen local groups pass.
+Private custom-room-records.txt exports otherCreate routines and common metadata;
+custom-sprites.txt/custom-constructors.txt/custom-build-and-obstruction.txt hold
+sprite parsing, constructors, Build and SquareContainsObstruction. New custom
+source awaits nativeCI. Next: owning level/session/render integration and other
+record classes/population. Keep resource paths/data/decompiler output private.

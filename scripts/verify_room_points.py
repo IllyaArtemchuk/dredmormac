@@ -63,12 +63,7 @@ class Points(GeometryOracle):
         m.reg_write(UC_X86_REG_ESP, esp + 4)
         m.reg_write(UC_X86_REG_EIP, ret)
 
-    def setup(self, prefix, attrs):
-        point = self.allocate(28)
-        self.string(point + 4, prefix)
-        dest = self.allocate(8)
-        self.write(dest, 71, 72)
-        self.write(point + 20, dest, dest + 4)
+    def attribute_map(self, attrs):
         table = self.allocate(24)
         self.write(table, 0, 0, 0, table + 4, table + 4, len(attrs))
         nodes = []
@@ -79,9 +74,18 @@ class Points(GeometryOracle):
             nodes.append(n)
         if nodes:
             self.write(table + 8, nodes[0], nodes[0], nodes[-1])
-            self.write(nodes[0], 1, table + 4, 0, nodes[1] if len(nodes) > 1 else 0)
-            if len(nodes) > 1:
-                self.write(nodes[1], 0, nodes[0], 0, 0)
+            for index,node in enumerate(nodes):
+                self.write(node, int(index==0), nodes[index-1] if index else table+4, 0,
+                           nodes[index+1] if index+1<len(nodes) else 0)
+        return table
+
+    def setup(self, prefix, attrs):
+        point = self.allocate(28)
+        self.string(point + 4, prefix)
+        dest = self.allocate(8)
+        self.write(dest, 71, 72)
+        self.write(point + 20, dest, dest + 4)
+        table=self.attribute_map(attrs)
         ats = self.original.address('_curAts')
         node = self.allocate(28)
         self.write(ats, 0, 0, node, node, node, 1)

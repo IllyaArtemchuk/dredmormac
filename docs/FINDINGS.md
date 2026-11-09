@@ -684,3 +684,38 @@ element definitions across346 supplied rooms. Common metadata is percent100,
 can_push byte1 and empty room-local id by default; points use the verified resolver.
 Thirteen local groups pass with reader, off-by-one gates, unknown types, vending
 variants and atomic malformed metadata checks. New planning awaits native CI.
+
+Run 42605231486 (34b0aa9) passed native validation and app packaging.
+
+## Custom blocker/engraving construction
+
+SpriteProperty::SetFrom (0x1aae04), in SpriteRecord mode, matches1,024 full
+executions with synthetic attribute BST chains and string/ASCII/map-erase library
+boundaries. Single images conflict with any series/Animate key; series requires
+Sprite/First/Num/Rate and accepts optional Animate. This overload has no Animate
+destination, so that key is consumed without changing animation behavior.
+Missing partial series leave the attributes untouched. Malformed conflicts are
+covered locally, not original error-handler comparisons.
+
+CustomBlockerRecord::CreateInLevel0x1a02e6 and CustomEngravingRecord::CreateInLevel
+0x1a04f2 match2,292 fixtures. The actual GameObj and object constructors, Build,
+CustomRecord finalizer0x1a0290 and base finalizer0x19f45c run. Supplied boundaries
+are allocation/strings/rand, sprite I/O, virtual placement/room-id binding and
+standard list insertion. Compared type, appearance/final RNG, coordinates,
+movement/visibility flags, push byte, name/description/id, sprite call parameters,
+initial frame/animation flags and blocker registration. Constructor paths add no
+RNG beyond the appearance gate within these boundaries. Original tile/list/id
+binding effects and actual visual output remain excluded.
+
+Blockers default to movement blocking without sight blocking; engravings default
+to neither. Explicit passable and visblock override those separately. Basic
+custom Build starts at frame0 and sets both animation flags true, including when
+the input series says pngAnimate0. The port retains that behavior. Blockers enter
+the blocker list even when passable; engravings do not. Low-byte can_push and
+room-local id are retained. Custom object construction remains separate from the
+owning Session/level and does not yet draw them natively.
+
+RoomDefinition::custom_objects exposes typed definitions. Independent ingestion
+matches all992 blockers/engravings across346 supplied rooms. Thirteen local
+groups pass, including sprite conflicts/partial keys, defaults/overrides, gate
+RNG and atomic reader failures. New custom-object integration awaits native CI.

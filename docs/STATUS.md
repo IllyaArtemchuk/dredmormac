@@ -160,3 +160,10 @@ Element creation plans now match 2,573 original executions with constructor/
 finalization boundaries. Typed ingestion matches all175 supplied element records.
 Thirteen local groups pass. Entity effects/extra RNG, other record classes,
 scripts/population and full-level session/native integration remain unfinished.
+
+Element run42605231486 passed native CI and packaging. Custom blocker/engraving
+construction now matches2,292 executions through actual constructors/Build and
+finalizers, with sprite/placement/id/list boundaries. Sprite property parsing
+matches1,024 executions; all992 supplied custom definitions pass ingestion.
+Thirteen local groups pass. Owning-level/session/render integration is next;
+other record classes, scripted interactions and full population remain incomplete.
