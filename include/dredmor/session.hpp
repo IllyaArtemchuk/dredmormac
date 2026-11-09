@@ -43,11 +43,16 @@ public:
     void step(Action action);
     void pickup();
     void equipment_profile(ClassRanks ranks,std::shared_ptr<const std::vector<ItemDefinition>> definitions);
+    // One-time new-character initialization, before turns or content spawning.
+    void character_profile(ClassRanks ranks,std::shared_ptr<const std::vector<ItemDefinition>> definitions,
+                           std::vector<SkillRank> skills,std::shared_ptr<const std::vector<AbilityDefinition>> abilities);
+    const std::vector<SkillRank>& skills() const { return skills_; }
     bool equip(std::uint64_t instance,EquipmentSlot slot);
     bool unequip(EquipmentSlot slot);
     std::string snapshot() const;
     void save(std::ostream& output) const;
-    static Session load(std::istream& input,std::shared_ptr<const std::vector<ItemDefinition>> definitions={});
+    static Session load(std::istream& input,std::shared_ptr<const std::vector<ItemDefinition>> definitions={},
+                        std::shared_ptr<const std::vector<AbilityDefinition>> abilities={});
 private:
     World world_;
     Actor player_;
@@ -59,6 +64,8 @@ private:
     ClassRanks ranks_{};
     Damage intrinsic_damage_{},intrinsic_resistance_{};
     std::shared_ptr<const std::vector<ItemDefinition>> definitions_;
+    std::vector<SkillRank> skills_;
+    std::shared_ptr<const std::vector<AbilityDefinition>> abilities_;
     GameRandom random_;
     Progression progression_;
     std::uint64_t next_actor_=2;

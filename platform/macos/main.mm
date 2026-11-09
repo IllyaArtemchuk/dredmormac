@@ -83,11 +83,11 @@
         std::istringstream input([scene[@"collision"] UTF8String]);
         auto world=dredmor::World::read(input);
         dredmor::ClassRanks ranks={3,2,2};
+        std::vector<int> selected;
         int experience=190;
         if ([scene[@"data_root"] isKindOfClass:NSString.class]) {
             _dataRoot=std::filesystem::canonical([scene[@"data_root"] UTF8String]);
             _content=std::make_unique<dredmor::GameContent>(dredmor::GameContent::load([scene[@"data_root"] UTF8String]));
-            std::vector<int> selected;
             if ([scene[@"skills"] isKindOfClass:NSArray.class]) {
                 for (id value in scene[@"skills"]) {
                     if (![value isKindOfClass:NSNumber.class]) throw std::runtime_error("invalid selected skill ID");
@@ -98,7 +98,11 @@
             experience=_content->tweaks().integer(dredmor::Difficulty::medium,"experience n");
         }
         _session=std::make_unique<dredmor::Session>(std::move(world),dredmor::make_player(ranks),0xD0ED,experience);
-        if (_content) _session->equipment_profile(ranks,std::make_shared<const std::vector<dredmor::ItemDefinition>>(_content->items()));
+        if (_content) {
+            std::vector<dredmor::SkillRank> skillRanks;for (auto id:selected) skillRanks.push_back({id,1});
+            _session->character_profile(ranks,std::make_shared<const std::vector<dredmor::ItemDefinition>>(_content->items()),
+                std::move(skillRanks),std::make_shared<const std::vector<dredmor::AbilityDefinition>>(_content->abilities()));
+        }
         _rows = scene[@"rows"];
         if (_rows.count != (NSUInteger)_session->world().height()) return nil;
         for (id row in _rows)
@@ -194,7 +198,8 @@
     if (!data) throw std::runtime_error(error.localizedDescription.UTF8String?:"cannot read save");
     std::string bytes(static_cast<const char*>(data.bytes),data.length);std::istringstream input(bytes);
     auto definitions=_content?std::make_shared<const std::vector<dredmor::ItemDefinition>>(_content->items()):nullptr;
-    auto loaded=std::make_unique<dredmor::Session>(dredmor::Session::load(input,definitions));
+    auto abilities=_content?std::make_shared<const std::vector<dredmor::AbilityDefinition>>(_content->abilities()):nullptr;
+    auto loaded=std::make_unique<dredmor::Session>(dredmor::Session::load(input,definitions,abilities));
     // Current renderer supports a single prepared room. Reject another layout
     // before replacing either the session or its images.
     const auto& old=_session->world();const auto& world=loaded->world();

@@ -6,6 +6,7 @@ int main(int argc,char** argv) {
     try {
         check(argc==2);auto content=dredmor::GameContent::load(argv[1]);
         check(content.items().size()==1 && content.monsters().size()==2 && content.skills().size()==7);
+        check(content.abilities().size()==1 && content.abilities()[0].skill_name=="Fixture 0");
         auto world=content.room("Starting Room").instantiate();
         check(world.width()==7 && world.height()==5 && !world.passable({3,2}));
         check(world.player().x==3 && world.player().y==1);

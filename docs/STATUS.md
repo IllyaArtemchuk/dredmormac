@@ -74,3 +74,11 @@ controls and their synthetic-window check pass on actual Mac CI.
 Starting-item kernels: 2,048 original food selections/final RNG states and 4,096
 original class/always loadout decisions match. Typed filtered loadout plans exist;
 complete starting item instantiation, auto-equip and abilities remain pending.
+
+Player passive abilities: 1,024 original full-function fixtures / 63,488 fields
+match with no equipment/buffs/polymorph and supplied string comparison boundary.
+Typed abilities and character_profile now feed sessions/equipment. Save v2 stores
+seven skills and ability content identity; v1 port saves still load. Local tests
+verify passive eligibility across equip/unequip and exact save/reload. Native
+integration CI is pending. Weapon-specific abilities, active spells and effects
+remain incomplete.

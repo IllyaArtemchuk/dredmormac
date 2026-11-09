@@ -32,7 +32,11 @@ int main() {
             original.step(action);loaded.step(action);
             check(original.snapshot()==loaded.snapshot() && saved(original)==saved(loaded));
         }
-        auto invalid=text;auto p=invalid.find("version=\"1\"");invalid.replace(p,11,"version=\"2\"");reject(invalid);
+        auto invalid=text;auto p=invalid.find("version=\"2\"");invalid.replace(p,11,"version=\"3\"");reject(invalid);
+        auto legacy=text;legacy.replace(legacy.find("version=\"2\""),11,"version=\"1\"");
+        p=legacy.find("<skills ");const auto end=legacy.find("</skills>\n",p);check(p!=std::string::npos && end!=std::string::npos);
+        legacy.erase(p,end+10-p);std::istringstream legacy_input(legacy);auto legacy_loaded=Session::load(legacy_input);
+        check(saved(legacy_loaded)==text);
         invalid=text;p=invalid.find("index=\"624\"");check(p!=std::string::npos);invalid.replace(p,11,"index=\"626\"");reject(invalid);
         invalid=text;p=invalid.find("<enemy id=\"2\"");check(p!=std::string::npos);invalid.replace(p,13,"<enemy id=\"1\"");reject(invalid);
         reject("<!DOCTYPE d [<!ENTITY x 'bad'>]>"+text);reject("<dredmor-session/>");
@@ -53,6 +57,33 @@ int main() {
         auto changed=definition;changed.name="Different content";
         auto wrong=std::make_shared<const std::vector<ItemDefinition>>(std::vector<ItemDefinition>{changed});
         bool mismatch=false;try {std::istringstream bad(saved(gear));Session::load(bad,wrong);} catch (const std::runtime_error&) {mismatch=true;}
+        check(mismatch);
+        auto sword=read_item(parse_xml("<item name='Fixture sword' type='0'><weapon crushing='3'/></item>"));
+        auto profile_items=std::make_shared<const std::vector<ItemDefinition>>(std::vector<ItemDefinition>{definition,sword});
+        auto passive=read_ability(parse_xml("<ability name='Fixture unarmed' skill='0'><primarybuff id='0' amount='3'/><damagebuff crushing='2'/></ability>"));
+        passive.skill_name="Unarmed Combat";
+        auto abilities=std::make_shared<const std::vector<AbilityDefinition>>(std::vector<AbilityDefinition>{passive});
+        std::vector<SkillRank> selected;for (int id=0;id<7;++id) selected.push_back({id,1});
+        std::istringstream profile_room("#####\n#@..#\n#####\n");Session profile(World::read(profile_room),make_player({3,2,2}),4);
+        profile.character_profile({3,2,2},profile_items,selected,abilities);
+        check(profile.player().primary[0]==13 && profile.player().health==25 && profile.player().damage[0]==2);
+        profile.inventory().insert({700,ItemKind::weapon,1,0,1,false},false);
+        const auto profile_text=saved(profile);std::istringstream profile_input(profile_text);
+        auto profile_loaded=Session::load(profile_input,profile_items,abilities);
+        check(saved(profile_loaded)==profile_text && profile_loaded.skills().size()==7);
+        check(profile.equip(700,EquipmentSlot::hand_left) && profile_loaded.equip(700,EquipmentSlot::hand_left));
+        check(profile.player().primary[0]==10 && profile.player().damage[0]==3 && saved(profile)==saved(profile_loaded));
+        check(profile.unequip(EquipmentSlot::hand_left) && profile_loaded.unequip(EquipmentSlot::hand_left));
+        check(profile.player().primary[0]==13 && profile.player().damage[0]==2 && saved(profile)==saved(profile_loaded));
+        auto wrong_ability=passive;wrong_ability.modifiers.primary[0]=4;
+        auto wrong_abilities=std::make_shared<const std::vector<AbilityDefinition>>(std::vector<AbilityDefinition>{wrong_ability});
+        mismatch=false;try {std::istringstream bad(profile_text);Session::load(bad,profile_items,wrong_abilities);} catch(const std::runtime_error&) {mismatch=true;}
+        check(mismatch);
+        mismatch=false;try {std::istringstream bad(profile_text);Session::load(bad,profile_items);} catch(const std::runtime_error&) {mismatch=true;}
+        check(mismatch);
+        auto duplicate=profile_text;auto location=duplicate.find("<skill id=\"1\"");check(location!=std::string::npos);
+        duplicate.replace(location,13,"<skill id=\"0\"");
+        mismatch=false;try {std::istringstream bad(duplicate);Session::load(bad,profile_items,abilities);} catch(const std::runtime_error&) {mismatch=true;}
         check(mismatch);
         std::cout<<"save/load: exact state, future random turns, equipment, escaping and malformed-input rejection passed\n";
     } catch (const std::exception& e) {std::cerr<<e.what()<<'\n';return 1;}

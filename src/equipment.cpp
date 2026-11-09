@@ -25,7 +25,8 @@ std::optional<InventoryItem> Equipment::remove(EquipmentSlot slot) {
     auto previous=slots_[index];slots_[index].reset();return previous;
 }
 EquippedStats Equipment::rebuild(const ClassRanks& ranks,const std::vector<ItemDefinition>& definitions,
-                               const PrimaryStats& primary_flat,const SecondaryStats& secondary_flat) const {
+                               const PrimaryStats& primary_flat,const SecondaryStats& secondary_flat,
+                               const std::vector<SkillRank>& skills,const std::vector<AbilityDefinition>& abilities) const {
     auto pflat=primary_flat;auto sflat=secondary_flat;
     EquippedStats result;int armour=0;
     for (const auto& slot:slots_) if (slot) {
@@ -38,8 +39,16 @@ EquippedStats Equipment::rebuild(const ClassRanks& ranks,const std::vector<ItemD
             result.resistance[i]=add(result.resistance[i],definition.modifiers.resistance[i]);
         }
     }
-    result.primary=derive_primary(ranks,pflat);
-    result.secondary=derive_secondary(result.primary,sflat);
+    AbilityContext context;
+    if (slots_[1]) {context.weapon_left=slots_[1]->kind==ItemKind::weapon;context.armour_left=slots_[1]->kind==ItemKind::armour;}
+    if (slots_[2]) {context.weapon_right=slots_[2]->kind==ItemKind::weapon;context.armour_right=slots_[2]->kind==ItemKind::armour;}
+    PassiveStatInput base;base.ranks=ranks;base.primary_flat=pflat;base.secondary_flat=sflat;
+    const auto passive=derive_passives(base,skills,abilities,context);
+    result.primary=passive.primary;result.secondary=passive.secondary;
+    for (std::size_t i=0;i<16;++i) {
+        result.damage_bonus[i]=add(result.damage_bonus[i],passive.damage[i]);
+        result.resistance[i]=add(result.resistance[i],passive.resistance[i]);
+    }
     result.secondary[10]=add(result.secondary[10],armour);
     return result;
 }

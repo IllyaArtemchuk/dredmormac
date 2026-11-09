@@ -4,6 +4,7 @@
 #include "dredmor/monsters.hpp"
 #include "dredmor/equipment.hpp"
 #include "dredmor/selection.hpp"
+#include "dredmor/abilities.hpp"
 #include <iostream>
 #include <stdexcept>
 #define check(value) do { if (!(value)) throw std::runtime_error("gameplay assertion at line "+std::to_string(__LINE__)); } while(false)
@@ -47,6 +48,19 @@ int main() {
         selection.seed(1);bool invalid_pool=false;
         try {select_booze({{0,1,false,false}},selection);} catch(const std::invalid_argument&) {invalid_pool=true;}
         check(invalid_pool && selection.state()==1);
+        auto ability=read_ability(parse_xml("<ability name='Fixture passive' skill='7' level='0'><PrimaryBuff id='0' amount='3'/><primarybuff id='0' amount='5'/><secondaryBuff id='2' amount='-10'/><damagebuff toxic='2'/></ability>"));
+        ability.skill_name="Fixture skill";
+        PassiveStatInput base;base.ranks={3,2,2};
+        auto passive=derive_passives(base,{{7,1}},{ability});
+        check(ability.modifiers.primary[0]==5 && passive.primary[0]==15 && passive.secondary[2]==-7 && passive.damage[7]==2);
+        check(!player_passive_applies(ability,{{7,0}}));
+        ability.skill_name="Unarmed Combat";check(player_passive_applies(ability,{{7,1}}));
+        AbilityContext armed;armed.weapon_left=true;check(!player_passive_applies(ability,{{7,1}},armed));
+        ability.skill_name="Shield Bearer";check(!player_passive_applies(ability,{{7,1}}));
+        armed.armour_right=true;check(player_passive_applies(ability,{{7,1}},armed));
+        ability.polymorphed_only=true;ability.polymorph_tag="fixture";
+        check(!player_passive_applies(ability,{{7,1}},armed));
+        armed.polymorph="fixture";check(player_passive_applies(ability,{{7,1}},armed));
         auto parent=read_monster(parse_xml("<monster name='Parent'><stats numFig='2' xpValue='5'/><damage crushing='1' acidic='2'/><idleSprite down='fixture.spr'/></monster>"));
         auto variant=read_monster(parse_xml("<monster name='Variant'><stats numRog='1' xpValue='10'/><damage acidic='0' voltaic='2'/></monster>"),&parent);
         check(variant.ranks==ClassRanks({2,0,1}) && variant.damage[0]==1 && variant.damage[10]==0 && variant.damage[6]==2);

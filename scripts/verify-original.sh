@@ -21,5 +21,6 @@ python_cmd=python3
 "$python_cmd" scripts/verify_stamp.py "$data_root/dredmor" build/dredmor-stamp --out "$report_root/room-stamping.json"
 "$python_cmd" scripts/verify_selection.py "$data_root/dredmor" build/dredmor-selection --out "$report_root/food-selection.json"
 "$python_cmd" scripts/verify_loadout.py "$data_root/dredmor" build/dredmor-loadout --out "$report_root/starting-loadout.json"
+"$python_cmd" scripts/verify_passives.py "$data_root/dredmor" build/dredmor-passives --out "$report_root/passive-stats.json"
 "$python_cmd" scripts/verify_catalog.py "$data_root" build/dredmor-data --out "$report_root/catalog-base.json"
 "$python_cmd" scripts/verify_catalog.py "$data_root" build/dredmor-data --expansions --out "$report_root/catalog-all.json"

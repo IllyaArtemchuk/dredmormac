@@ -157,7 +157,8 @@ void Session::equipment_profile(ClassRanks ranks,std::shared_ptr<const std::vect
 }
 void Session::rebuild_equipment() {
     if (!definitions_) return;
-    auto stats=equipment_.rebuild(ranks_,*definitions_);
+    static const std::vector<AbilityDefinition> empty;
+    auto stats=equipment_.rebuild(ranks_,*definitions_,{},{},skills_,abilities_?*abilities_:empty);
     player_.primary=stats.primary;player_.secondary=stats.secondary;
     player_.health=std::min(player_.health,stats.secondary[0]);player_.mana=std::min(player_.mana,stats.secondary[1]);
     for (std::size_t i=0;i<16;++i) {
@@ -169,6 +170,23 @@ void Session::rebuild_equipment() {
         if (definition.weapon_type==4) continue;
         for (std::size_t i=0;i<16;++i) player_.damage[i]=add(player_.damage[i],definition.weapon_damage[i]);
     }
+}
+void Session::character_profile(ClassRanks ranks,std::shared_ptr<const std::vector<ItemDefinition>> definitions,
+                                std::vector<SkillRank> skills,std::shared_ptr<const std::vector<AbilityDefinition>> abilities) {
+    if (definitions_ || world_.turn()!=0 || !ground_.empty() || !enemies_.empty() || skills.size()!=7 || !abilities)
+        throw std::invalid_argument("character profile requires a fresh session and seven selected skills");
+    auto occupied=[](const auto& slot){return slot.has_value();};
+    if (std::any_of(inventory_.bag().begin(),inventory_.bag().end(),occupied) ||
+        std::any_of(inventory_.belt().begin(),inventory_.belt().end(),occupied))
+        throw std::invalid_argument("character inventory must start empty");
+    for (std::size_t i=0;i<skills.size();++i) {
+        if (skills[i].id<0 || skills[i].rank<1) throw std::invalid_argument("invalid selected skill");
+        for (std::size_t j=0;j<i;++j) if (skills[j].id==skills[i].id) throw std::invalid_argument("duplicate selected skill");
+    }
+    auto next=*this;next.equipment_profile(ranks,std::move(definitions));
+    next.skills_=std::move(skills);next.abilities_=std::move(abilities);next.rebuild_equipment();
+    next.player_.health=next.player_.secondary[0];next.player_.mana=next.player_.secondary[1];
+    *this=std::move(next);
 }
 bool Session::equip(std::uint64_t instance,EquipmentSlot slot) {
     if (!definitions_ || !player_.alive()) return false;

@@ -79,6 +79,7 @@ GameContent GameContent::load(const std::filesystem::path& root,bool expansions)
     for (const auto& database:content.catalog_.databases()) {
         if (database->layer=="base" && database->source.filename()=="tweakDB.xml") {content.tweaks_=Tweaks::read(database->root);found_tweaks=true;}
         for (const auto& node:database->root.children) {
+            if (database->source.filename()=="skillDB.xml" && node.tag=="ability") content.abilities_.push_back(read_ability(node));
             if (database->source.filename()=="itemDB.xml" && node.tag=="item") content.items_.push_back(read_item(node));
             if (database->source.filename()=="skillDB.xml" && node.tag=="skill") {
                 const auto category=node.attribute("type");
@@ -97,6 +98,9 @@ GameContent GameContent::load(const std::filesystem::path& root,bool expansions)
                 content.rooms_.push_back(std::move(room));
             }
         }
+    }
+    for (auto& ability:content.abilities_) if (ability.skill_name.empty()) {
+        for (const auto& skill:content.skills_) if (skill.id==ability.skill_id) {ability.skill_name=skill.name;break;}
     }
     if (!found_tweaks) throw std::runtime_error("base tweakDB.xml is required");
     content.monsters_=load_monsters(content.catalog_);return content;

@@ -348,3 +348,27 @@ original database ordering. GameContent::starting_loadout returns this filtered
 plan; it does not yet instantiate/grant items, auto-equip, add default clothes,
 roll four random food entries, or grant abilities. Original scripts reproduce
 food-selection.json and starting-loadout.json privately.
+
+## Player passive abilities
+
+Typed ability ingestion preserves the complete source and reads stat/damage/resist
+modifiers with case-insensitive tags/attributes and last assignment per ID.
+Player::RebuildAttributes (0x1218de) matches 1,024 full-function fixtures with
+4,670 ability records and 63,488 fields (primary, secondary, damage, resistance).
+Only ASCII std::string::compare is supplied at its imported boundary; original
+ability gating and arithmetic execute. Equipment, buffs and polymorph are empty.
+Ability::IsMeleeAbility (0x146482) and base passive gating are recovered: unarmed
+requires empty weapon hands; Shield Bearer needs hand armour; melee families,
+Thrown Weaponry and Archery are excluded from this base pass and handled elsewhere.
+Passive primary additions occur after base primary scaling/clamping, then feed
+secondary derivation. Secondary/damage/resist additions follow base secondary
+scaling/clamping, so negative final secondary bonuses are preserved. Weapon-specific
+ability rebuilding, triggers, active spells and polymorph gameplay remain pending.
+
+Session character_profile initializes seven skills and immutable ability content
+before any turns/spawning; initial HP/MP use the resulting maxima. Equipment
+changes recompute base passive eligibility. Tests switch unarmed bonuses off/on
+through weapon transfers. Port save version two stores skills and an ability
+content fingerprint, supports version-one port saves, and rejects missing/changed
+ability content and duplicate skills. Full serialized state and future equipment
+rebuilds agree after reload. Native integration smoke is awaiting the next push.

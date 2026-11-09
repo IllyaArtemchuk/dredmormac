@@ -27,7 +27,9 @@
   libc rand() stream matches 36,864 actual Mac outputs. DoRandomize startup seed
   flow is identified; full-game seed/consumption parity remains pending.
 - Class-rank primary and secondary stats match original controlled fixtures.
-  Basic equipment aggregation exists; complete abilities, artifacts, encrusting,
+  Base passive abilities now have controlled original comparisons and session
+  integration. Weapon-family abilities and active effects remain incomplete.
+  Basic equipment aggregation exists; complete artifacts, encrusting,
   dual-wield, buffs and polymorph aggregation remain incomplete/unverified.
 - Catalog loading preserves sources and monster ancestry. It does not implement
   expansion override rules. Known monster numeric/sprite fields inherit parent

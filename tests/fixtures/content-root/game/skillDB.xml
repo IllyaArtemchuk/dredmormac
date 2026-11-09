@@ -6,4 +6,7 @@
   <skill id="4" name="Fixture 4" type="wizard"/>
   <skill id="5" name="Fixture 5" type="rogue"/>
   <skill id="6" name="Fixture 6" type="warrior"/>
+  <ability name="Fixture starting passive" skill="0" startSkill="1">
+    <primarybuff id="1" amount="2"/><secondarybuff id="10" amount="1"/><damagebuff acidic="1"/>
+  </ability>
 </skillDB>

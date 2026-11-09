@@ -13,7 +13,9 @@ int main(int argc,char** argv) {
         auto world=content.room("Starting Room").instantiate();
         auto hero=dredmor::make_player(ranks);
         dredmor::Session session(std::move(world),hero,0xD0ED,content.tweaks().integer(dredmor::Difficulty::medium,"experience n"));
-        session.equipment_profile(ranks,std::make_shared<const std::vector<dredmor::ItemDefinition>>(content.items()));
+        std::vector<dredmor::SkillRank> skill_ranks;for (auto id:selected) skill_ranks.push_back({id,1});
+        session.character_profile(ranks,std::make_shared<const std::vector<dredmor::ItemDefinition>>(content.items()),
+            std::move(skill_ranks),std::make_shared<const std::vector<dredmor::AbilityDefinition>>(content.abilities()));
         if (argc==4) {
             bool spawned=false;
             for (int y=0;y<session.world().height() && !spawned;++y) for (int x=0;x<session.world().width() && !spawned;++x) {

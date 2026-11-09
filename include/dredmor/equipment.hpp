@@ -1,5 +1,6 @@
 #pragma once
 #include "dredmor/inventory.hpp"
+#include "dredmor/abilities.hpp"
 
 namespace dredmor {
 struct EquippedStats {
@@ -15,7 +16,8 @@ public:
                                                    const std::vector<ItemDefinition>& definitions);
     std::optional<InventoryItem> remove(EquipmentSlot slot);
     EquippedStats rebuild(const ClassRanks& ranks,const std::vector<ItemDefinition>& definitions,
-                          const PrimaryStats& primary_flat={},const SecondaryStats& secondary_flat={}) const;
+                          const PrimaryStats& primary_flat={},const SecondaryStats& secondary_flat={},
+                          const std::vector<SkillRank>& skills={},const std::vector<AbilityDefinition>& abilities={}) const;
 private:
     Slots slots_{};
 };

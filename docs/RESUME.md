@@ -91,3 +91,14 @@ loadout gates. Typed skill.loadouts and starting_loadout return plans only.
 Private starting-skills.txt has full BuildPlayerFromSkills/RebuildAttributes;
 loadout-rules.txt has skill callback, GiveStartingAbilities, GetRandomEdible/Booze,
 GiveAndEquipWeapon/Armour. Full starting grants and ability aggregation pending.
+
+Abilities module and session profile added. verify_passives.py compares full
+original Player::RebuildAttributes with passive abilities: 1,024/63,488 matches,
+only ASCII string-compare import supplied, no equipment/buffs/polymorph. Private
+ability-gates.txt and skill-finalize.txt hold constructors and callback details.
+Session::character_profile sets selected skills/rules on fresh sessions, fills
+resources, and equipment rebuild recalculates base unarmed/shield eligibility.
+Weapon-family/archery/thrown ability rebuilding is still separate and missing.
+Save version 2 persists selected skills and ability fingerprint; load accepts v1.
+Native load now passes item and ability rules. Synthetic native fixture includes
+a passive to exercise this path on the next CI push.

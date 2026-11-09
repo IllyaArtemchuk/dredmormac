@@ -2,6 +2,7 @@
 #include "dredmor/monsters.hpp"
 #include "dredmor/session.hpp"
 #include "dredmor/generation.hpp"
+#include "dredmor/abilities.hpp"
 
 namespace dredmor {
 struct SkillLoadout { std::string type,subtype;int amount=1;bool always=false; };
@@ -23,6 +24,7 @@ public:
     const std::vector<ItemDefinition>& items() const { return items_; }
     const std::vector<MonsterDefinition>& monsters() const { return monsters_; }
     const std::vector<SkillDefinition>& skills() const { return skills_; }
+    const std::vector<AbilityDefinition>& abilities() const { return abilities_; }
     const std::vector<RoomDefinition>& rooms() const { return rooms_; }
     const RoomDefinition& room(std::string_view name) const;
     const MonsterDefinition& monster(std::string_view name) const;
@@ -35,6 +37,7 @@ private:
     std::vector<ItemDefinition> items_;
     std::vector<MonsterDefinition> monsters_;
     std::vector<SkillDefinition> skills_;
+    std::vector<AbilityDefinition> abilities_;
     std::vector<RoomDefinition> rooms_;
     Tweaks tweaks_;
 };

@@ -68,6 +68,25 @@ std::uint64_t signature(const std::shared_ptr<const std::vector<ItemDefinition>>
     }
     return hash?hash:1;
 }
+std::uint64_t ability_signature(const std::shared_ptr<const std::vector<AbilityDefinition>>& definitions) {
+    if (!definitions) return 0;
+    std::uint64_t hash=14695981039346656037ull;
+    auto add=[&](const std::string& text){for (unsigned char c:text) {hash^=c;hash*=1099511628211ull;}hash^=0;hash*=1099511628211ull;};
+    std::function<void(const XmlNode&)> node=[&](const XmlNode& n) {
+        add(n.tag);add(n.text);for (const auto& a:n.attributes) {add(a.first);add(a.second);}
+        for (const auto& c:n.children) node(c);
+    };
+    for (const auto& ability:*definitions) {
+        add(ability.name);add(ability.skill_name);add(std::to_string(ability.skill_id));add(std::to_string(ability.level));
+        add(std::to_string(ability.starting));add(std::to_string(ability.polymorphed_only));add(ability.polymorph_tag);
+        for (auto n:ability.modifiers.primary) add(std::to_string(n));
+        for (auto n:ability.modifiers.secondary) add(std::to_string(n));
+        for (auto n:ability.modifiers.damage) add(std::to_string(n));
+        for (auto n:ability.modifiers.resistance) add(std::to_string(n));
+        node(ability.source);
+    }
+    return hash?hash:1;
+}
 void write_actor(std::ostream& out,std::string_view tag,const Actor& actor) {
     out<<'<'<<tag<<" id=\""<<actor.id<<"\" name=\""<<escape(actor.name)<<"\" sprite=\""<<escape(actor.sprite)
        <<"\" x=\""<<actor.position.x<<"\" y=\""<<actor.position.y<<"\" hp=\""<<actor.health
@@ -100,7 +119,7 @@ InventoryItem read_item_instance(const XmlNode& node) {
 }
 }
 void Session::save(std::ostream& out) const {
-    out<<"<dredmor-session version=\"1\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
+    out<<"<dredmor-session version=\"2\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
        <<"\" content=\""<<signature(definitions_)<<"\">\n<room>"<<escape(world_.room_text())<<"</room>\n";
     write_actor(out,"player",player_);out<<"<enemies>\n";for (const auto& enemy:enemies_) write_actor(out,"enemy",enemy);out<<"</enemies>\n";
     out<<"<progress level=\""<<progression_.level<<"\" xp=\""<<progression_.experience<<"\" lifetime=\""<<progression_.lifetime_experience
@@ -117,15 +136,20 @@ void Session::save(std::ostream& out) const {
     out<<"</equipment><ground>\n";
     for (const auto& item:ground_) write_item(out,item.item,"x=\""+std::to_string(item.position.x)+"\" y=\""+std::to_string(item.position.y)+"\"");
     out<<"</ground>\n";write_array(out,"ranks",ranks_);write_array(out,"intrinsic-damage",intrinsic_damage_);
-    write_array(out,"intrinsic-resistance",intrinsic_resistance_);out<<"</dredmor-session>\n";
+    write_array(out,"intrinsic-resistance",intrinsic_resistance_);
+    out<<"<skills content=\""<<ability_signature(abilities_)<<"\">\n";
+    for (auto skill:skills_) out<<"<skill id=\""<<skill.id<<"\" rank=\""<<skill.rank<<"\"/>\n";
+    out<<"</skills>\n</dredmor-session>\n";
     if (!out) throw std::runtime_error("cannot write session save");
 }
-Session Session::load(std::istream& input,std::shared_ptr<const std::vector<ItemDefinition>> definitions) {
+Session Session::load(std::istream& input,std::shared_ptr<const std::vector<ItemDefinition>> definitions,
+                       std::shared_ptr<const std::vector<AbilityDefinition>> abilities) {
     std::string content;std::array<char,4096> buffer;
     while (input) {input.read(buffer.data(),buffer.size());content.append(buffer.data(),static_cast<std::size_t>(input.gcount()));if (content.size()>64*1024*1024) throw std::runtime_error("save exceeds size limit");}
     if (input.bad()) throw std::runtime_error("cannot read session save");
     const auto root=parse_xml(content,"session save");
-    if (root.tag!="dredmor-session" || attribute(root,"version")!="1") throw std::runtime_error("unsupported session save version");
+    const auto version=attribute(root,"version");
+    if (root.tag!="dredmor-session" || (version!="1" && version!="2")) throw std::runtime_error("unsupported session save version");
     if (attribute_number<std::uint64_t>(root,"content")!=signature(definitions)) throw std::runtime_error("save item content does not match loaded definitions");
     const auto turn=attribute_number<std::uint64_t>(root,"turn");
     if (turn==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("saved turn counter exhausted");
@@ -180,6 +204,23 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     session.ranks_=array<std::int32_t,3>(child(root,"ranks"));
     session.intrinsic_damage_=array<std::int32_t,16>(child(root,"intrinsic-damage"));
     session.intrinsic_resistance_=array<std::int32_t,16>(child(root,"intrinsic-resistance"));
+    if (version=="2") {
+        const auto& selected=child(root,"skills");
+        const auto content=attribute_number<std::uint64_t>(selected,"content");
+        if (content) {
+            if (!session.definitions_ || !abilities || ability_signature(abilities)!=content)
+                throw std::runtime_error("save ability content does not match loaded definitions");
+            std::set<int> seen;
+            for (const auto& node:selected.children) {
+                if (node.tag!="skill" || session.skills_.size()>=7) throw std::runtime_error("invalid saved skill list");
+                SkillRank skill{attribute_number<int>(node,"id"),attribute_number<int>(node,"rank")};
+                if (skill.id<0 || skill.rank<1 || !seen.insert(skill.id).second) throw std::runtime_error("invalid saved skill");
+                session.skills_.push_back(skill);
+            }
+            if (session.skills_.size()!=7) throw std::runtime_error("save requires seven selected skills");
+            session.abilities_=std::move(abilities);
+        } else if (!selected.children.empty()) throw std::runtime_error("saved skills require ability content");
+    }
     return session;
 }
 }
