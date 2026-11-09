@@ -293,24 +293,66 @@
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication*)sender { return YES; }
 @end
 
+static NSDictionary *sceneFromInstallation(const std::filesystem::path& selected) {
+    auto root=std::filesystem::canonical(selected);
+    if (std::filesystem::is_directory(root/"Contents/MacOS")) root/="Contents/MacOS";
+    const auto content=dredmor::GameContent::load(root);
+    const auto& room=content.room("Starting Room");
+    const auto world=room.instantiate();
+    NSMutableArray<NSString*> *rows=[NSMutableArray array];
+    for (const auto& row:room.rows) [rows addObject:[NSString stringWithUTF8String:row.c_str()]];
+    auto path=[&](const std::filesystem::path& value) { return [NSString stringWithUTF8String:value.c_str()]; };
+    return @{@"name":@"Starting Room",@"policy":@"provisional-preview",@"rows":rows,
+        @"collision":[NSString stringWithUTF8String:world.room_text().c_str()],
+        @"atlas":path(root/"tilesets/basic.png"),@"hero":path(root/"sprites/hero/hero_idle_d.spr"),
+        @"data_root":path(root),@"floor_crop":@[@0,@192,@32,@32],@"wall_crop":@[@0,@96,@32,@32]};
+}
+
 int main(int argc,const char**argv) {
     @autoreleasepool {
         const bool smoke=argc==3 && std::strcmp(argv[2],"--smoke-test")==0;
-        if (argc!=2 && !smoke) { fprintf(stderr,"Usage: DredmorMac scene.json [--smoke-test]\n"); return 2; }
-        NSError *error=nil;
-        NSData *data=[NSData dataWithContentsOfFile:[NSString stringWithUTF8String:argv[1]]];
-        NSDictionary *scene=data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:&error] : nil;
-        if (![scene isKindOfClass:NSDictionary.class] || ![scene[@"collision"] isKindOfClass:NSString.class]
-            || ![scene[@"rows"] isKindOfClass:NSArray.class]
-            || ![scene[@"atlas"] isKindOfClass:NSString.class] || ![scene[@"hero"] isKindOfClass:NSString.class]) {
-            fprintf(stderr,"Invalid scene; run scripts/prepare_scene.py first\n"); return 1;
+        if (argc!=1 && argc!=2 && !smoke) {
+            fprintf(stderr,"Usage: DredmorMac [INSTALLATION_OR_SCENE [--smoke-test]]\n"); return 2;
         }
         NSApplication *app=[NSApplication sharedApplication];
         [app setActivationPolicy:NSApplicationActivationPolicyRegular];
-        RoomView *view=nil;
-        try { view=[[RoomView alloc] initWithScene:scene]; }
-        catch (const std::exception& e) { fprintf(stderr,"%s\n",e.what()); return 1; }
-        if (!view) { fprintf(stderr,"Cannot load scene images\n"); return 1; }
+        RoomView *view=nil;NSDictionary *scene=nil;
+        while (!view) {
+            NSString *selected=nil;
+            if (argc==1) {
+                [app activateIgnoringOtherApps:YES];
+                NSOpenPanel *panel=[NSOpenPanel openPanel];
+                panel.title=@"Open Dungeons of Dredmor Installation";
+                panel.message=@"Choose Dungeons of Dredmor.app or its Contents/MacOS folder to open the development room view.";
+                panel.canChooseFiles=YES;panel.canChooseDirectories=YES;panel.allowsMultipleSelection=NO;
+                if ([panel runModal]!=NSModalResponseOK) return 0;
+                selected=panel.URL.path;
+            } else selected=[NSString stringWithUTF8String:argv[1]];
+            try {
+                const std::filesystem::path path(selected.UTF8String);
+                if (std::filesystem::is_directory(path)) scene=sceneFromInstallation(path);
+                else {
+                    NSData *data=[NSData dataWithContentsOfFile:selected];
+                    scene=data?[NSJSONSerialization JSONObjectWithData:data options:0 error:nullptr]:nil;
+                }
+                if (![scene isKindOfClass:NSDictionary.class] || ![scene[@"collision"] isKindOfClass:NSString.class]
+                    || ![scene[@"rows"] isKindOfClass:NSArray.class] || ![scene[@"atlas"] isKindOfClass:NSString.class]
+                    || ![scene[@"hero"] isKindOfClass:NSString.class]) throw std::runtime_error("invalid installation or scene file");
+                view=[[RoomView alloc] initWithScene:scene];
+                if (!view) throw std::runtime_error("cannot load room layout or scene images");
+            } catch (const std::exception& error) {
+                fprintf(stderr,"%s\n",error.what());
+                if (argc!=1) return 1;
+                NSAlert *alert=[NSAlert new];alert.messageText=@"Cannot open installation";
+                alert.informativeText=[NSString stringWithUTF8String:error.what()];[alert runModal];
+            }
+        }
+        NSString *expectedSnapshot=scene[@"smoke_expected"];
+        if (smoke && ![expectedSnapshot isKindOfClass:NSString.class]) {
+            std::istringstream input([scene[@"collision"] UTF8String]);auto expected=dredmor::World::read(input);
+            expected.step(dredmor::Action::east);expected.step(dredmor::Action::wait);
+            expectedSnapshot=[NSString stringWithUTF8String:expected.snapshot().c_str()];
+        }
         NSMenu *menu=[NSMenu new];
         NSMenuItem *appMenuItem=[NSMenuItem new];[menu addItem:appMenuItem];
         NSMenu *appMenu=[[NSMenu alloc] initWithTitle:@"DredmorMac"];
@@ -342,8 +384,7 @@ int main(int argc,const char**argv) {
                     modifierFlags:0 timestamp:0 windowNumber:delegate.window.windowNumber context:nil
                     characters:@"." charactersIgnoringModifiers:@"." isARepeat:NO keyCode:47];
                 [view keyDown:right]; [view keyDown:wait]; [view displayIfNeeded];
-                NSString *expected=[scene[@"smoke_expected"] isKindOfClass:NSString.class]?scene[@"smoke_expected"]:@"{\"turn\":2,\"x\":2,\"y\":1}";
-                if (![[view snapshot] isEqualToString:expected] || ([scene[@"smoke_combat"] boolValue] && [view hasLivingEnemies]) ||
+                if (![[view snapshot] isEqualToString:expectedSnapshot] || ([scene[@"smoke_combat"] boolValue] && [view hasLivingEnemies]) ||
                     ([scene[@"smoke_animation"] boolValue] && ![view hasAnimatedHero]) || ![view smokeSaveLoad]) {
                     fprintf(stderr,"native smoke failed: %s\n",[[view snapshot] UTF8String]); std::exit(1);
                 }

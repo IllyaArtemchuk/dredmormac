@@ -72,18 +72,23 @@ The verified MT stream alone is not sufficient to claim deterministic combat.
 ## Native macOS handoff
 
 On an actual Mac, install Xcode command line tools, Python 3.11+ and CMake,
-then prepare a scene locally using the commands above.
+then launch the app and choose your original installation. Prepared JSON scenes
+remain available for explicit developer encounters.
 
 ```sh
 scripts/build-macos.sh
-build/macos-arm64/DredmorMac.app/Contents/MacOS/DredmorMac \
-  '/private/derived/starting-room/scene.json'
+build/macos-arm64/DredmorMac.app/Contents/MacOS/DredmorMac
+# Or supply an original .app / Contents/MacOS folder / prepared scene as an argument.
 ```
 
 Arrow keys move or attack; `.` waits. Command-S saves the current port session;
 Command-O loads a port save for the same prepared room. Malformed saves fail
 before replacing the current state. These saves are not original .sav files.
 Closing the window quits. The UI remains a developer room/encounter view.
+
+Direct installation startup is newly added and awaiting its synthetic native
+fixture check. The current preview still omits original room scripts, population
+and decoration.
 
 Actual standard macos-15 arm64 runs compile with AppleClang and test the native
 window, movement, combat and animated SPR loading. Run 42584845873 passed all

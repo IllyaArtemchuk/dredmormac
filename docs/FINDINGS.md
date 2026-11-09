@@ -303,3 +303,10 @@ or full script/population parity. Source trees preserve remaining annotations.
 Run 42585590201 (fa64f9d) passed all fourteen native/portable checks plus relocated
 package smoke. UTType file filtering compiles without the earlier deprecation
 warnings. Original assets remain outside GitHub and test artifacts.
+
+Run 42586474951 (6cecbb3) passed all fourteen checks and packaged app smoke.
+Direct installation startup now builds the conservative Starting Room scene from
+GameContent in process. No arguments shows an AppKit installation picker; .app,
+data directory and prepared JSON are accepted. Failed interactive loads show an
+error and permit another selection. Original data is read in place, not copied.
+The synthetic installation startup fixture is pending native execution.

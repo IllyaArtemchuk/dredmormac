@@ -31,7 +31,7 @@ Verified:
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
 - Nine local CTest groups pass, including deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42585590201 passed all fourteen checks, including
+- Actual macos-15 arm64 CI run 42586474951 passed all fourteen checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -65,3 +65,7 @@ compared, while complete DoCombat/triggers and original HP/death side-effect
 comparisons remain unfinished. Session HP/death behavior exists but is not yet
 a full original transition comparison.
 Obtain original gameplay captures for remaining parity comparisons. See RESUME.md.
+
+Native startup now accepts the original .app or data directory directly, decoding
+SPR in process. No-argument launch opens an installation picker. The prepared-scene
+path remains supported. Synthetic installation startup CI is pending.

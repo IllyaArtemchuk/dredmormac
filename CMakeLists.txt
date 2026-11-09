@@ -97,5 +97,12 @@ if(APPLE)
     add_test(NAME native-combat-window COMMAND $<TARGET_FILE:DredmorMac>
       ${CMAKE_BINARY_DIR}/native-combat/scene.json --smoke-test)
     set_tests_properties(native-combat-window PROPERTIES FIXTURES_REQUIRED native-combat-scene TIMEOUT 15)
+    add_test(NAME native-installation-fixture COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-installation
+      --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root)
+    set_tests_properties(native-installation-fixture PROPERTIES FIXTURES_SETUP native-installation)
+    add_test(NAME native-installation-window COMMAND $<TARGET_FILE:DredmorMac>
+      ${CMAKE_BINARY_DIR}/native-installation/installation --smoke-test)
+    set_tests_properties(native-installation-window PROPERTIES FIXTURES_REQUIRED native-installation TIMEOUT 15)
   endif()
 endif()

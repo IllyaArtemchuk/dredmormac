@@ -71,3 +71,8 @@ room-constructor.txt confirms arrays initially zero; digit script positions stay
 zero until later population. Numeric RoomDefinition::numeric_template is distinct
 from provisional instantiate collision. scripts/verify_templates.py compares all
 346 templates independently. Full generation remains pending.
+
+Native startup selection is added: no arguments opens a file/folder picker;
+argument can be original .app, data directory, or prepared scene JSON. A new
+synthetic-content installation fixture exercises direct loading, movement and
+save/load. Its actual native CI execution is pending the next push.
