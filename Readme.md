@@ -135,3 +135,10 @@ JAVA_HOME to that new directory, GHIDRA_INSTALL_DIR to Ghidra, and GAMEFRAME_ROO
 to the external checkout. Then `scripts/analyze-original.sh ORIGINAL_BINARY
 PRIVATE_ANALYSIS_DIR` imports once and reuses the saved project for targeted
 exports. This workflow has successfully analyzed the supplied Mach-O.
+
+`dredmor-factory` exercises simple loot creation using explicit ordered item
+registration tables. Compare with `scripts/verify_factory.py ORIGINAL_BINARY
+build/dredmor-factory --out PRIVATE_REPORT.json`. It covers named/misc/currency,
+reagent/component, potion, wand, bolts and trap paths. Random weapon/armour and
+artifact generation remain incomplete and fail explicitly. Session loot creation
+retains constructor results and RNG across saves; full room population is pending.

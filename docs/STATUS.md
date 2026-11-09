@@ -218,3 +218,14 @@ v5 serializer checks nonempty skills, objects and normal cache migration. Fiftee
 local groups pass. Native wallet display and the inventory smoke now check17
 zorkmids on pickup; this new integration awaits Mac CI. Scheduling/UI/audio parity
 and complete gameplay remain unfinished.
+
+Wallet run42617482250 passed all26 native checks and relocated packaged-app smoke.
+Simple loot factory/session creation now supports ordered four-pool named lookup,
+misc/currency, reagent/component, potion/wand/bolts and random traps. A2,100-case
+original comparison checks full outer/named dispatch, actual trap selection,
+separate currency values, count override and libc/normal/MT state. Simple item
+constructors are recording boundaries; currency constructors/Build execute with
+sprite boundaries. Sixteen local groups pass, including mixed resumed factories
+and atomic failed placement. Registration tables remain explicit inputs. Random
+weapon/armour/artifact generation and complete room population are unfinished;
+those unsupported generators throw atomically. New factory source awaits Mac CI.

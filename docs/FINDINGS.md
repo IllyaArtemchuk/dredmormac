@@ -882,3 +882,28 @@ adds typed currency-bonus bits to ability signatures. Earlier hashes remain vali
 for v1..5; a fixture produced by the actual df8cac9 v5 serializer exercises cached
 normal state, custom objects, nonempty skills and subsequent bonused pickup.
 Currency core run42615446594 passed actual arm64 Mac validation/package checks.
+
+## Simple loot factory integration
+
+factory.cpp and Session::create_ground_loot connect ordered item selection to
+inventory instance construction and session ground ownership. Four named pools
+are searched in order with exact case, retaining first-match behavior even when
+that entry has no supported constructor. Type artifact/zorkmids/misc dispatches
+before subtype handling. Other non-random subtypes bypass the type and use named
+lookup. Reagent/component share a global uniform pool; potion/wand/bolts use the
+selected level-set pool. Trap uses the measured cached-normal selector. Quantity
+above1 forces stack/count; currency value is independent. Named artifact and
+random artifact/weapon/armour construction remain unimplemented and throw before
+committing session/RNG changes. Registration tables are explicit input boundaries.
+
+verify_factory.py matches2,100 original full outer/named factory calls, including
+actual random-trap/normal/MT execution and currency constructors/Build. Simple
+constructors are recorded; allocation/string/rand/strcmp, currency sprite and
+trap log/tweak are supplied. Selected constructor/definition, forced quantity,
+separate money value, libc/normal cache and next8 MT draws match. Default simple
+constructor stack flags are excluded; factory forced-stack flags are compared.
+Synthetic tables exercise every named type in each pool, duplicates, unknown
+first matches, case, unknown types, ignored artifact flag on named items and both
+currency routes. Sixteen local groups pass; session tests cover failure rollback,
+full-state save/reload of mixed future factories and currency autocollection.
+Wallet run42617482250 passed all26 native checks/package; factory MacCI pending.

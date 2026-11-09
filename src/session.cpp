@@ -127,6 +127,14 @@ void Session::currency_transfer_impl(std::int32_t amount,CurrencyOperation opera
     events_.push_back({result.money_sound?EventKind::currency_given:EventKind::currency_taken,player_.id,0,result.delta});
     player_.zorkmids=result.balance;
 }
+std::optional<std::uint64_t> Session::create_ground_loot(const ItemFactoryTables& tables,const ItemFactoryContext& context,
+    std::string_view type,std::string_view subtype,int quantity,bool artifact,Position position) {
+    if (!definitions_) throw std::invalid_argument("loot creation needs item definitions");
+    auto next=*this;const auto identifier=next_item_instance();static const std::vector<AbilityDefinition> empty;
+    auto item=make_loot_item(*definitions_,tables,context,type,subtype,quantity,artifact,identifier,next.random_,skills_,abilities_?*abilities_:empty);
+    if (!item) {*this=std::move(next);return std::nullopt;}
+    next.drop(*item,position);*this=std::move(next);return identifier;
+}
 void Session::give_currency(std::int32_t amount) {auto next=*this;next.currency_transfer_impl(amount,CurrencyOperation::give);*this=std::move(next);}
 void Session::take_currency(std::int32_t amount) {auto next=*this;next.currency_transfer_impl(amount,CurrencyOperation::take);*this=std::move(next);}
 void Session::pickup_currency() {

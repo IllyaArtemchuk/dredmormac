@@ -385,3 +385,17 @@ legacy hash. Synthetic tests/fixtures/port-v5-rng-objects.xml was generated usin
 the df8cac9 serializer and synthetic skills/object/cache. Fifteen local groups
 pass; native wallet and17-zorkmid inventory smoke await new CI. Next: actual
 item/loot factories, activation and ordered population/full-level integration.
+
+Wallet run42617482250 passed26 native checks/package (job129160872552). Simple
+factory is in factory.hpp/cpp and Session::create_ground_loot. Explicit tables:
+four ordered named/potion/wand/bolts/trap pools and global reagent pool. Named
+lookup returns the first exact match, including unsupported-first NULL; subtype
+not random bypasses type except artifact/zorkmids/misc. Both currency roll paths
+retain separate amount/count. Random trap delegates measured selector. Random
+weapon/armour/artifact and named artifact generation throw before mutation.
+verify_factory.py matches2,100 original factory executions, actual trap sampler
+with log/tweak boundary, currency constructors/Build with sprite boundary, other
+constructors recording; compares selected definition/kind, count override, money,
+libc/cache/nextMT8. Synthetic case tables only, not real registration. Sixteen local
+groups pass. Latest factory source awaits MacCI. Next: original registration
+metadata and tables, other selectors/artifacts, actual room population ordering.
