@@ -425,3 +425,38 @@ Normal ordered nonnegative ranges plus boundary cases up to INT_MAX are covered.
 Optional per-instance charges persist in port saves, including zero/depleted wands;
 older saves without this attribute retain an unspecified charge state. Native
 inventory displays known charges. This does not implement wand casting or effects.
+
+Run 42592841136 (ecbb2cb) passed all eighteen native/portable checks and relocated
+package smoke with basic instance fields, builtins and optional wand charges.
+
+## Starting character integration
+
+create_character now applies filtered loadouts in database order, basic instance
+creation, automatic initial weapon/armour choices, builtins, default class clothes
+and two booze/edible pairs. Original code grants an amount>1 weapon stack and then
+one additional weapon, so ammunition may receive the extra unit; misc entries each
+give one builtin. Starting weapon handling precedes other named/random loadouts.
+Armour checks preferred anatomy in order 2,5,0,7,6,3,10,11,9 and leaves occupied
+slots intact. Default clothing prioritizes warrior ties, then wizard ties, then
+rogue; an already granted head item suppresses the wizard robe. Constructor ends
+with attribute rebuild and HP/MP refill. Tutorial behavior and active starting
+ability hotbars are not implemented. Weapon-family ability rebuilding remains
+pending, so full character stat parity with equipped weapons is not yet claimed.
+
+Source-driven basic random loadouts use ordered mushroom/potion/wand pools and
+shared alchemical reagent/component entries. These include the supplied base
+loadouts; unsupported empty pools fail explicitly. Full original table registration,
+expansion merge semantics and whole BuildPlayerFromSkills execution comparison
+remain pending. Existing individual gate/food/wand/inventory comparisons still
+apply; do not describe their composition as a complete reference trace.
+
+New synthetic character tests cover exact starting quantities, automatic slots,
+class clothing paths, builtins, charges, resource fill, skills, complete save/load
+and atomic failed ground creation. A supplied-content batch initialized 256
+characters covering all 36 base skill IDs with no failures; this is integration
+validation, not original-game comparison. check_starting_content.py reproduces
+starting-character-integration.json privately. CLI supports explicit --skills and
+--seed. Normal native installation startup enables starting grants and seeds both
+streams with elapsed application milliseconds before skill selection; the exact
+original external startup timing is not claimed. Developer scenes retain fixed
+seed/default-empty loadouts unless explicitly configured.

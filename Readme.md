@@ -88,7 +88,9 @@ Command-S saves the current port session;
 Command-O loads a port save for the same prepared room. Selected skills and
 passive abilities persist in version-three port saves; earlier port saves still load with item-type migration. Malformed saves fail
 before replacing the current state. These saves are not original .sav files.
-Closing the window quits. The UI remains a developer room/encounter view.
+Closing the window quits. Normal installation startup grants the selected skills’ starting items and
+class clothes. Prepared developer scenes keep empty loadouts unless configured.
+The UI remains a developer room/encounter view.
 
 Direct installation startup passes its synthetic native fixture check. The current preview still omits original room scripts, population
 and decoration.

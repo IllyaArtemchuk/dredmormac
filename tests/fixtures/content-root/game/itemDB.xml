@@ -1,1 +1,6 @@
-<itemDB><item name="Fixture cap"><armour type="head" ac="1"/></item></itemDB>
+<itemDB>
+<item name="Fixture cap"><armour type="head" ac="1"/></item>
+<item name="Fixture food" level="1"><food hp="10"/></item>
+<item name="Fixture drink" level="1"><food mp="10"/></item>
+<item name="Leather Cuirass"><armour type="chest" ac="2"/></item>
+</itemDB>

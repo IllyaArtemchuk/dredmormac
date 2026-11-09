@@ -129,3 +129,18 @@ loadouts use only mushroom/potion/wand/reagent/component pools; all weapon/armou
 loadouts name fixed definitions. Misc loadouts each give one lockpick (repeated
 entries produce four/eight), not an amount override. Weapon amount>1 creates that
 stack then additionally grants one weapon; preserve observed +1 behavior.
+
+CharacterBuilder/create_character now initialize filtered starting gear, basic
+random consumables, builtins and clothing; end with rebuilt stats/full HP/MP.
+Ten local groups pass. check_starting_content.py exercised 256 characters across
+all 36 base skills without failure (integration only, not original reference).
+Native normal installation scenes enable starting_loadout; developer scenes keep
+empty loadouts by default. Native seed is elapsed application ms before picking
+skills; developer scene seed and CLI --seed are explicit/reproducible.
+Session::create_ground_item uses its own libc RNG atomically, allocates a free ID
+across all containers, and retains charges. drop now rejects equipped identities
+and definition mismatches. New synthetic character-root fixture tests complete
+initial inventory/clothing paths and save/load. Pending native CI.
+Next fidelity work: weapon/armour ability buffs and full starting-creation trace.
+Private equipment-ability-buffs.txt exports Weapon::FixBuffs (0x13ba4e) and
+Armour::FixBuffs (0x38340); their headless log is work/equipment-ability-buffs.log.

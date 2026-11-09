@@ -1,0 +1,24 @@
+<skillDB>
+<skill id="10" name="Fixture warrior A" type="warrior"><loadout type="armour" subtype="Fixture cap"/><loadout type="weapon" subtype="Fixture sword"/></skill>
+<skill id="11" name="Fixture warrior B" type="warrior"><loadout type="weapon" subtype="Fixture bolt" amount="3"/><loadout type="wand"/></skill>
+<skill id="12" name="Fixture warrior C" type="warrior"><loadout type="misc" subtype="lockpick"/><loadout type="misc" subtype="lockpicks"/><loadout type="misc" subtype="spores" amount="9"/></skill>
+<skill id="13" name="Fixture wizard A" type="wizard"><loadout type="potion" amount="3" always="1"/></skill>
+<skill id="14" name="Fixture wizard B" type="wizard"><loadout type="armour" subtype="Fixture cap"/></skill>
+<skill id="15" name="Fixture rogue A" type="rogue"><loadout type="mushroom" amount="2" always="1"/><loadout type="component" amount="3" always="1"/></skill>
+<skill id="16" name="Fixture rogue B" type="rogue"><loadout type="toolkit" subtype="Fixture toolkit" always="1"/></skill>
+<skill id="17" name="Fixture extra 17" type="wizard"/>
+<skill id="18" name="Fixture extra 18" type="wizard"/>
+<skill id="19" name="Fixture extra 19" type="wizard"/>
+<skill id="20" name="Fixture extra 20" type="wizard"/>
+<skill id="21" name="Fixture extra 21" type="wizard"/>
+<skill id="22" name="Fixture extra 22" type="wizard"/>
+<skill id="23" name="Fixture extra 23" type="wizard"/>
+<skill id="24" name="Fixture extra 24" type="rogue"/>
+<skill id="25" name="Fixture extra 25" type="rogue"/>
+<skill id="26" name="Fixture extra 26" type="rogue"/>
+<skill id="27" name="Fixture extra 27" type="rogue"/>
+<skill id="28" name="Fixture extra 28" type="rogue"/>
+<skill id="29" name="Fixture extra 29" type="rogue"/>
+<skill id="30" name="Fixture extra 30" type="rogue"/>
+<ability name="Fixture passive" skill="13" startSkill="1"><primarybuff id="1" amount="2"/></ability>
+</skillDB>

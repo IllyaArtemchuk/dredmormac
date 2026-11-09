@@ -1,27 +1,44 @@
 #include "dredmor/content.hpp"
+#include "dredmor/character.hpp"
 #include <fstream>
 #include <iostream>
+#include <charconv>
+#include <sstream>
+namespace {
+template<class T> T integer(std::string_view text) {
+    T value;const auto parsed=std::from_chars(text.data(),text.data()+text.size(),value);
+    if (parsed.ec!=std::errc() || parsed.ptr!=text.data()+text.size()) throw std::invalid_argument("invalid CLI integer");
+    return value;
+}
+}
 int main(int argc,char** argv) {
-    if (argc<3 || argc>4) {
-        std::cerr<<"Usage: dredmor-session DATA_ROOT ACTIONS [DEVELOPER_ENCOUNTER_MONSTER]\nActions: NSWE. and G for pickup\n";return 2;
+    if (argc<3) {
+        std::cerr<<"Usage: dredmor-session DATA_ROOT ACTIONS [DEVELOPER_ENCOUNTER_MONSTER] [--skills ID,ID,...] [--seed UINT32]\nActions: NSWE. and G for pickup\n";return 2;
     }
     try {
         auto content=dredmor::GameContent::load(argv[1]);
         std::vector<int> selected;
-        for (const auto& skill:content.skills()) if (selected.size()<7) selected.push_back(skill.id);
-        const auto ranks=content.starting_ranks(selected);
+        std::string encounter;std::uint32_t seed=0xD0ED;bool explicit_skills=false;
+        for (int i=3;i<argc;++i) {
+            const std::string option=argv[i];
+            if (option=="--skills") {
+                if (++i==argc || explicit_skills) throw std::invalid_argument("missing or repeated selected skills");
+                explicit_skills=true;std::istringstream input(argv[i]);std::string part;
+                while (std::getline(input,part,',')) selected.push_back(integer<int>(part));
+            } else if (option=="--seed") {
+                if (++i==argc) throw std::invalid_argument("missing seed");seed=integer<std::uint32_t>(argv[i]);
+            } else if (!option.empty() && option[0]!='-' && encounter.empty()) encounter=option;
+            else throw std::invalid_argument("unknown or repeated encounter/option");
+        }
+        if (!explicit_skills) for (const auto& skill:content.skills()) if (selected.size()<7) selected.push_back(skill.id);
         auto world=content.room("Starting Room").instantiate();
-        auto hero=dredmor::make_player(ranks);
-        dredmor::Session session(std::move(world),hero,0xD0ED,content.tweaks().integer(dredmor::Difficulty::medium,"experience n"));
-        std::vector<dredmor::SkillRank> skill_ranks;for (auto id:selected) skill_ranks.push_back({id,1});
-        session.character_profile(ranks,std::make_shared<const std::vector<dredmor::ItemDefinition>>(content.items()),
-            std::move(skill_ranks),std::make_shared<const std::vector<dredmor::AbilityDefinition>>(content.abilities()));
-        if (argc==4) {
+        auto session=dredmor::create_character(content,std::move(world),selected,seed);
+        if (!encounter.empty()) {
             bool spawned=false;
             for (int y=0;y<session.world().height() && !spawned;++y) for (int x=0;x<session.world().width() && !spawned;++x) {
                 auto hero_position=session.player().position;
                 if (session.world().passable({x,y}) && std::abs(x-hero_position.x)+std::abs(y-hero_position.y)==1) {
-                    session.spawn_enemy(content.make_monster(argv[3],{x,y},dredmor::Difficulty::medium));spawned=true;
+                    session.spawn_enemy(content.make_monster(encounter,{x,y},dredmor::Difficulty::medium));spawned=true;
                 }
             }
             if (!spawned) throw std::runtime_error("no adjacent developer encounter spawn");

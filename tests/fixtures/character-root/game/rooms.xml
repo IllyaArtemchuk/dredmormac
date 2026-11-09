@@ -1,0 +1,7 @@
+<roomdb>
+  <room name="Starting Room" width="7" height="5">
+    <row text="#######"/><row text="#.....#"/><row text="#..b..#"/>
+    <row text="#.....#"/><row text="#######"/>
+    <customblocker at="b"/>
+  </room>
+</roomdb>

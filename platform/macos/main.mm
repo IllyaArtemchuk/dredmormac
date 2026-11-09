@@ -6,10 +6,12 @@
 #include <cstring>
 #include <cstdlib>
 #include "dredmor/content.hpp"
+#include "dredmor/character.hpp"
 #include "dredmor/sprite.hpp"
 #include <memory>
 #include <sstream>
 #include <stdexcept>
+#include <chrono>
 
 @interface SpriteImage : NSObject {
     dredmor::Sprite _sprite;
@@ -85,6 +87,14 @@
         std::istringstream input([scene[@"collision"] UTF8String]);
         auto world=dredmor::World::read(input);
         dredmor::ClassRanks ranks={3,2,2};
+        std::uint32_t seed=0xD0ED;
+        if (scene[@"seed"]) {
+            if (![scene[@"seed"] isKindOfClass:NSNumber.class] || [scene[@"seed"] doubleValue]<0 ||
+                [scene[@"seed"] doubleValue]>UINT32_MAX ||
+                [scene[@"seed"] doubleValue]!=[scene[@"seed"] unsignedLongLongValue])
+                throw std::runtime_error("scene seed must be a uint32 integer");
+            seed=[scene[@"seed"] unsignedIntValue];
+        }
         std::vector<int> selected;
         int experience=190;
         if ([scene[@"data_root"] isKindOfClass:NSString.class]) {
@@ -99,8 +109,10 @@
             ranks=_content->starting_ranks(selected);
             experience=_content->tweaks().integer(dredmor::Difficulty::medium,"experience n");
         }
-        _session=std::make_unique<dredmor::Session>(std::move(world),dredmor::make_player(ranks),0xD0ED,experience);
-        if (_content) {
+        if (_content && [scene[@"starting_loadout"] boolValue])
+            _session=std::make_unique<dredmor::Session>(dredmor::create_character(*_content,std::move(world),selected,seed));
+        else _session=std::make_unique<dredmor::Session>(std::move(world),dredmor::make_player(ranks),seed,experience);
+        if (_content && ![scene[@"starting_loadout"] boolValue]) {
             std::vector<dredmor::SkillRank> skillRanks;for (auto id:selected) skillRanks.push_back({id,1});
             _session->character_profile(ranks,std::make_shared<const std::vector<dredmor::ItemDefinition>>(_content->items()),
                 std::move(skillRanks),std::make_shared<const std::vector<dredmor::AbilityDefinition>>(_content->abilities()));
@@ -144,7 +156,6 @@
             _enemyImages[@(identifier)]=sprite;
         }
         if (scene[@"ground_items"] && ![scene[@"ground_items"] isKindOfClass:NSArray.class]) return nil;
-        std::uint64_t instance=1;
         for (id value in scene[@"ground_items"]) {
             if (!_content || ![value isKindOfClass:NSDictionary.class] || ![value[@"name"] isKindOfClass:NSString.class] ||
                 ![value[@"x"] isKindOfClass:NSNumber.class] || ![value[@"y"] isKindOfClass:NSNumber.class])
@@ -155,15 +166,12 @@
                 if (index) throw std::runtime_error("ambiguous developer ground item");index=i;
             }
             if (!index) throw std::runtime_error("developer ground item not found");
-            const auto& definition=_content->items()[*index];
-            dredmor::InventoryItem item;item.instance=instance++;item.kind=definition.kind;
-            item.definition=static_cast<std::uint32_t>(*index);item.weapon_type=definition.weapon_type;
+            std::int32_t quantity=1;
             if (value[@"quantity"]) {
                 if (![value[@"quantity"] isKindOfClass:NSNumber.class]) throw std::runtime_error("invalid ground quantity");
-                item.quantity=[value[@"quantity"] intValue];
+                quantity=[value[@"quantity"] intValue];
             }
-            item.stackable=[value[@"stackable"] boolValue];
-            _session->drop(item,{[value[@"x"] intValue],[value[@"y"] intValue]});
+            _session->create_ground_item(static_cast<std::uint32_t>(*index),{[value[@"x"] intValue],[value[@"y"] intValue]},quantity);
         }
         _animationStart=NSProcessInfo.processInfo.systemUptime;
         __weak RoomView *weakSelf=self;
@@ -394,10 +402,15 @@
 }
 @end
 
-static NSDictionary *sceneFromInstallation(const std::filesystem::path& selected,BOOL selectSkills) {
+static NSDictionary *sceneFromInstallation(const std::filesystem::path& selected,BOOL selectSkills,
+                                          std::chrono::steady_clock::time_point startup) {
     auto root=std::filesystem::canonical(selected);
     if (std::filesystem::is_directory(root/"Contents/MacOS")) root/="Contents/MacOS";
     const auto content=dredmor::GameContent::load(root);
+    // Both streams share an elapsed-millisecond seed, as in DoRandomize. Exact
+    // original startup timing is external input; smoke uses a fixed seed.
+    const auto seed=selectSkills?static_cast<std::uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now()-startup).count()):0xD0ED;
     const auto& room=content.room("Starting Room");
     const auto world=room.instantiate();
     NSMutableArray<NSString*> *rows=[NSMutableArray array];
@@ -406,7 +419,7 @@ static NSDictionary *sceneFromInstallation(const std::filesystem::path& selected
     NSMutableDictionary *scene=[@{@"name":@"Starting Room",@"policy":@"provisional-preview",@"rows":rows,
         @"collision":[NSString stringWithUTF8String:world.room_text().c_str()],
         @"atlas":path(root/"tilesets/basic.png"),@"hero":path(root/"sprites/hero/hero_idle_d.spr"),
-        @"data_root":path(root),@"floor_crop":@[@0,@192,@32,@32],@"wall_crop":@[@0,@96,@32,@32]} mutableCopy];
+        @"data_root":path(root),@"seed":@(seed),@"starting_loadout":@YES,@"floor_crop":@[@0,@192,@32,@32],@"wall_crop":@[@0,@96,@32,@32]} mutableCopy];
     if (selectSkills) {
         DredmorSkillSelectionController *controller=[[DredmorSkillSelectionController alloc] initWithSkills:content.skills()];
         NSArray<NSNumber*> *skills=[controller runSelection];
@@ -417,6 +430,7 @@ static NSDictionary *sceneFromInstallation(const std::filesystem::path& selected
 }
 
 int main(int argc,const char**argv) {
+    const auto startup=std::chrono::steady_clock::now();
     @autoreleasepool {
         const bool smoke=argc==3 && std::strcmp(argv[2],"--smoke-test")==0;
         if (argc!=1 && argc!=2 && !smoke) {
@@ -439,7 +453,7 @@ int main(int argc,const char**argv) {
             try {
                 const std::filesystem::path path(selected.UTF8String);
                 if (std::filesystem::is_directory(path)) {
-                    scene=sceneFromInstallation(path,!smoke);
+                    scene=sceneFromInstallation(path,!smoke,startup);
                     if (!scene) return 0;
                 }
                 else {

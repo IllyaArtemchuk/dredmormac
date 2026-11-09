@@ -40,6 +40,7 @@ public:
     const Inventory& inventory() const { return inventory_; }
     std::uint64_t spawn_enemy(Actor enemy);
     void drop(InventoryItem item,Position position);
+    std::uint64_t create_ground_item(std::uint32_t definition,Position position,std::int32_t quantity=1);
     void step(Action action);
     void pickup();
     void equipment_profile(ClassRanks ranks,std::shared_ptr<const std::vector<ItemDefinition>> definitions);
@@ -54,6 +55,7 @@ public:
     static Session load(std::istream& input,std::shared_ptr<const std::vector<ItemDefinition>> definitions={},
                         std::shared_ptr<const std::vector<AbilityDefinition>> abilities={});
 private:
+    friend class CharacterBuilder;
     World world_;
     Actor player_;
     std::vector<Actor> enemies_;

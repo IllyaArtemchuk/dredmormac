@@ -35,6 +35,7 @@ ItemDefinition read_item(const XmlNode& source) {
     item.name=attr(source,"name");item.icon=attr(source,"iconfile");
     item.level=integer(source,"level");item.weapon_type=integer(source,"type",0);
     item.special=integer(source,"special")!=0;item.debug=integer(source,"debug")!=0;
+    item.alchemical=integer(source,"alchemical")!=0;
     if (item.name.empty()) throw std::runtime_error("item name missing");
     for (const auto& child:source.children) {
         const auto tag=lower(child.tag);

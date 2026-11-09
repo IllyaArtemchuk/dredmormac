@@ -63,10 +63,29 @@ std::uint64_t Session::spawn_enemy(Actor enemy) {
     enemies_.push_back(std::move(enemy));return enemies_.back().id;
 }
 void Session::drop(InventoryItem item,Position position) {
-    if (!world_.passable(position) || !item.instance || item.quantity<1 || inventory_.find(item.instance))
+    if (!world_.passable(position) || !item.instance || item.quantity<1 || inventory_.find(item.instance) || ground_.size()>=10000 ||
+        (item.charges && (item.kind!=ItemKind::wand || *item.charges<0)))
         throw std::invalid_argument("invalid ground item");
+    if (definitions_ && (item.definition>=definitions_->size() || definitions_->at(item.definition).kind!=item.kind))
+        throw std::invalid_argument("ground item definition mismatch");
+    for (const auto& slot:equipment_.slots()) if (slot && slot->instance==item.instance) throw std::invalid_argument("ground item is already equipped");
     for (const auto& existing:ground_) if (existing.item.instance==item.instance) throw std::invalid_argument("duplicate ground item");
     ground_.push_back({item,position});
+}
+std::uint64_t Session::create_ground_item(std::uint32_t definition,Position position,std::int32_t quantity) {
+    if (!definitions_ || definition>=definitions_->size() || quantity<1) throw std::invalid_argument("invalid ground item creation");
+    std::uint64_t identifier=1;
+    auto observe=[&](const InventoryItem& item) {
+        if (item.instance==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("item IDs exhausted");
+        identifier=std::max(identifier,item.instance+1);
+    };
+    for (const auto& slot:inventory_.bag()) if (slot) observe(*slot);
+    for (const auto& slot:inventory_.belt()) if (slot) observe(*slot);
+    for (const auto& slot:equipment_.slots()) if (slot) observe(*slot);
+    for (const auto& ground:ground_) observe(ground.item);
+    auto next=*this;
+    auto item=make_inventory_item(definitions_->at(definition),definition,identifier,next.random_.libc);item.quantity=quantity;
+    next.drop(item,position);*this=std::move(next);return identifier;
 }
 void Session::attack(Actor& attacker,Actor& defender) {
     Actor* source=&attacker;Actor* victim=&defender;

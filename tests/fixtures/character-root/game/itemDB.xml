@@ -1,0 +1,15 @@
+<itemDB>
+<item name="Fixture cap"><armour type="head" ac="1"/></item>
+<item name="Fixture sword" type="0"><weapon crushing="3"/></item>
+<item name="Fixture bolt" type="6"><weapon piercing="1"/></item>
+<item name="Fixture wand"><wand mincharge="2" maxcharge="5"/></item>
+<item name="Fixture potion"><potion/></item>
+<item name="Fixture mushroom"><mushroom/></item>
+<item name="Fixture reagent" alchemical="1"/>
+<item name="Fixture toolkit"><toolkit/></item>
+<item name="Fixture food" level="1"><food hp="10"/></item>
+<item name="Fixture drink" level="1"><food mp="10"/></item>
+<item name="Leather Cuirass"><armour type="chest" ac="2"/></item>
+<item name="Robe"><armour type="chest" ac="1"/></item>
+<item name="Fine Linen Shirt"><armour type="chest" ac="0"/></item>
+</itemDB>
