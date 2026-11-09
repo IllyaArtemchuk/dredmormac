@@ -46,7 +46,7 @@ int main(int argc,char** argv) {
         auto save=[](const dredmor::Session& value){std::ostringstream out;value.save(out);return out.str();};
         dredmor::RoomMonsterRecord monster_record;monster_record.name="Fixture variant";monster_record.placement.relative={3,2};
         monster_record.placement.percent=-1;int calls=0;
-        auto constructor=[&](const auto& plan,auto& random) {++calls;check(plan.request==dredmor::PopulationRequest::named_monster);
+        auto constructor=[&](const auto& plan,auto& random,auto&) {++calls;check(plan.request==dredmor::PopulationRequest::named_monster);
             return content.create_monster(plan.name,plan.position,dredmor::Difficulty::medium,0,random.libc);};
         check(!room_monsters.create_room_monster(monster_record,constructor) && calls==0);
         monster_record.placement.percent=100;monster_record.placement.id="room-monster";monster_record.placement.can_push=255;
@@ -54,7 +54,7 @@ int main(int argc,char** argv) {
         check(room_enemy && calls==1 && room_monsters.enemies()[0].room_spawned && room_monsters.enemies()[0].room_local_id=="room-monster");
         check(room_monsters.enemies()[0].can_push==255);
         const auto occupied_save=save(room_monsters);bool failed=false;
-        try {room_monsters.create_room_monster(monster_record,[&](const auto& plan,auto& random) {random.libc.next();return constructor(plan,random);});}
+        try {room_monsters.create_room_monster(monster_record,[&](const auto& plan,auto& random,auto& state) {random.libc.next();return constructor(plan,random,state);});}
         catch(const std::invalid_argument&) {failed=true;}
         check(failed && save(room_monsters)==occupied_save);
         std::istringstream monster_input(occupied_save);auto loaded_monsters=dredmor::Session::load(monster_input);check(save(loaded_monsters)==occupied_save);
@@ -65,6 +65,28 @@ int main(int argc,char** argv) {
         check(failed);
         dredmor::DarwinRandom rank_random(1);check(dredmor::monster_creation_ranks({-2,0,4},0,rank_random)==dredmor::ClassRanks({-2,0,4}));
         check(dredmor::monster_creation_ranks({-2,0,4},-1,rank_random)==dredmor::ClassRanks({0,0,4}));
+        std::istringstream random_map("#########\n#@......#\n#.......#\n#.......#\n#########\n");
+        dredmor::Session random_monsters(dredmor::World::read(random_map),dredmor::make_player({3,2,2}),777);
+        dredmor::RoomMonsterRecord random_record;random_record.placement.relative={2,1};random_record.placement.id="random-record";
+        auto random_constructor=[&](const auto& plan,auto& random,auto& state) {
+            dredmor::MonsterSpawnContext context;context.depth.depth=-1;
+            return content.create_room_monster(plan,context,dredmor::Difficulty::medium,random,state);
+        };
+        check(random_monsters.create_room_monster(random_record,random_constructor));
+        check(random_monsters.monster_spawn_state().counts.size()==1 && !(random_monsters.enemies()[0].monster_flags&~10U));
+        const auto random_before=save(random_monsters);failed=false;
+        try {random_monsters.create_room_monster(random_record,random_constructor);} catch(const std::invalid_argument&) {failed=true;}
+        check(failed && save(random_monsters)==random_before);
+        std::istringstream random_input(random_before);auto random_resumed=dredmor::Session::load(random_input);
+        for (int i=0;i<8;++i) {
+            random_record.placement.relative={3+i%4,1+i/4};random_record.placement.percent=50;
+            random_monsters.create_room_monster(random_record,random_constructor);random_resumed.create_room_monster(random_record,random_constructor);
+            check(save(random_monsters)==save(random_resumed));
+        }
+        auto bad_counts=random_before;const auto counts_at=bad_counts.find("</monster-counts>");check(counts_at!=std::string::npos);
+        bad_counts.insert(counts_at,"<entry name='Fixture monster' count='0'/>");failed=false;
+        try {std::istringstream invalid(bad_counts);dredmor::Session::load(invalid);} catch(const std::runtime_error&) {failed=true;}
+        check(failed);
         bool rejected=false;try {content.starting_ranks({0,0,1,2,3,4,5});} catch (const std::invalid_argument&) {rejected=true;}
         check(rejected);
         dredmor::RoomDefinition geometry;

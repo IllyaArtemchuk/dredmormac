@@ -3,13 +3,14 @@
 #include "dredmor/combat.hpp"
 #include "dredmor/stats.hpp"
 #include "dredmor/random.hpp"
+#include "dredmor/selection.hpp"
 #include <optional>
 
 namespace dredmor {
 struct MonsterDefinition {
     std::string name,parent,layer,display_name;
     int level=0,experience=0,armour_ac=0,aggressiveness=0,span=0;
-    int special=0;
+    int special=0,max_spawns=0;
     bool diggle_hell=false;
     ClassRanks ranks{};
     PrimaryStats primary{};
@@ -25,9 +26,14 @@ std::vector<MonsterDefinition> load_monsters(const Catalog& catalog);
 ClassRanks monster_creation_ranks(ClassRanks ranks,int level_adder,DarwinRandom& random);
 using MonsterPools=std::array<std::vector<std::uint32_t>,4>;
 struct MonsterTables {MonsterPools named;std::array<MonsterPools,15> levels;std::vector<std::uint32_t> diggle_hell;};
+struct MonsterSpawnState {std::map<std::string,std::int32_t,std::less<>> counts;};
+struct MonsterSpawnContext {SpawnDepthContext depth;std::size_t level_set=0;bool expansion=false;};
 void register_monster(MonsterTables& tables,std::uint32_t index,const MonsterDefinition& definition,std::uint32_t level_sets);
 MonsterTables build_base_monster_tables(const Catalog& catalog,const std::vector<MonsterDefinition>& definitions);
 std::optional<std::uint32_t> find_registered_monster(const MonsterTables& tables,const std::vector<MonsterDefinition>& definitions,std::string_view display_name);
+std::optional<std::uint32_t> select_room_monster(const MonsterTables& tables,const std::vector<MonsterDefinition>& definitions,
+    MonsterSpawnContext context,int boost_chance,const MonsterSpawnState& state,GameRandom& random,std::size_t budget=1000000);
+std::uint32_t finish_random_monster_spawn(const MonsterDefinition& definition,MonsterSpawnState& state,Random& random);
 enum class Difficulty : std::size_t { easy,medium,hard };
 class Tweaks {
 public:

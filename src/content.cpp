@@ -19,6 +19,11 @@ std::optional<int> legacy_attribute(const XmlNode& node,std::string_view key) {
     for (const auto& attribute:node.attributes) if (ascii_lower(attribute.first)==key) return legacy_integer(attribute.second);
     return std::nullopt;
 }
+Actor monster_actor(const MonsterDefinition& definition,Position position,const MonsterStats& stats) {
+    Actor actor;actor.name=definition.name;actor.position=position;actor.primary=stats.primary;actor.secondary=stats.secondary;
+    actor.health=stats.secondary[0];actor.mana=stats.secondary[1];actor.damage=definition.damage;actor.resistance=definition.resistance;
+    actor.experience_reward=definition.experience;actor.sprite=definition.idle_sprites[3];return actor;
+}
 }
 std::vector<RoomElementDefinition> RoomDefinition::elements() const {
     auto numeric=numeric_template();RoomMarkers markers;
@@ -240,17 +245,26 @@ const MonsterDefinition& GameContent::monster(std::string_view name) const {
 Actor GameContent::make_monster(std::string_view name,Position position,Difficulty difficulty,int dungeon_level) const {
     const auto& definition=monster(name);
     auto stats=derive_monster(tweaks_.monster_input(definition,difficulty,dungeon_level));
-    Actor actor;actor.name=definition.name;actor.position=position;actor.primary=stats.primary;actor.secondary=stats.secondary;
-    actor.health=stats.secondary[0];actor.mana=stats.secondary[1];actor.damage=definition.damage;actor.resistance=definition.resistance;
-    actor.experience_reward=definition.experience;actor.sprite=definition.idle_sprites[3];return actor;
+    return monster_actor(definition,position,stats);
 }
 Actor GameContent::create_monster(std::string_view name,Position position,Difficulty difficulty,int dungeon_level,DarwinRandom& random) const {
     const auto index=find_registered_monster(monster_tables(),monsters_,name);
     if (!index) throw std::invalid_argument("registered monster not found: "+std::string(name));
     const auto& definition=monsters_.at(*index);auto input=tweaks_.monster_input(definition,difficulty,dungeon_level);
     input.ranks=monster_creation_ranks(input.ranks,tweaks_.integer(difficulty,"monster level adder"),random);
-    const auto stats=derive_monster(input);auto actor=make_monster(definition.name,position,difficulty,dungeon_level);
-    actor.primary=stats.primary;actor.secondary=stats.secondary;actor.health=stats.secondary[0];actor.mana=stats.secondary[1];return actor;
+    return monster_actor(definition,position,derive_monster(input));
+}
+Actor GameContent::create_room_monster(const RoomPopulationPlan& plan,MonsterSpawnContext context,Difficulty difficulty,
+    GameRandom& random,MonsterSpawnState& state) const {
+    if (plan.request==PopulationRequest::named_monster) return create_monster(plan.name,plan.position,difficulty,context.depth.depth,random.libc);
+    if (plan.request!=PopulationRequest::random_monster) throw std::invalid_argument("expected a room monster request");
+    auto candidate=random;auto next=state;
+    const auto index=select_room_monster(monster_tables(),monsters_,context,tweaks_.integer(difficulty,"monster boost chance"),next,candidate);
+    if (!index) throw std::runtime_error("room monster level has no registered candidates");
+    const auto& definition=monsters_.at(*index);auto input=tweaks_.monster_input(definition,difficulty,context.depth.depth);
+    input.ranks=monster_creation_ranks(input.ranks,tweaks_.integer(difficulty,"monster level adder"),candidate.libc);
+    auto actor=monster_actor(definition,plan.position,derive_monster(input));actor.monster_flags=finish_random_monster_spawn(definition,next,candidate.mt);
+    random=std::move(candidate);state=std::move(next);return actor;
 }
 ClassRanks GameContent::starting_ranks(const std::vector<int>& skill_ids) const {
     if (skill_ids.size()!=7 || std::set<int>(skill_ids.begin(),skill_ids.end()).size()!=7) throw std::invalid_argument("select exactly seven distinct skills");

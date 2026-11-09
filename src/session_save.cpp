@@ -106,6 +106,7 @@ void write_actor(std::ostream& out,std::string_view tag,const Actor& actor) {
        <<"\" mana=\""<<actor.mana<<"\" reward=\""<<actor.experience_reward<<"\" zorkmids=\""<<actor.zorkmids<<"\"";
     if (!actor.room_local_id.empty() || actor.can_push!=1 || actor.room_spawned)
         out<<" room-id=\""<<escape(actor.room_local_id)<<"\" push=\""<<unsigned(actor.can_push)<<"\" room-spawned=\""<<actor.room_spawned<<"\"";
+    if (actor.monster_flags) out<<" monster-flags=\""<<actor.monster_flags<<"\"";
     out<<">\n";
     write_array(out,"primary",actor.primary);write_array(out,"secondary",actor.secondary);
     write_array(out,"damage",actor.damage);write_array(out,"resistance",actor.resistance);
@@ -117,6 +118,9 @@ Actor read_actor(const XmlNode& node,bool currency_fields,bool room_fields) {
     if (has_room && !room_fields) throw std::runtime_error("actor room metadata requires save version seven");
     if (has_room) {
         actor.room_local_id=attribute(node,"room-id");actor.can_push=attribute_number<std::uint8_t>(node,"push");actor.room_spawned=flag(node,"room-spawned");
+    }
+    if (node.attributes.count("monster-flags")) {
+        if (!room_fields) throw std::runtime_error("monster flags require save version seven");actor.monster_flags=attribute_number<std::uint32_t>(node,"monster-flags");
     }
     actor.position={attribute_number<int>(node,"x"),attribute_number<int>(node,"y")};
     actor.health=attribute_number<std::int32_t>(node,"hp");actor.mana=attribute_number<std::int32_t>(node,"mana");
@@ -227,6 +231,11 @@ void Session::save(std::ostream& out) const {
     write_array(out,"intrinsic-resistance",intrinsic_resistance_);
     if (!factory_state_.spawned_artifacts.empty()) {
         out<<"<spawned-artifacts>";for (auto index:factory_state_.spawned_artifacts) out<<index<<' ';out<<"</spawned-artifacts>\n";
+    }
+    if (!monster_state_.counts.empty()) {
+        out<<"<monster-counts>\n";
+        for (const auto& entry:monster_state_.counts) out<<"<entry name=\""<<escape(entry.first)<<"\" count=\""<<entry.second<<"\"/>\n";
+        out<<"</monster-counts>\n";
     }
     out<<"<skills content=\""<<ability_signature(abilities_)<<"\">\n";
     for (auto skill:skills_) out<<"<skill id=\""<<skill.id<<"\" rank=\""<<skill.rank<<"\"/>\n";
@@ -358,6 +367,14 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
             if (index>=session.definitions_->size() || session.factory_state_.spawned_artifacts.size()>=10000 ||
                 session.definitions_->at(index).kind!=ItemKind::weapon || !artifact_request(session.definitions_->at(index),0).fixed_name ||
                 !session.factory_state_.spawned_artifacts.insert(index).second) throw std::runtime_error("invalid saved artifact registration");
+        }
+    }
+    if (root.first("monster-counts")) {
+        if (version!="7") throw std::runtime_error("monster counts require save version seven");
+        for (const auto& entry:child(root,"monster-counts").children) {
+            const auto name=attribute(entry,"name");const auto count=attribute_number<std::int32_t>(entry,"count");
+            if (entry.tag!="entry" || name.empty() || count<1 || !entry.children.empty() || session.monster_state_.counts.size()>=10000 ||
+                !session.monster_state_.counts.emplace(name,count).second) throw std::runtime_error("invalid saved monster counts");
         }
     }
     if (version!="1") {

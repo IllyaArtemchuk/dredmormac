@@ -7,6 +7,7 @@
 #include "dredmor/selection.hpp"
 #include "dredmor/currency.hpp"
 #include "dredmor/factory.hpp"
+#include "dredmor/monsters.hpp"
 #include <memory>
 
 namespace dredmor {
@@ -21,6 +22,7 @@ struct Actor {
     std::string room_local_id;
     std::uint8_t can_push=1;
     bool room_spawned=false;
+    std::uint32_t monster_flags=0;
     bool alive() const { return health>0; }
 };
 struct GroundItem { InventoryItem item;Position position; };
@@ -66,7 +68,8 @@ public:
     RoomLootCreation create_room_loot(const RoomLootRecord& record,const ItemFactoryTables& tables,
         const ItemFactoryContext& context,Position origin={0,0});
     std::optional<std::uint64_t> create_room_monster(const RoomMonsterRecord& record,
-        const std::function<Actor(const RoomPopulationPlan&,GameRandom&)>& constructor,Position origin={0,0});
+        const std::function<Actor(const RoomPopulationPlan&,GameRandom&,MonsterSpawnState&)>& constructor,Position origin={0,0});
+    const MonsterSpawnState& monster_spawn_state() const {return monster_state_;}
     void give_currency(std::int32_t amount);
     void take_currency(std::int32_t amount);
     void step(Action action);
@@ -83,6 +86,7 @@ public:
     static Session load(std::istream& input,std::shared_ptr<const std::vector<ItemDefinition>> definitions={},
                         std::shared_ptr<const std::vector<AbilityDefinition>> abilities={});
 private:
+    MonsterSpawnState monster_state_;
     friend class CharacterBuilder;
     World world_;
     Actor player_;

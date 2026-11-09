@@ -612,3 +612,28 @@ All20 local groups pass. Run42632516392 validated room loot onMac. Monster Mac
 run42633520439 failed only because the new test lacked explicit<sstream>; fixed
 in e537b02 and rerun42633827494 is queued. Full random SpawnMonster, population,
 scripts/AI/spells and whole-level/native visual parity remain incomplete.
+
+Regular fixed-position Level::SpawnMonster63a5a now matches1024 full original
+executions through actual NewMonster648da, CanSpawnMonster60876, Monster/Hittable/
+GameObj constructors and attribute rebuilding. Sprite rebuild, actual placement,
+tweaks/library and unbalanced search-tree insertion/decrement are supplied boundaries.
+Compared selected identity, rejected maxspawns candidates, resulting class/stats,
+spawn byte354 bits2/8, all counts, libc state and next8MT. This is the room path
+with flags(false,false,true,true), excluding platoons and random-position/terrain
+branches. GetRandomMonsterLevel may return-1 before SpawnMonster's pre-clamp table
+index; that invalid original read is excluded and port fails explicitly.
+Monster maxspawns defaults0 (unlimited), confirmed entryctor e0dfc; atdepth-1 any
+positive limit fails eligibility regardless current count. Named room construction
+does not increment random spawn counts or draw the two spawn-flag MT values.
+Random construction increments the internal-name count then MTbounded5/10 sets
+raw flags8/2. Existing provisional BFS AI does not yet interpret those flags.
+GameContent/Session now support both named and random room records with shared
+owned RNG/state. Optional savev7 monster-counts and actor monster-flags persist
+state; absent fields migrate empty/zero. Gate rejection skips callbacks; overlap/
+factory failures roll back RNG/counts/IDs. Resumed mixed appearance/random spawns
+and malformed counts pass; all20 local groups pass. Native fixture now includes
+named plus random records, sprites, full-byte push/ID/count/flag checks and saves.
+Run42634769177 passed all37 Mac checks including prior named-monster integration
+and packaging, superseding the missing-sstream failure. Current random-spawn
+source awaits MacCI. Full horde/trap/element population, complete constructor
+sprite/effect semantics, scripts/spells/AI and whole-floor gameplay remain unfinished.

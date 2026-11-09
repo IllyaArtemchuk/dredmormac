@@ -46,6 +46,8 @@ public:
     ItemFactoryContext loot_context(SpawnDepthContext depth={},std::size_t level_set=0,Difficulty difficulty=Difficulty::medium) const;
     Actor make_monster(std::string_view name,Position position,Difficulty difficulty,int dungeon_level=0) const;
     Actor create_monster(std::string_view name,Position position,Difficulty difficulty,int dungeon_level,DarwinRandom& random) const;
+    Actor create_room_monster(const RoomPopulationPlan& plan,MonsterSpawnContext context,Difficulty difficulty,
+        GameRandom& random,MonsterSpawnState& state) const;
     ClassRanks starting_ranks(const std::vector<int>& skill_ids) const;
     std::vector<StartingLoadout> starting_loadout(const std::vector<int>& skill_ids) const;
 private:

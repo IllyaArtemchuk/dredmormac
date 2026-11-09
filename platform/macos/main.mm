@@ -199,8 +199,8 @@ static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
                 else if constexpr (std::is_same_v<T,dredmor::RoomLootRecord>)
                     _session->create_room_loot(definition,_content->item_factory_tables(),_content->loot_context());
                 else if constexpr (std::is_same_v<T,dredmor::RoomMonsterRecord>) {
-                    if (!definition.name.empty()) _session->create_room_monster(definition,[&](const auto& plan,auto& random) {
-                        return _content->create_monster(plan.name,plan.position,dredmor::Difficulty::medium,0,random.libc);
+                    _session->create_room_monster(definition,[&](const auto& plan,auto& random,auto& state) {
+                        return _content->create_room_monster(plan,{},dredmor::Difficulty::medium,random,state);
                     });
                 }
                 else if constexpr (std::is_same_v<T,dredmor::BreakableRoomDefinition>) {
@@ -531,9 +531,12 @@ static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
         primary==_session->player().primary && secondary==_session->player().secondary;
 }
 - (BOOL)smokeRoomMonsters {
-    if (_session->enemies().size()!=1 || _enemyImages.count!=1) return NO;
-    const auto& enemy=_session->enemies()[0];
-    return enemy.room_spawned && enemy.room_local_id=="fixture-monster" && enemy.can_push==0 && !enemy.sprite.empty();
+    if (_session->enemies().size()!=2 || _enemyImages.count!=2) return NO;
+    const auto& named=_session->enemies()[0];const auto& random=_session->enemies()[1];
+    const auto count=_session->monster_spawn_state().counts.find("Fixture variant");
+    return named.room_spawned && named.room_local_id=="fixture-monster" && named.can_push==0 && !named.sprite.empty() &&
+        random.room_spawned && random.room_local_id=="fixture-random" && random.can_push==255 && !random.sprite.empty() &&
+        !(random.monster_flags&~10U) && count!=_session->monster_spawn_state().counts.end() && count->second==1;
 }
 - (BOOL)smokeSkillSelection {
     if (!_content) return YES;

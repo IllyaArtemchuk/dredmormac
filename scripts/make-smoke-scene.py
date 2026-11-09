@@ -59,9 +59,11 @@ if __name__=='__main__':
         (root/'dungeon').mkdir(exist_ok=True);(root/'dungeon/fixture.spr').write_bytes(sprite())
         if args.monsters:
             (root/'game/rooms.xml').write_text('''<roomdb><room name="Starting Room" width="5" height="4">
-<row text="#####"/><row text="#...#"/><row text="#..1#"/><row text="#####"/>
-<monster at="1" name="Fixture variant" id="fixture-monster" can_push="0"/></room></roomdb>''')
-            monsters=ET.parse(root/'game/monDB.xml');ET.SubElement(monsters.getroot()[0],'idleSprite',{'down':'dungeon/fixture.spr'})
+<row text="#####"/><row text="#...#"/><row text="#.21#"/><row text="#####"/>
+<monster at="1" name="Fixture variant" id="fixture-monster" can_push="0"/>
+<monster at="2" id="fixture-random" can_push="255"/></room></roomdb>''')
+            monsters=ET.parse(root/'game/monDB.xml');monsters.getroot()[0].insert(0,ET.Element('idleSprite',{'down':'dungeon/fixture.spr'}))
+            monsters.getroot()[0].find('monster').set('level','1')
             monsters.write(root/'game/monDB.xml',encoding='unicode')
             tweaks=ET.parse(root/'game/tweakDB.xml');ET.SubElement(tweaks.getroot(),'tweak',{'name':'monster level adder','ival':'3'})
             tweaks.write(root/'game/tweakDB.xml',encoding='unicode')

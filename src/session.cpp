@@ -201,10 +201,10 @@ RoomLootCreation Session::create_room_loot(const RoomLootRecord& record,const It
 }
 void Session::give_currency(std::int32_t amount) {auto next=*this;next.currency_transfer_impl(amount,CurrencyOperation::give);*this=std::move(next);}
 std::optional<std::uint64_t> Session::create_room_monster(const RoomMonsterRecord& record,
-    const std::function<Actor(const RoomPopulationPlan&,GameRandom&)>& constructor,Position origin) {
+    const std::function<Actor(const RoomPopulationPlan&,GameRandom&,MonsterSpawnState&)>& constructor,Position origin) {
     auto next=*this;const auto plan=plan_room_population(RoomPopulationRecord{record},origin,next.random_.libc);
     if (plan.request==PopulationRequest::none) {random_.libc=next.random_.libc;return std::nullopt;}
-    auto actor=constructor(plan,next.random_);actor.position=plan.position;
+    auto actor=constructor(plan,next.random_,next.monster_state_);actor.position=plan.position;
     actor.room_local_id=record.placement.id;actor.can_push=record.placement.can_push;actor.room_spawned=true;
     const auto result=next.spawn_enemy(std::move(actor));*this=std::move(next);return result;
 }

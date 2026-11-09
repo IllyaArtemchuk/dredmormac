@@ -7,6 +7,27 @@ void print_tables(const dredmor::MonsterTables& tables) {
     std::cout<<tables.diggle_hell.size();for (auto index:tables.diggle_hell) std::cout<<' '<<index;std::cout<<'\n';
 }
 int main(int argc,char** argv) {
+    if (argc==2 && std::string(argv[1])=="--spawn") {
+        std::uint32_t seed;while (std::cin>>seed) {
+            dredmor::MonsterSpawnContext context;int boost,adder;std::size_t count;
+            if (!(std::cin>>context.depth.depth>>context.depth.alternate>>context.depth.alternate_depth>>boost>>context.expansion>>context.level_set>>adder>>count) || count>10000) return 1;
+            std::vector<dredmor::MonsterDefinition> definitions(count);dredmor::MonsterTables tables;dredmor::MonsterSpawnState state;
+            for (std::size_t i=0;i<count;++i) {
+                auto& def=definitions[i];def.name="Fixture"+std::to_string(i);std::uint32_t mask;int previous;
+                if (!(std::cin>>def.level>>mask>>def.max_spawns>>previous>>def.ranks[0]>>def.ranks[1]>>def.ranks[2])) return 1;
+                dredmor::register_monster(tables,i,def,mask);if (previous) state.counts.emplace(def.name,previous);
+            }
+            dredmor::GameRandom random;random.seed(seed);const auto selected=dredmor::select_room_monster(tables,definitions,context,boost,state,random);
+            if (!selected) return 1;const auto& def=definitions[*selected];dredmor::MonsterStatInput input;
+            input.ranks=dredmor::monster_creation_ranks(def.ranks,adder,random.libc);input.dungeon_level=context.depth.depth;
+            const auto stats=dredmor::derive_monster(input);const auto flags=dredmor::finish_random_monster_spawn(def,state,random.mt);
+            std::cout<<*selected<<' '<<flags;for (auto value:input.ranks) std::cout<<' '<<value;
+            for (auto value:stats.primary) std::cout<<' '<<value;for (auto value:stats.secondary) std::cout<<' '<<value;
+            for (const auto& definition:definitions) {auto found=state.counts.find(definition.name);std::cout<<' '<<(found==state.counts.end()?0:found->second);}
+            std::cout<<' '<<random.libc.state();for (int i=0;i<8;++i) std::cout<<' '<<random.mt.u32();std::cout<<'\n';
+        }
+        return std::cin.eof()?0:1;
+    }
     if (argc==3 && std::string(argv[1])=="--tables-content") {print_tables(dredmor::GameContent::load(argv[2]).monster_tables());return 0;}
     if (argc==2 && std::string(argv[1])=="--tables") {
         std::size_t count;while (std::cin>>count) {
