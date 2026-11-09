@@ -202,3 +202,8 @@ Trap run42612861333 failed in the new test's aggregate initialization on AppleCl
 GameRandom libc now initializes explicitly to1; numeric behavior is unchanged.
 Native revalidation is pending. This does not affect the passing original-routine
 comparisons, but the new trap code is not yet a successful native checkpoint.
+
+Currency core construction/rolls/transfers now match5,166 original cases with
+sprite/UI/config/library boundaries and unchanged MT draws. Typed zorkmidbuff
+metadata and kind10 are added. Currency value and stack quantity remain separate.
+Fifteen local groups pass; session wallet, pickup and persistence are next.

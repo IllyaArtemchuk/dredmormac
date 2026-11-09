@@ -10,6 +10,7 @@ struct AbilityDefinition {
     bool starting=false,polymorphed_only=false;
     ItemModifiers modifiers;
     XmlNode source;
+    float currency_bonus=0;
 };
 struct AbilityContext {
     bool weapon_left=false,weapon_right=false,armour_left=false,armour_right=false;

@@ -836,3 +836,36 @@ parent level. Tests cover missing/repeated attributes, case-sensitive enum value
 case-insensitive keys and prefix integers; overflow remains the stated port policy.
 All53 supplied traps pass independent metadata ingestion. Fourteen local groups
 pass. Trap activation, disarming, spell execution and full population are pending.
+
+Trap run42612861333 failed AppleClang at streams={} in the new normal/selection
+test. GameRandom.libc now has default member initializer{1}, preserving behavior
+and making aggregate reset portable; follow-up native validation is pending.
+
+## Currency primitives
+
+CurrencyObject models the separate money value, Item quantity/stack flag and six
+sprite thresholds. Positive eligible zorkmidbuff modifiers apply sequentially in
+ability-table order with float multiplication/addition and integer truncation
+after each. Eligibility uses the first matching of seven selected skills and
+level<rank; it does not use weapon or polymorph passive gates. Both percent and
+percentage attributes populate the typed ability field; source metadata remains.
+Currency kind10 is now named explicitly. This core is not yet a session wallet.
+
+verify_currency.py matches5,166 cases:1,040 actual currency constructors/Build,
+1,024 type-based rolls,1,024 named rolls and2,078 wallet transfers. Actual original
+Item/Zorkmids construction, Build, currency branches of factories18ac20/185bb0 and
+Give/TakeZorkmids11c446/11c402 execute. Allocation/strings/rand/strcmp, tweak,
+sprite I/O, sound and floating text are supplied boundaries. Amount, sprite key/
+path, Item quantity/stackability, wallet balance/delta/sound, roll libc state and
+unchanged next eight MT outputs match. Constructor bonus fixtures include varied
+skill ranks, sequential modifiers, signs, overflow/float limits and ignored NaNs.
+
+Currency value lives separately from Item count: a quantity>1 factory override
+sets count/stackability but does not change the money credited. Type zorkmids rolls
+(effectiveDepth+1)*libcBucket15Plus2, or1 for negative ordinary depth without a
+valid alternate depth. Named zorkmids rolls from wrapping (depth+1)*goldDropPerLevel
+then adds5; invalid bounds return5 without a draw. The type factory uses curLevel,
+not its Level argument. Wallet transfers wrap and allow negative balances. Only
+INT_MIN transfer is guarded, since the original virtual negative-amount delegation
+recurses indefinitely. Fifteen local groups pass; native currency validation and
+session wallet/pickup/save integration are next.

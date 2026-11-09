@@ -3,6 +3,7 @@
 #include <charconv>
 #include <cstring>
 #include <stdexcept>
+#include <cstdlib>
 
 namespace dredmor {
 namespace {
@@ -43,6 +44,9 @@ AbilityDefinition read_ability(const XmlNode& node) {
             auto& target=tag=="damagebuff"?ability.modifiers.damage:ability.modifiers.resistance;
             for (std::size_t i=0;i<damage_names.size();++i) if (!attr(child,damage_names[i]).empty())
                 target[i]=integer(child,damage_names[i]);
+        } else if (tag=="zorkmidbuff") {
+            for (const auto& field:child.attributes) if (lower(field.first)=="percent" || lower(field.first)=="percentage")
+                ability.currency_bonus=float(std::strtod(field.second.c_str(),nullptr));
         }
     }
     return ability;

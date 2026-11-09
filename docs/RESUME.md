@@ -354,3 +354,22 @@ defaulted constructor. GameRandom.libc now has an explicit default member
 initializer{1}, preserving seed1 and allowing portable aggregate reset. Re-run Mac
 CI before treating trap integration validated. Currency core work is underway;
 see the current working tree and its verify_currency.py report before continuing.
+
+Currency core is now in currency.hpp/cpp, with typed AbilityDefinition.currency_bonus
+and ItemKind::currency10. verify_currency.py matches5,166 actual ctor/factory/
+wallet cases with sprite/UI/config/library boundaries and nextMT8 unchanged.
+15local groups pass. No Session wallet or Currency InventoryItem payload exists
+yet; that is the next integration. Value lives at originalobject1c8, separate
+from quantity9c; factory count override must not multiply money. Base Currency
+quantity1/stackfalse; icon thresholds10/50/250/1000/4000 choosecash0..5. Bonuses
+are positive eligible floats applied sequentially with truncation after each.
+Type zorkmids roll and named zorkmids have different distributions (currency.cpp).
+Give/Take wrap int32 and allowdebt; INT_MIN input has a port guard for original
+infinite delegation. Private currency-and-named-items.txt exportsCtor, Build,
+Give/Take, SteppedOn, PutInInventory and CreateItem(name); loadout-rules.txt confirms
+zorkmidbuff percent/percentage -> float130. Original named lookup is case sensitive
+and searches all four item pools in order, unlike current ambiguity-rejecting
+preview lookup. Native currency validation pending push. Next: Session balance,
+separate currency_value item payload, builtin appended afterLockpick/Spores,
+autopickup/G, savev6 and native wallet/smoke. New typed currency bonus must enter
+ability-content fingerprint with legacy v1..5 hash migration when Session uses it.
