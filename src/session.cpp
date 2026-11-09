@@ -253,7 +253,7 @@ bool Session::cast_spell_recursive(const SpellDefinition& spell,Position origin,
     else for (auto& enemy:enemies_) if (enemy.id==caster) {source=&enemy;break;}
     if (!source) throw std::invalid_argument("spell caster not found");
     for (const auto& effect:spell.effects) {
-        if ((effect.type!="damage" && effect.type!="heal" && effect.type!="trigger") || effect.midas || effect.burn || effect.is_sleeping || effect.regeneration_graphic || !effect.taxa.empty() || !effect.source.children.empty())
+        if ((effect.type!="damage" && effect.type!="heal" && effect.type!="trigger" && effect.type!="spellpoints") || effect.midas || effect.burn || effect.is_sleeping || effect.regeneration_graphic || !effect.taxa.empty() || !effect.source.children.empty())
             throw std::invalid_argument("spell effect execution is not implemented: "+effect.type);
         for (const auto& attribute:effect.source.attributes) {
             auto key=attribute.first;for (auto& c:key) if (c>='A' && c<='Z') c+=32;
@@ -273,6 +273,12 @@ bool Session::cast_spell_recursive(const SpellDefinition& spell,Position origin,
         if (effect.primary_scale< -1 || effect.primary_scale>=6 || (effect.primary_scale==-1 && (effect.secondary_scale<0 || effect.secondary_scale>=24)))
             throw std::invalid_argument("spell scaling attribute outside range");
         if (effect.percent!=100 && random_.libc.next()/21474837>effect.percent) continue;
+        if (effect.type=="spellpoints") {
+            const auto attribute=effect.primary_scale==-1?source->secondary[effect.secondary_scale]:source->primary[effect.primary_scale];
+            const auto mana=resolve_spellpoints(player_.mana,player_.secondary[1],effect.amount,effect.amount_scale,attribute);
+            if (mana<0) throw std::runtime_error("negative spellpoints MP is outside current session save invariants");
+            events_.push_back({EventKind::spell_mana,source->id,player_.id,mana-player_.mana});player_.mana=mana;continue;
+        }
         Actor* victim=same(player_.position,target)?&player_:enemy_at(target);
         if (!victim || !victim->alive()) continue;
         if (effect.type=="heal") {

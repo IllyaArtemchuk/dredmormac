@@ -57,7 +57,7 @@ class Cast(SpellDamage):
         self.string(spell+0x138,'');self.string(spell+0x13c,'')
         array=self.allocate(max(4,len(effects)*0x11c))
         for index,(effect_kind,amount,amount_scale,percent,affects,primary,secondary,unblockable,damage,scaling) in enumerate(effects):
-            effect=array+index*0x11c;self.original.call('__ZN11spellEffectC2Ev',effect);self.write(effect,0 if effect_kind=='damage' else 2)
+            effect=array+index*0x11c;self.original.call('__ZN11spellEffectC2Ev',effect);self.write(effect,{'damage':0,'heal':2,'spellpoints':37}[effect_kind])
             self.write(effect+4,*damage);self.write(effect+0x44,*scaling);self.write(effect+0xcc,percent);self.write(effect+0x88,affects)
             self.write(effect+0xe0,primary);self.write(effect+0xdc,secondary);self.write(effect+0xe4,unblockable)
             self.write(effect+0xd0,amount,amount_scale)

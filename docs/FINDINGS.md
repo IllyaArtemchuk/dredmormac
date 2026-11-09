@@ -1389,3 +1389,17 @@ cycles and delayed/unsupported rollback; all23 local groups pass. Previous4096 m
 cast comparisons still pass. Native trap fixture now triggers a separate damage
 spell, exercising nested casts through movement/resources/save/load. Current source
 awaits MacCI. Continue full spell families, scheduled effects/buffs and level play.
+
+Spellpoints effects (ApplyEffectAt case37) now update global player MP regardless
+of caster/target occupancy, with caster primary/secondary scaling, signed amount
+wrap, positive-only amountF and lower0/upperMaxMP clamps. No current-HP gate applies.
+verify_spellpoints.py matches4096 actual arithmetic cases plus4096 full mixed
+DoActualSpellLoop damage/heal/spellpoints casts, including monster casters, empty
+targets, chance/targeting, HP/MP, request order and libc state. Virtual identities/
+names, damage HP delivery and UI/library remain boundaries; other families/buffs
+and original damage HP/death are excluded. Existing4096 heal cases still pass after
+sharing resource arithmetic. Session emits spell_mana events; nested mana casts,
+clamps, global recipient and save/resume tests pass in23 local groups. Native trap
+fixture now spends3MP before triggering and restores1MP in its damage child, proving
+net2MP per activation through reload. Current mana source awaits MacCI. Immediate
+trigger run42688935604 is inprogress; full game remains unfinished.

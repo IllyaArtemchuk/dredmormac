@@ -15,10 +15,12 @@ void output(const dredmor::SpellEffectDefinition& effect) {
 }
 int main(int argc,char** argv) {
     try {
-        if (argc==2 && std::string(argv[1])=="--heal") {
+        if (argc==2 && (std::string(argv[1])=="--heal" || std::string(argv[1])=="--spellpoints")) {
             std::int32_t current,maximum,amount,attribute;std::uint32_t bits;
             while (std::cin>>current>>maximum>>amount>>bits>>attribute) {
-                float scale;std::memcpy(&scale,&bits,4);std::cout<<dredmor::resolve_healing(current,maximum,amount,scale,attribute)<<'\n';
+                float scale;std::memcpy(&scale,&bits,4);
+                const auto result=std::string(argv[1])=="--heal"?dredmor::resolve_healing(current,maximum,amount,scale,attribute):dredmor::resolve_spellpoints(current,maximum,amount,scale,attribute);
+                std::cout<<result<<'\n';
             }
             return std::cin.eof()?0:1;
         }

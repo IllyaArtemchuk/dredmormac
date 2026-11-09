@@ -565,8 +565,8 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
         [NSUUID.UUID.UUIDString stringByAppendingString:@".dredmor-save"]]];
     try {
         auto fail=[&](const char* stage) {
-            fprintf(stderr,"native traps failed at %s: HP %d/%d, traps %zu, images %lu\n",stage,_session->player().health,
-                _session->player().secondary[0],_session->traps().size(),static_cast<unsigned long>(_trapImages.count));
+            fprintf(stderr,"native traps failed at %s: HP %d/%d, MP %d/%d, traps %zu, images %lu\n",stage,_session->player().health,
+                _session->player().secondary[0],_session->player().mana,_session->player().secondary[1],_session->traps().size(),static_cast<unsigned long>(_trapImages.count));
             for (const auto& trap:_session->traps()) fprintf(stderr,"trap %u: charges %d, discovered %d, pending %d, origin %d,%d/%d, push %u\n",
                 trap.definition,trap.charges,trap.discovered,trap.pending_destruction,trap.origin.x,trap.origin.y,trap.has_origin_object,unsigned(trap.can_push));
             return NO;
@@ -574,7 +574,7 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
         if (_session->traps().size()!=2 || _trapImages.count!=2) return fail("ownership");
         const auto& ceiling=_session->traps()[0];const auto& floor=_session->traps()[1];
         if (ceiling.charges!=1 || !ceiling.discovered || ceiling.pending_destruction || ceiling.room_local_id!="fixture-trap" || ceiling.can_push!=0 ||
-            _session->player().health!=_session->player().secondary[0]-7 || !floor.has_origin_object || floor.origin.x!=1 || floor.origin.y!=2 ||
+            _session->player().health!=_session->player().secondary[0]-7 || _session->player().mana!=_session->player().secondary[1]-2 || !floor.has_origin_object || floor.origin.x!=1 || floor.origin.y!=2 ||
             _session->passable(floor.origin) || !_session->world().passable(floor.origin) || [_trapImages[0][1] frameCount]!=2 || [_trapImages[1][2] frameCount]!=2) return fail("initial activation");
         if (![self smokeSaveLoad]) return fail("save/load");
         std::ostringstream before;_session->save(before);NSArray *images=_trapImages;std::vector<std::string> invalid;
@@ -599,7 +599,7 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
                 windowNumber:self.window.windowNumber context:nil characters:key charactersIgnoringModifiers:key isARepeat:NO keyCode:code];[self keyDown:event];
         }
         if (_session->traps()[0].charges!=0 || !_session->traps()[0].pending_destruction ||
-            _session->player().health!=_session->player().secondary[0]-14 || _session->passable(_session->traps()[1].origin)) return fail("second activation");
+            _session->player().health!=_session->player().secondary[0]-14 || _session->player().mana!=_session->player().secondary[1]-4 || _session->passable(_session->traps()[1].origin)) return fail("second activation");
         return YES;
     } catch(const std::exception& error) {
         [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];fprintf(stderr,"native traps: %s\n",error.what());return NO;

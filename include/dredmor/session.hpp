@@ -31,7 +31,7 @@ struct Actor {
 struct GroundItem { InventoryItem item;Position position; };
 struct RoomLootCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
 struct RoomTrapCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
-enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken,spell_damage,trap_click,trap_triggered,trap_spell_missing,spell_heal };
+enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken,spell_damage,trap_click,trap_triggered,trap_spell_missing,spell_heal,spell_mana };
 struct TurnEvent {
     EventKind kind;
     std::uint64_t actor=0,target=0;

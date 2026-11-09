@@ -24,4 +24,5 @@ SpellDefinition read_spell(const XmlNode& node);
 // Original heal effect arithmetic; signed wrapping and float conversion can
 // produce negative HP for pathological inputs, without a lower clamp.
 std::int32_t resolve_healing(std::int32_t current,std::int32_t maximum,std::int32_t amount,float scale,std::int32_t attribute);
+std::int32_t resolve_spellpoints(std::int32_t current,std::int32_t maximum,std::int32_t amount,float scale,std::int32_t attribute);
 }
