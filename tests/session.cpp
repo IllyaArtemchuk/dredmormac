@@ -60,6 +60,22 @@ int main() {
         check(skipped_xml.first("random")->attribute("libc")=="16807" && bad_object.custom_objects().empty());
         Progression xp;check(!xp.gain(10,10) && xp.experience==10);
         check(xp.gain(1,10) && xp.experience==0 && xp.level==1 && xp.unspent_points==1);
-        std::cout<<"session: attacks, enemy turns, death, pickup, progression and atomic rejection passed\n";
+        auto magic=fixture();enemy.position={2,1};enemy.health=enemy.secondary[0]=6;enemy.secondary[2]=1;magic.spawn_enemy(enemy);
+        auto spell=read_spell(parse_xml("<spell name='Fixture damage' type='target'><effect type='damage' slashing='8' affectsCaster='1'/></spell>"));
+        check(magic.cast_damage_spell(spell,{1,1},{2,1}) && magic.enemies()[0].health==0 && magic.world().turn()==0);
+        check(magic.progression().experience==10 && magic.events()[0].kind==EventKind::spell_damage && magic.events()[1].kind==EventKind::death);
+        auto spell_save=[](const Session& value){std::ostringstream out;value.save(out);return out.str();};
+        magic=fixture();const auto untouched=spell_save(magic);
+        auto partial=read_spell(parse_xml("<spell name='Partial' type='target'><effect type='damage' slashing='2' affectsCaster='1'/><effect type='heal' amount='3'/></spell>"));
+        rejected=false;try {magic.cast_damage_spell(partial,{1,1},{1,1});} catch(const std::invalid_argument&) {rejected=true;}
+        check(rejected && spell_save(magic)==untouched && magic.events().empty());
+        check(!magic.cast_damage_spell(spell,{1,1},{99,99}) && spell_save(magic)==untouched);
+        spell.type="adjacent";check(!magic.cast_damage_spell(spell,{1,1},{3,1}) && spell_save(magic)==untouched);
+        spell.type="self";check(magic.cast_damage_spell(spell,{1,1},{99,99},0,false) && magic.player().health==12);
+        auto chance=read_spell(parse_xml("<spell name='Chance damage' type='target'><effect type='damage' slashing='2' affectsCaster='1' percent='0'/></spell>"));
+        auto zero_chance=fixture();check(zero_chance.cast_damage_spell(chance,{1,1},{1,1}) && zero_chance.player().health==18);
+        chance.effects[0].percent=50;std::istringstream resumed_spell(spell_save(magic));auto magic_copy=Session::load(resumed_spell);
+        for (int i=0;i<8;++i) {magic.cast_damage_spell(chance,{1,1},{1,1});magic_copy.cast_damage_spell(chance,{1,1},{1,1});check(spell_save(magic)==spell_save(magic_copy));}
+        std::cout<<"session: combat/turns, basic damage spells, progression, resumed RNG and atomic rejection passed\n";
     } catch (const std::exception& e) {std::cerr<<e.what()<<'\n';return 1;}
 }

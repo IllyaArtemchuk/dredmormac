@@ -468,3 +468,22 @@ buffs, HP changes, trap movement/native integration and other spell types remain
 unfinished. Private spell-effect-dispatch.txt contains ApplyEffectAt904c0 (~6142
 lines); spell-registration.txt records EndElement/findSpell. ConvertSpellType probes:
 self0,missile1,adjacent2,area3,cone7,target8,targetfloor9,targetmonster22,template24.
+
+Session::cast_damage_spell now connects self/adjacent/target/targetfloor damage
+casts to owned RNG, HP, events/death and existing provisional XP policy, without
+mana/cooldowns/turn scheduling. Unsupported effect/type/buff/mine/attack execution
+fails atomically. verify_spell_cast.py executes2048 full original DoActualSpellLoop
+994e0→ApplyEffectAt904c0 damage→DoSpellDamageca940 paths plus actual empty-buff
+helpers. Hittable/Monster virtual identity/name and HP delivery, VFX/synchronous
+Bob playback/UI/logging/library are boundaries. Accepted targeting, ordered damage
+requests/flags, resulting HP under supplied delivery and libc state match. Original
+HP/death/XP effects and other entity/effect types are not verified by this harness.
+Self/adjacent force allowHaywire=true regardless caller flag; target/targetfloor
+forward it. Damage-effect percent100 skips a chance draw; other values compare
+libc bucket<=percent, so percent0 accepts bucket0. Self applies at origin, not the
+explicit target argument. Adjacent checks wrapping square distance<2. Target
+bounds reject without effect RNG. Session tests cover kills/XP, zero-percent edge,
+self/adjacent bounds, mixed unsupported-effect rollback and resumed chance casts.
+All21 local groups pass. Parser run42640439157 is inprogress; current basic-cast
+source awaits MacCI. Automatic trap movement/casting, spell rules/save identity,
+origin blocker ownership and native trap presentation are the next integration.

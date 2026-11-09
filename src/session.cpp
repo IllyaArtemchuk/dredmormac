@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <limits>
 #include <cstring>
+#include "dredmor/legacy_number.hpp"
 
 namespace dredmor {
 namespace {
@@ -224,6 +225,53 @@ std::optional<std::uint64_t> Session::create_room_monster(const RoomMonsterRecor
     auto actor=constructor(plan,next.random_,next.monster_state_);actor.position=plan.position;
     actor.room_local_id=record.placement.id;actor.can_push=record.placement.can_push;actor.room_spawned=true;
     const auto result=next.spawn_enemy(std::move(actor));*this=std::move(next);return result;
+}
+bool Session::cast_damage_spell(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire) {
+    auto next=*this;next.events_.clear();const auto result=next.cast_damage_spell_impl(spell,origin,target,caster,allow_haywire);*this=std::move(next);return result;
+}
+bool Session::cast_damage_spell_impl(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire) {
+    if (spell.type=="self") target=origin;
+    else if (spell.type=="adjacent") {
+        const auto dx=std::uint32_t(target.x)-std::uint32_t(origin.x),dy=std::uint32_t(target.y)-std::uint32_t(origin.y);
+        const auto bits=dx*dx+dy*dy;std::int32_t distance;std::memcpy(&distance,&bits,4);if (distance>=2) return false;
+    } else if (spell.type!="target" && spell.type!="targetfloor") throw std::invalid_argument("spell dispatch is not implemented: "+spell.type);
+    if (target.x<0 || target.y<0 || target.x>=world_.width() || target.y>=world_.height()) return false;
+    for (const auto& node:spell.source.children) if (node.tag!="effect" && node.tag!="anim" && node.tag!="impact" && node.tag!="description" && node.tag!="requirements")
+        throw std::invalid_argument("spell child execution is not implemented: "+node.tag);
+    for (const auto& attribute:spell.source.attributes) {
+        auto key=attribute.first;for (auto& c:key) if (c>='A' && c<='Z') c+=32;
+        if ((key=="mine" || key=="attack") && legacy_integer(attribute.second)) throw std::invalid_argument("spell mine/attack dispatch is not implemented");
+    }
+    Actor* source=nullptr;if (!caster || caster==player_.id) source=&player_;
+    else for (auto& enemy:enemies_) if (enemy.id==caster) {source=&enemy;break;}
+    if (!source) throw std::invalid_argument("spell caster not found");
+    for (const auto& effect:spell.effects) {
+        if (effect.type!="damage" || effect.midas || effect.burn || effect.is_sleeping || effect.regeneration_graphic || !effect.taxa.empty() || !effect.source.children.empty())
+            throw std::invalid_argument("spell effect execution is not implemented: "+effect.type);
+        for (const auto& attribute:effect.source.attributes) {
+            auto key=attribute.first;for (auto& c:key) if (c>='A' && c<='Z') c+=32;
+            if (key.rfind("requirebuff",0)==0 && legacy_integer(attribute.second)) throw std::invalid_argument("spell buff gate execution is not implemented");
+        }
+        if (effect.primary_scale< -1 || effect.primary_scale>=6 || (effect.primary_scale==-1 && (effect.secondary_scale<0 || effect.secondary_scale>=24)))
+            throw std::invalid_argument("spell scaling attribute outside range");
+        if (effect.percent!=100 && random_.libc.next()/21474837>effect.percent) continue;
+        Actor* victim=same(player_.position,target)?&player_:enemy_at(target);
+        if (!victim || !victim->alive() || (!effect.affects_caster && source->id==victim->id)) continue;
+        SpellDamageInput input;input.haywire=source->secondary[5];input.resist=victim->secondary[11];input.armour=victim->secondary[10];
+        input.scaling_attribute=effect.primary_scale==-1?source->secondary[effect.secondary_scale]:source->primary[effect.primary_scale];
+        input.allow_haywire=allow_haywire || spell.type=="self" || spell.type=="adjacent";
+        input.force_unresisted=effect.unblockable!=0;input.damage=effect.damage;input.scaling=effect.scaling;input.resistance=victim->resistance;
+        const auto result=resolve_spell_damage(input,[&]{return random_.libc.next();});
+        events_.push_back({EventKind::spell_damage,source->id,victim->id,result.total,result.haywire,result.resisted});
+        if (result.total>0) victim->health=std::max(0,victim->health-result.total);
+        if (!victim->alive()) {
+            events_.push_back({EventKind::death,victim->id,source->id});
+            if (source->id==player_.id && victim->id!=player_.id && progression_.gain(victim->experience_reward,experience_n_)) {
+                player_.health=player_.secondary[0];player_.mana=player_.secondary[1];events_.push_back({EventKind::level_up,player_.id,0,progression_.level});
+            }
+        }
+    }
+    return true;
 }
 void Session::take_currency(std::int32_t amount) {auto next=*this;next.currency_transfer_impl(amount,CurrencyOperation::take);*this=std::move(next);}
 void Session::pickup_currency() {

@@ -9,6 +9,7 @@
 #include "dredmor/factory.hpp"
 #include "dredmor/monsters.hpp"
 #include "dredmor/traps.hpp"
+#include "dredmor/spells.hpp"
 #include <memory>
 
 namespace dredmor {
@@ -29,7 +30,7 @@ struct Actor {
 struct GroundItem { InventoryItem item;Position position; };
 struct RoomLootCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
 struct RoomTrapCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
-enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken };
+enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken,spell_damage };
 struct TurnEvent {
     EventKind kind;
     std::uint64_t actor=0,target=0;
@@ -75,6 +76,9 @@ public:
     const MonsterSpawnState& monster_spawn_state() const {return monster_state_;}
     RoomTrapCreation create_room_trap(const RoomTrapRecord& record,const ItemFactoryTables& tables,
         const ItemFactoryContext& context,const TrapMap& map,Position origin={0,0});
+    // Low-level cast: no mana/cooldown/turn scheduling. Unsupported dispatch or
+    // effects fail atomically while the remaining spell engine is implemented.
+    bool cast_damage_spell(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster=0,bool allow_haywire=true);
     void give_currency(std::int32_t amount);
     void take_currency(std::int32_t amount);
     void step(Action action);
@@ -126,6 +130,7 @@ private:
     bool hit_breakable_impl(std::size_t index);
     std::optional<std::uint64_t> create_ground_loot_impl(const ItemFactoryTables& tables,const ItemFactoryContext& context,
         std::string_view type,std::string_view subtype,int quantity,bool artifact,Position position);
+    bool cast_damage_spell_impl(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster,bool allow_haywire);
 };
 Actor make_player(const ClassRanks& ranks,std::string name="Player");
 }
