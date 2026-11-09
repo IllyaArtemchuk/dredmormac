@@ -31,7 +31,7 @@ Verified:
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
 - Eighteen local CTest groups pass, including deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42621347955 passed all twenty-nine checks, including
+- Actual macos-15 arm64 CI run 42624802836 passed all thirty-one checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -283,3 +283,13 @@ pass; all18 local groups and existing2,100 simple factory comparisons pass. Nati
 artifact fixture now uses the real named factory. Ownership run42623376554 is
 queued for a Mac runner; this expanded factory source awaits its own CI push.
 Next: ordered room content/population and complete constructor/interaction effects.
+
+Artifact integration run42624802836 passed all31 Mac checks, including native
+artifact pickup/equip/save and relocated packaging. Earlier ownership run was
+cancelled while queued; this successful descendant validates those changes.
+Ordered RoomDefinition::records now preserves all2,123 recognized records across
+346 supplied rooms, including116 breakables and10 pedestals. Breakable creation/
+AttackSomehow matches1,024 original cases /4,580 requested hits; pedestal creation
+matches1,024 original cases. Sprite/place/id/trigger/transient-animation boundaries
+are explicit. Eighteen local groups pass. Session/native ownership and interaction
+for these new record types are next; full content execution remains unfinished.

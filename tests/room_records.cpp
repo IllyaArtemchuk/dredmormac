@@ -94,6 +94,31 @@ int main() {
         check(rejected && room.cells[30].kind==0);
         definition.source=parse_xml("<room width='5' height='1'><monster at='1'/><loot at='2'/><trap at='3'/><horde at='4'/></room>");
         auto records=definition.population();check(records.size()==4 && records[0].index()==0 && records[1].index()==2 && records[2].index()==1 && records[3].index()==3);
+        auto breakable=read_breakable_room_object(parse_xml("<custombreakable at='3' png='intact.spr' breaking='breaking.spr' broken='broken.spr' hitsNeededToBreak='2' name='Fixture' description='Details' id='break-id' visblock='1'/>"),markers,room);
+        random.seed(1);auto fragile=create_breakable_room_object(breakable,{10,20},random,{3,1,4});
+        check(fragile && fragile->object.position.x==12 && fragile->object.position.y==24 && fragile->object.blocks_movement && fragile->object.blocks_vision);
+        check(fragile->object.frame==0 && !fragile->object.playing && !fragile->object.looping && fragile->single_breaking_delay==10 && random.state()==1);
+        auto hit=hit_breakable(*fragile);check(hit.handled && !hit.broken_now && hit.triggers==std::vector<std::string>({"hit"}) && !hit.animation && fragile->object.frame==1);
+        hit=hit_breakable(*fragile);check(hit.handled && hit.broken_now && hit.triggers==std::vector<std::string>({"hit","broken"}));
+        check(hit.animation && hit.animation->image=="breaking.spr" && fragile->object.sprite.image=="broken.spr" && fragile->object.frame==3);
+        check(!fragile->object.blocks_movement && !fragile->object.blocks_vision && !hit_breakable(*fragile).handled);
+        breakable.hits_taken=2;fragile=create_breakable_room_object(breakable,{0,0},random,{3,1,4});
+        check(fragile && fragile->object.frame==3 && fragile->object.blocks_movement && !hit_breakable(*fragile).handled); // Pre-broken construction retains initial collision.
+        breakable.breaking.reset();breakable.hits_taken=0;fragile=create_breakable_room_object(breakable,{0,0},random,{3,1,4});
+        check(fragile && fragile->breaking.image=="intact.spr" && fragile->frames.breaking==3 && fragile->single_breaking_delay==0);
+        breakable.placement.percent=-1;random.seed(1);check(!create_breakable_room_object(breakable,{0,0},random,{0,0,0}) && random.state()==16807);
+        room.cells[30].kind=0;rejected=false;
+        try {read_breakable_room_object(parse_xml("<custombreakable at='3' png='intact.spr'/>"),markers,room);} catch(const std::invalid_argument&) {rejected=true;}
+        check(rejected && room.cells[30].kind==0);
+        auto pedestal=read_room_pedestal(parse_xml("<pedestal at='3' name='Fixture pedestal' text='Read this' id='pedestal-id' can_push='0'/>"),markers,room);
+        auto podium=create_room_pedestal(pedestal,{10,20},random);
+        check(podium && podium->kind==CustomRoomKind::pedestal && podium->blocks_movement && !podium->blocks_vision && !podium->playing && !podium->looping);
+        check(podium->sprite.image=="dungeon/podium_scroll.png" && podium->description=="Read this" && podium->room_local_id=="pedestal-id" && podium->can_push==0);
+        definition.source=parse_xml("<room width='5' height='1'><loot at='1'/><custombreakable at='2' png='intact.spr' broken='broken.spr'/><script/><customblocker at='3' png='fixture.spr'/><pedestal at='4'/><element x='0' y='0' type='lever'/><clock at='1'/><unknown/></room>");
+        const auto ordered=definition.records();check(ordered.size()==6);
+        check(std::holds_alternative<RoomLootRecord>(ordered[0]) && std::holds_alternative<BreakableRoomDefinition>(ordered[1]) &&
+            std::holds_alternative<CustomRoomDefinition>(ordered[2]) && std::holds_alternative<RoomPedestalRecord>(ordered[3]) &&
+            std::holds_alternative<RoomElementDefinition>(ordered[4]) && std::get<UnimplementedRoomRecord>(ordered[5]).type=="clock");
         std::cout<<"room point resolution, attribute consumption, marker floors and nested script references passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

@@ -1057,3 +1057,38 @@ mark the weapon flag, while random weapon selection does; armour ignores it.
 All18 local groups and existing2,100 simple factory comparisons pass. Native
 artifact fixture now uses named factory. Ownership Mac run42623376554 is queued;
 expanded factory native validation is pending. Full room population remains next.
+
+## Ordered room records, breakables and pedestals
+
+RoomObjectRecordFrom1a3ef0 recognizes12 exact lower-case types: customblocker,
+customengraving, custombreakable, trap, monster, pedestal, element, loot, horde,
+lever, clock, magicblocker. RoomDefinition::records preserves their source order;
+last three retain raw pending definitions. Scripts have a separate original list.
+Independent XML checks match all2,123 records across346 supplied rooms, including
+116 breakable and10 pedestal metadata definitions. This is not an original whole
+XML-parser execution comparison. Unknown metadata remains on RoomDefinition.source.
+
+Breakable construction uses normal/breaking/broken SpriteRecord; missing breaking
+falls back to normal. Build changes one-frame breaking delay to10. Intact state
+usesframe0, initially broken useslastbrokenframe; both animation flags are0. The
+constructor still blocks movement when initially broken. Passable/vis overrides
+apply through CustomRecord's actual virtual finalizer (2653a8+10 points1a0290),
+after construction. AttackSomehow increments hits only if not alreadybroken,
+emits hit then optionally broken, usesmin(hits,intactframes-1) when intact, and
+onbreak records a transient breaking animation before selecting static lastbroken
+frame, clears movement/vision and stops animation. Alreadybroken returns0 unchanged.
+
+verify_breakable.py matches1,024 original full record/constructor/GameObj/Build/
+finalizer/AttackSomehow cases /4,580 requested hits. SpriteRecord resources, virtual
+placement/id, script events and PlayOnBob are boundaries; compares appearance,
+libc/unchangedMT, hitcounts, coords/labels/id/push, overrides, frames/flags/delay,
+trigger order and animation request. No custom contained item is modeled (original
+custom constructor sets it0); trigger execution/rendering/scheduling are excluded.
+
+Pedestal defaults PNGdungeon/podium_scroll.png/keyPedestal_ext, movementblocked,
+visionclear, stoppedframe0. Name/text and commonfinalizer metadata survive.
+verify_pedestal.py matches1,024 full original record/constructor/finalizer calls
+with sprite/place/id boundaries and unchanged MT. Eighteen local groups pass;
+session/save/native integration of these new types remains next. Artifact factory
+run42624802836 passed all31 native checks/package; older ownership run cancelled
+whilequeued, successful descendant validates all prior artifact changes.

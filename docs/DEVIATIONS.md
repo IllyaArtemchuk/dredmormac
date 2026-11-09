@@ -34,7 +34,8 @@
 - Class-rank primary and secondary stats match original controlled fixtures.
   Base passive abilities now have controlled original comparisons and session
   integration. Weapon-family abilities and active effects remain incomplete.
-  Basic equipment aggregation exists; complete artifacts, encrusting,
+  Measured artifact construction/equipment and unique weapon selection are integrated;
+  complete constructor side effects, encrusting,
   dual-wield, buffs and polymorph aggregation remain incomplete/unverified.
 - Catalog loading preserves sources and monster ancestry. It does not implement
   expansion override rules. Known monster numeric/sprite fields inherit parent

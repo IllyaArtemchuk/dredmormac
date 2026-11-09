@@ -48,6 +48,23 @@ std::vector<RoomPopulationRecord> RoomDefinition::population() const {
     }
     return result;
 }
+std::vector<RoomRecord> RoomDefinition::records() const {
+    auto numeric=numeric_template();RoomMarkers markers;
+    for (std::size_t y=0;y<rows.size();++y) for (std::size_t x=0;x<std::min(rows[y].size(),std::size_t(numeric.width));++x)
+        if (rows[y][x]>='1' && rows[y][x]<='9') markers[rows[y][x]]={int(x),int(y)};
+    std::vector<RoomRecord> result;
+    for (const auto& node:source.children) {
+        const auto tag=ascii_lower(node.tag);
+        if (tag=="customblocker" || tag=="customengraving") result.emplace_back(read_custom_room_object(node,markers,numeric));
+        else if (tag=="custombreakable") result.emplace_back(read_breakable_room_object(node,markers,numeric));
+        else if (tag=="pedestal") result.emplace_back(read_room_pedestal(node,markers,numeric));
+        else if (tag=="element") result.emplace_back(read_room_element(node,markers,numeric));
+        else if (tag=="monster" || tag=="trap" || tag=="loot" || tag=="horde")
+            std::visit([&](auto&& record){result.emplace_back(std::move(record));},read_room_population(node,markers,numeric));
+        else if (tag=="lever" || tag=="clock" || tag=="magicblocker") result.emplace_back(UnimplementedRoomRecord{tag,node});
+    }
+    return result;
+}
 RoomStamp RoomDefinition::numeric_template() const {
     const auto width=legacy_attribute(source,"width"),height=legacy_attribute(source,"height");
     if (!width || !height || *width<1 || *height<1 || *width>512 || *height>512 || rows.size()>std::size_t(*height))
@@ -97,7 +114,7 @@ RoomStamp RoomDefinition::numeric_template() const {
             return std::string{};
         };
         if (tag=="customblocker" || tag=="customengraving" || tag=="custombreakable" || tag=="trap" || tag=="monster" ||
-            tag=="pedestal" || tag=="element" || tag=="loot" || tag=="horde") prefix="";
+            tag=="pedestal" || tag=="element" || tag=="loot" || tag=="horde" || tag=="lever" || tag=="clock" || tag=="magicblocker") prefix="";
         if (tag=="condition" && value("condition_type")=="at") prefix="";
         if (tag=="action") {
             const auto type=value("action_type");

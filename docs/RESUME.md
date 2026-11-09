@@ -504,3 +504,30 @@ v7 empty state. Native artifact fixture now marks synthetic cap namedartifact an
 uses real factory (no explicit quality bypass). Ownership run42623376554 queued
 for runner (13:12UTC); factory changes still await push/CI. Next: ordered room
 content execution/population and complete constructor effects/interactions.
+
+Artifact run42624802836 passed31 native checks/package, including new artifact
+window; job129185710082. Ownership42623376554 was cancelled whilequeued, not a
+source failure. Latest successful descendant includes full artifact factory.
+RoomDefinition.records now returns recognized object records in XML order, scripts
+separate. BreakableRoomDefinition/RoomPedestalRecord typed, lever/clock/magicblocker
+are retained UnimplementedRoomRecord (none in supplied rooms). All2,123 records /
+346 rooms independently match order/common metadata;116 breakable and10 pedestal
+metadata compare. numeric_template now recognizes point properties for all12 tags.
+BreakableRoomObject has base appearance, intact/breaking/broken sprites/counts,
+hits, single-breaking-delay override10 whenoneframe. Constructor defaults stopped,
+initial broken selects lastbrokenframe but retains movement block until hit causes
+break (unlesspassableoverride). CustomRecord virtual finalizer applies passable/
+vis overrides even tobreakables; vtable2653a8+10=1a0290 confirms. Hits addone, hit
+thenbroken events, nonbrokenframe=min(hits,currentframes-1), breaking animation
+request then static lastbrokenframe/collision0. Alreadybrokenreturns0 unchanged.
+verify_breakable.py matches1,024 original fullrecord/Ctor/Build/finalizer/hit cases /
+4,580 hits, SpriteRecord lookup/place/id/script-events/PlayOnBob boundaries; MT
+unchanged. Includes arbitrary signedhitcounts/coords, optionalbreakingfallback and
+framecounts, overrides. Custom contained-item path omitted (ctor initializes0).
+Pedestal typed name/text, PNGdungeon/podium_scroll.png, blockedmovement/clearvision,
+stoppedframe0; verify_pedestal.py matches1,024 fullrecord/ctor/finalizer cases with
+sprite/place/id boundaries. Eighteen local groups pass. New source awaits MacCI.
+Next: Session ownership/collision/save/native rendering and hit handling, ordered
+room content execution, full monster/trap/horde/element constructors/interactions.
+Private breakable-and-pedestal-records.txt/breakable-runtime.txt/breakable-attack.txt
+exports. Do not commit original resources or private analysis output.

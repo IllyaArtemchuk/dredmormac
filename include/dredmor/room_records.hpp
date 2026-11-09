@@ -45,7 +45,7 @@ RoomElementDefinition read_room_element(const XmlNode& node,const RoomMarkers& m
 // Creation dispatch only. Constructors/finalization can consume additional RNG
 // and have entity effects that are not performed by this planning function.
 RoomElementPlan plan_room_element(const RoomElementDefinition& definition,Position origin,DarwinRandom& random);
-enum class CustomRoomKind { blocker,engraving };
+enum class CustomRoomKind { blocker,engraving,breakable,pedestal };
 struct CustomRoomDefinition {
     RoomObjectPlacement placement;
     CustomRoomKind kind=CustomRoomKind::blocker;
@@ -67,6 +67,37 @@ CustomRoomDefinition read_custom_room_object(const XmlNode& node,const RoomMarke
 // Basic constructor/metadata/collision state. Sprite I/O, tile/list registration,
 // room-id binding and subsequent interactions belong to the owning level.
 std::optional<CustomRoomObject> create_custom_room_object(const CustomRoomDefinition& definition,Position origin,DarwinRandom& random);
+struct BreakableRoomDefinition {
+    RoomObjectPlacement placement;
+    RoomSprite intact,broken;
+    std::optional<RoomSprite> breaking;
+    std::string name,description;
+    int hits_needed=1,hits_taken=0;
+    // Applied by CustomRecord's virtual finalizer after construction.
+    std::optional<bool> passable,vis_block;
+};
+struct BreakableFrames {std::uint16_t intact=1,breaking=1,broken=1;};
+struct BreakableRoomObject {
+    CustomRoomObject object;
+    RoomSprite intact,breaking,broken;
+    BreakableFrames frames;
+    int hits_needed=1,hits_taken=0;
+    std::uint16_t single_breaking_delay=0;
+};
+struct BreakableHit {
+    bool handled=false,broken_now=false;
+    std::vector<std::string> triggers;
+    std::optional<RoomSprite> animation;
+};
+BreakableRoomDefinition read_breakable_room_object(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room);
+std::optional<BreakableRoomObject> create_breakable_room_object(const BreakableRoomDefinition& definition,
+    Position origin,DarwinRandom& random,BreakableFrames frames={});
+// Basic custom breakables contain no item. Trigger/animation dispatch belongs to
+// the owner; this applies the original hit count, frame and collision transition.
+BreakableHit hit_breakable(BreakableRoomObject& object);
+struct RoomPedestalRecord {RoomObjectPlacement placement;std::string name,text;};
+RoomPedestalRecord read_room_pedestal(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room);
+std::optional<CustomRoomObject> create_room_pedestal(const RoomPedestalRecord& definition,Position origin,DarwinRandom& random);
 struct RoomMonsterRecord {RoomObjectPlacement placement;std::string name;};
 struct RoomTrapRecord {RoomObjectPlacement placement;std::string name;};
 struct RoomLootRecord {RoomObjectPlacement placement;std::string type,subtype="random";int amount=1;bool artifact=false;};
@@ -84,4 +115,7 @@ RoomPopulationRecord read_room_population(const XmlNode& node,const RoomMarkers&
 // Ordered request planning only: database resolution, constructors, loot factory,
 // random spawn/horde selection, entity flags and finalization remain external.
 RoomPopulationPlan plan_room_population(const RoomPopulationRecord& record,Position origin,DarwinRandom& random);
+struct UnimplementedRoomRecord {std::string type;XmlNode source;};
+using RoomRecord=std::variant<CustomRoomDefinition,BreakableRoomDefinition,RoomPedestalRecord,RoomElementDefinition,
+    RoomMonsterRecord,RoomTrapRecord,RoomLootRecord,RoomHordeRecord,UnimplementedRoomRecord>;
 }

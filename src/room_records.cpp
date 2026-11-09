@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <cstring>
 #include <type_traits>
+#include <algorithm>
 
 namespace dredmor {
 namespace {
@@ -130,6 +131,57 @@ std::optional<CustomRoomObject> create_custom_room_object(const CustomRoomDefini
     result.can_push=definition.placement.can_push;
     result.blocks_movement=!definition.passable.value_or(definition.kind==CustomRoomKind::engraving);
     result.blocks_vision=definition.vis_block.value_or(false);
+    random=candidate;return result;
+}
+BreakableRoomDefinition read_breakable_room_object(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room) {
+    if (lower(node.tag)!="custombreakable") throw std::invalid_argument("expected custom breakable");
+    auto candidate=room;auto attributes=node.attributes;const auto intact=take_room_sprite(attributes),breaking=take_room_sprite(attributes,"breaking"),broken=take_room_sprite(attributes,"broken");
+    if (!intact || !broken) throw std::invalid_argument("breakable requires intact and broken sprites");
+    BreakableRoomDefinition result;result.placement=placement(node,markers,candidate);result.intact=*intact;result.breaking=breaking;result.broken=*broken;
+    result.name=attribute(node,"name").value_or("");result.description=attribute(node,"description").value_or("");
+    result.hits_needed=legacy_integer(attribute(node,"hitsneededtobreak").value_or("1"));result.hits_taken=legacy_integer(attribute(node,"hitstaken").value_or("0"));
+    if (const auto value=attribute(node,"passable")) result.passable=legacy_integer(*value)!=0;
+    if (const auto value=attribute(node,"visblock")) result.vis_block=legacy_integer(*value)!=0;
+    room=std::move(candidate);return result;
+}
+std::optional<BreakableRoomObject> create_breakable_room_object(const BreakableRoomDefinition& definition,
+    Position origin,DarwinRandom& random,BreakableFrames frames) {
+    auto candidate=random;if (!appears(definition.placement.percent,candidate)) {random=candidate;return std::nullopt;}
+    if (!definition.breaking) frames.breaking=frames.intact;
+    if (!frames.intact || !frames.breaking || !frames.broken) throw std::invalid_argument("breakable sprites require frames");
+    auto normalize=[](RoomSprite sprite){if (!sprite.series.empty()) sprite.image.clear();return sprite;};
+    BreakableRoomObject result;result.intact=normalize(definition.intact);result.breaking=normalize(definition.breaking.value_or(definition.intact));result.broken=normalize(definition.broken);
+    result.hits_needed=definition.hits_needed;result.hits_taken=definition.hits_taken;result.frames=frames;
+    result.single_breaking_delay=frames.breaking==1?10:0;
+    auto& object=result.object;object.kind=CustomRoomKind::breakable;object.position={add(origin.x,definition.placement.relative.x),add(origin.y,definition.placement.relative.y)};
+    object.name=definition.name;object.description=definition.description;object.room_local_id=definition.placement.id;object.can_push=definition.placement.can_push;
+    object.blocks_movement=!definition.passable.value_or(false);object.blocks_vision=definition.vis_block.value_or(false);object.playing=object.looping=false;
+    const bool broken=result.hits_taken>=result.hits_needed;object.sprite=broken?result.broken:result.intact;object.frame=broken?frames.broken-1:0;
+    random=candidate;return result;
+}
+BreakableHit hit_breakable(BreakableRoomObject& object) {
+    BreakableHit result;if (object.hits_taken>=object.hits_needed) return result;
+    if (!object.frames.intact || !object.frames.breaking || !object.frames.broken) throw std::invalid_argument("breakable sprites require frames");
+    auto next=object;result.handled=true;next.hits_taken=add(next.hits_taken,1);result.triggers.push_back("hit");
+    result.broken_now=next.hits_taken>=next.hits_needed;
+    if (result.broken_now) {
+        result.triggers.push_back("broken");result.animation=next.breaking;next.object.sprite=next.broken;
+        next.object.frame=next.frames.broken-1;next.object.blocks_movement=next.object.blocks_vision=false;
+        next.object.playing=next.object.looping=false;
+    } else next.object.frame=std::uint32_t(std::min(next.hits_taken,int(next.frames.intact)-1));
+    object=std::move(next);return result;
+}
+RoomPedestalRecord read_room_pedestal(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room) {
+    if (lower(node.tag)!="pedestal") throw std::invalid_argument("expected pedestal");
+    auto candidate=room;RoomPedestalRecord result;result.placement=placement(node,markers,candidate);
+    result.name=attribute(node,"name").value_or("");result.text=attribute(node,"text").value_or("");room=std::move(candidate);return result;
+}
+std::optional<CustomRoomObject> create_room_pedestal(const RoomPedestalRecord& definition,Position origin,DarwinRandom& random) {
+    auto candidate=random;if (!appears(definition.placement.percent,candidate)) {random=candidate;return std::nullopt;}
+    CustomRoomObject result;result.kind=CustomRoomKind::pedestal;
+    result.position={add(origin.x,definition.placement.relative.x),add(origin.y,definition.placement.relative.y)};
+    result.name=definition.name;result.description=definition.text;result.room_local_id=definition.placement.id;result.can_push=definition.placement.can_push;
+    result.sprite.image="dungeon/podium_scroll.png";result.blocks_movement=true;result.blocks_vision=false;result.playing=result.looping=false;
     random=candidate;return result;
 }
 RoomPopulationRecord read_room_population(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room) {

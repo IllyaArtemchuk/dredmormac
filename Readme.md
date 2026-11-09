@@ -163,3 +163,9 @@ build/dredmor-artifact --out PRIVATE_REPORT.json`; metadata uses
 with explicit Buff-constructor/item-text boundaries. Artifact instances support ground/inventory/equipment ownership and save persistence;
 artifact factory selection/quality and unique weapon flags are integrated. Complete
 constructor side effects and full room population remain pending.
+
+Ordered room records include typed breakables and pedestals. Compare primitives
+with `verify_breakable.py ORIGINAL_BINARY build/dredmor-breakable --content DATA_ROOT
+--out PRIVATE_REPORT.json` and `verify_pedestal.py ORIGINAL_BINARY build/dredmor-pedestal
+--out PRIVATE_REPORT.json`. Constructor/hit state matches explicit sprite/event
+boundaries; their owning session/native interaction remains under development.

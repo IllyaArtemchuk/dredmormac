@@ -24,6 +24,9 @@ struct RoomDefinition {
     std::vector<RoomElementDefinition> elements() const;
     std::vector<CustomRoomDefinition> custom_objects() const;
     std::vector<RoomPopulationRecord> population() const;
+    // All recognized object records in original source order. Scripts have a
+    // separate list; lever/clock/magicblocker retain raw pending definitions.
+    std::vector<RoomRecord> records() const;
 };
 class GameContent {
 public:
