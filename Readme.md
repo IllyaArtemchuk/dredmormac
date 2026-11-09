@@ -86,11 +86,17 @@ Arrow keys move or attack; `.` waits; G picks up and I opens inventory.
 Select an item and target slot, then Equip; select equipped gear to Unequip.
 Command-S saves the current port session;
 Command-O loads a port save for the same prepared room. Selected skills and
-passive abilities persist in version-three port saves; earlier port saves still load with item-type migration. Malformed saves fail
+passive abilities and custom room objects persist in version-four port saves; earlier port saves still load with item-type migration. Malformed saves fail
 before replacing the current state. These saves are not original .sav files.
 Closing the window quits. Normal installation startup grants the selected skills’ starting items and
 class clothes. Prepared developer scenes keep empty loadouts unless configured.
-The UI remains a developer room/encounter view.
+Custom blockers and engravings now load their SPR/PNG-series graphics and affect
+movement. The UI remains a developer room/encounter view. Full seeded-level
+population and original visual/animation parity remain unfinished.
+
+The portable session harness accepts `--room-objects` to populate the starting
+preview's custom objects using the session RNG. This integration does not include
+the preceding full-level generator consumption or intervening object constructors.
 
 Direct installation startup passes its synthetic native fixture check. The current preview still omits original room scripts, population
 and decoration.

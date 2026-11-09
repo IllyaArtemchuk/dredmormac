@@ -119,6 +119,7 @@ CustomRoomDefinition read_custom_room_object(const XmlNode& node,const RoomMarke
     room=std::move(candidate);return result;
 }
 std::optional<CustomRoomObject> create_custom_room_object(const CustomRoomDefinition& definition,Position origin,DarwinRandom& random) {
+    if (definition.kind!=CustomRoomKind::blocker && definition.kind!=CustomRoomKind::engraving) throw std::invalid_argument("invalid custom room object kind");
     auto candidate=random;
     if (!appears(definition.placement.percent,candidate)) {random=candidate;return std::nullopt;}
     CustomRoomObject result;result.kind=definition.kind;

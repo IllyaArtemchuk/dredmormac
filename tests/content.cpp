@@ -13,6 +13,9 @@ int main(int argc,char** argv) {
         check(world.player().x==3 && world.player().y==1);
         check(content.starting_ranks({0,1,2,3,4,5,6})==dredmor::ClassRanks({3,2,2}));
         const auto loadout=content.starting_loadout({6,5,4,3,2,1,0});
+        const auto static_room=content.room("Starting Room").instantiate(),dynamic_room=content.room("Starting Room").instantiate(false);
+        check(!static_room.passable({3,2}) && dynamic_room.passable({3,2}));
+        check(static_room.player().x==dynamic_room.player().x && static_room.player().y==dynamic_room.player().y);
         check(loadout.size()==2 && loadout[0].skill_id==0 && loadout[0].item.amount==1);
         check(loadout[1].skill_id==1 && loadout[1].item.always && loadout[1].item.subtype=="Fixture");
         auto enemy=content.make_monster("Fixture variant",{2,1},dredmor::Difficulty::medium);

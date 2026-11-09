@@ -30,7 +30,7 @@ Verified:
 - Room-placement collision: 69,632 original executions match.
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
-- Eleven local CTest groups pass, including deterministic session and save/load tests.
+- Thirteen local CTest groups pass, including deterministic session and save/load tests.
 - Actual macos-15 arm64 CI run 42597407998 passed all nineteen checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
@@ -58,8 +58,9 @@ content definitions. Combat-window CI and portable development app packaging pas
 Direct SPR animation passes Mac CI. Native save/load controls and atomic reload
 checks pass on actual Mac CI. Room-placement collision now matches 69,632
 original executions. Cell stamping matches 1,024 original loop executions; all
-346 numeric room templates match independent ingestion. Full seeded generation,
-room records, naming and content/script population remain pending.
+346 numeric room templates match independent ingestion. Seeded numeric geometry,
+room records and naming now have controlled original comparisons. Full-level
+session integration and content/script population remain pending.
 DoRandomize and seed flow are identified; decision/arithmetic combat rules are
 compared, while complete DoCombat/triggers and original HP/death side-effect
 comparisons remain unfinished. Session HP/death behavior exists but is not yet
@@ -167,3 +168,12 @@ finalizers, with sprite/placement/id/list boundaries. Sprite property parsing
 matches1,024 executions; all992 supplied custom definitions pass ingestion.
 Thirteen local groups pass. Owning-level/session/render integration is next;
 other record classes, scripted interactions and full population remain incomplete.
+
+Custom-object run42607026309 passed native validation/package smoke. Session now
+owns custom objects, applies their movement collision to players/enemy routes and
+persists all modeled fields/RNG in save v4 (v1..3 still read). Native startup and
+prepared scenes can populate/render original SPR/PNG-series objects. Thirteen
+local groups, 2,292 original object states (also unchanged MT stream), 992 metadata
+definitions and256 starting characters pass. New native object fixture and atomic
+asset-load checks await Mac CI. Preview construction still omits full generator
+RNG and intervening object constructors; complete content parity is not claimed.

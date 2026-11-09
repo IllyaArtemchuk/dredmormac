@@ -1,7 +1,7 @@
 <roomdb>
   <room name="Starting Room" width="7" height="5">
-    <row text="#######"/><row text="#.....#"/><row text="#..b..#"/>
+    <row text="#######"/><row text="#.....#"/><row text="#..1..#"/>
     <row text="#.....#"/><row text="#######"/>
-    <customblocker at="b"/>
+    <customblocker at="1" png="dungeon/fixture.spr"/>
   </room>
 </roomdb>

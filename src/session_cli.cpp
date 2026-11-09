@@ -13,12 +13,12 @@ template<class T> T integer(std::string_view text) {
 }
 int main(int argc,char** argv) {
     if (argc<3) {
-        std::cerr<<"Usage: dredmor-session DATA_ROOT ACTIONS [DEVELOPER_ENCOUNTER_MONSTER] [--skills ID,ID,...] [--seed UINT32]\nActions: NSWE. and G for pickup\n";return 2;
+        std::cerr<<"Usage: dredmor-session DATA_ROOT ACTIONS [DEVELOPER_ENCOUNTER_MONSTER] [--skills ID,ID,...] [--seed UINT32] [--room-objects]\nActions: NSWE. and G for pickup\n";return 2;
     }
     try {
         auto content=dredmor::GameContent::load(argv[1]);
         std::vector<int> selected;
-        std::string encounter;std::uint32_t seed=0xD0ED;bool explicit_skills=false;
+        std::string encounter;std::uint32_t seed=0xD0ED;bool explicit_skills=false,room_objects=false;
         for (int i=3;i<argc;++i) {
             const std::string option=argv[i];
             if (option=="--skills") {
@@ -27,17 +27,19 @@ int main(int argc,char** argv) {
                 while (std::getline(input,part,',')) selected.push_back(integer<int>(part));
             } else if (option=="--seed") {
                 if (++i==argc) throw std::invalid_argument("missing seed");seed=integer<std::uint32_t>(argv[i]);
-            } else if (!option.empty() && option[0]!='-' && encounter.empty()) encounter=option;
+            } else if (option=="--room-objects") room_objects=true;
+            else if (!option.empty() && option[0]!='-' && encounter.empty()) encounter=option;
             else throw std::invalid_argument("unknown or repeated encounter/option");
         }
         if (!explicit_skills) for (const auto& skill:content.skills()) if (selected.size()<7) selected.push_back(skill.id);
-        auto world=content.room("Starting Room").instantiate();
+        auto world=content.room("Starting Room").instantiate(!room_objects);
         auto session=dredmor::create_character(content,std::move(world),selected,seed);
+        if (room_objects) for (const auto& definition:content.room("Starting Room").custom_objects()) session.create_custom_object(definition);
         if (!encounter.empty()) {
             bool spawned=false;
             for (int y=0;y<session.world().height() && !spawned;++y) for (int x=0;x<session.world().width() && !spawned;++x) {
                 auto hero_position=session.player().position;
-                if (session.world().passable({x,y}) && std::abs(x-hero_position.x)+std::abs(y-hero_position.y)==1) {
+                if (session.passable({x,y}) && std::abs(x-hero_position.x)+std::abs(y-hero_position.y)==1) {
                     session.spawn_enemy(content.make_monster(encounter,{x,y},dredmor::Difficulty::medium));spawned=true;
                 }
             }

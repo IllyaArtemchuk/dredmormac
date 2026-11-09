@@ -33,11 +33,15 @@ int main(int argc,char** argv) {
             original.step(action);loaded.step(action);
             check(original.snapshot()==loaded.snapshot() && saved(original)==saved(loaded));
         }
-        auto invalid=text;auto p=invalid.find("version=\"3\"");invalid.replace(p,11,"version=\"4\"");reject(invalid);
-        auto legacy=text;legacy.replace(legacy.find("version=\"3\""),11,"version=\"1\"");
+        auto invalid=text;auto p=invalid.find("version=\"4\"");invalid.replace(p,11,"version=\"5\"");reject(invalid);
+        auto legacy=text;legacy.replace(legacy.find("version=\"4\""),11,"version=\"1\"");
         p=legacy.find("<skills ");const auto end=legacy.find("</skills>\n",p);check(p!=std::string::npos && end!=std::string::npos);
         legacy.erase(p,end+10-p);std::istringstream legacy_input(legacy);auto legacy_loaded=Session::load(legacy_input);
         check(saved(legacy_loaded)==text);
+        auto version_three=text;version_three.replace(version_three.find("version=\"4\""),11,"version=\"3\"");
+        p=version_three.find("<custom-objects>");const auto objects_end=version_three.find("</custom-objects>\n",p);
+        check(p!=std::string::npos && objects_end!=std::string::npos);version_three.erase(p,objects_end+18-p);
+        std::istringstream version_three_input(version_three);check(saved(Session::load(version_three_input))==text);
         invalid=text;p=invalid.find("index=\"624\"");check(p!=std::string::npos);invalid.replace(p,11,"index=\"626\"");reject(invalid);
         invalid=text;p=invalid.find("<enemy id=\"2\"");check(p!=std::string::npos);invalid.replace(p,13,"<enemy id=\"1\"");reject(invalid);
         reject("<!DOCTYPE d [<!ENTITY x 'bad'>]>"+text);reject("<dredmor-session/>");
@@ -111,6 +115,24 @@ int main(int argc,char** argv) {
         wands.inventory().insert(wand_instance);
         std::istringstream wand_input(saved(wands));auto wand_loaded=Session::load(wand_input,wand_definitions);
         check(wand_loaded.inventory().find(900)->charges==0 && saved(wand_loaded)==saved(wands));
+        auto decorated=fixture();CustomRoomDefinition object;object.placement.relative={3,2};object.placement.can_push=2;
+        object.placement.id="fixture<&>\"";object.name="Fixture<&>\"\n";object.description="Details & more";
+        object.sprite.series="dungeon/fixture";object.sprite.first=2;object.sprite.count=3;object.sprite.rate=150;
+        object.passable=true;object.vis_block=true;decorated.create_custom_object(object);
+        const auto decorated_text=saved(decorated);std::istringstream decorated_input(decorated_text);auto decorated_loaded=Session::load(decorated_input);
+        check(saved(decorated_loaded)==decorated_text && decorated_loaded.snapshot()==decorated.snapshot());
+        check(decorated_loaded.custom_objects().size()==1 && decorated_loaded.custom_objects()[0].can_push==2);
+        check(decorated_loaded.custom_objects()[0].name==object.name && !decorated_loaded.custom_objects()[0].blocks_movement && decorated_loaded.custom_objects()[0].blocks_vision);
+        for (int i=0;i<20;++i) {
+            object.placement.percent=60;object.placement.relative={4,2};
+            check(decorated.create_custom_object(object)==decorated_loaded.create_custom_object(object));
+            check(saved(decorated)==saved(decorated_loaded));
+        }
+        for (const auto& replacement:std::vector<std::pair<std::string,std::string>>{{"kind=\"0\"","kind=\"2\""},{"push=\"2\"","push=\"256\""},
+             {"movement=\"0\"","movement=\"2\""},{"x=\"3\" y=\"2\"","x=\"99\" y=\"2\""},{"count=\"3\"","count=\"bad\""}}) {
+            auto malformed=decorated_text;const auto field=malformed.find(replacement.first,malformed.find("<object "));
+            check(field!=std::string::npos);malformed.replace(field,replacement.first.size(),replacement.second);reject(malformed);
+        }
         std::cout<<"save/load: exact state, future random turns, equipment, escaping and malformed-input rejection passed\n";
     } catch (const std::exception& e) {std::cerr<<e.what()<<'\n';return 1;}
 }

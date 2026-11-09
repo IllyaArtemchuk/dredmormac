@@ -54,7 +54,11 @@ class CustomObjects(GeometryOracle):
         self.machine.mem_write(record+0x24,bytes([int(bool(passable)),int(passable is not None)]))
         self.machine.mem_write(record+0x40,bytes([int(bool(vis)),int(vis is not None)]))
         level=self.original.scratch;self.machine.mem_write(level,bytes(0x100));self.write(self.original.address('_curLevel'),level)
+        self.original.call('__Z12init_genrandm',seed)
+        expected_mt=[self.original.call('__Z13genrand_int32v') for _ in range(8)]
+        self.original.call('__Z12init_genrandm',seed)
         accepted=self.original.call('__ZN19CustomBlockerRecord13CreateInLevelEiiP5Level' if kind==0 else '__ZN21CustomEngravingRecord13CreateInLevelEiiP5Level',record,*origin,level,budget=1000000)
+        if [self.original.call('__Z13genrand_int32v') for _ in range(8)]!=expected_mt:raise AssertionError('custom object unexpectedly consumed MT RNG')
         output=[accepted,self.state]
         if not accepted:
             if self.object or self.sprite or self.bound_id or self.registered:raise AssertionError('appearance rejection had side effects')

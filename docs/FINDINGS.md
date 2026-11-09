@@ -719,3 +719,35 @@ RoomDefinition::custom_objects exposes typed definitions. Independent ingestion
 matches all992 blockers/engravings across346 supplied rooms. Thirteen local
 groups pass, including sprite conflicts/partial keys, defaults/overrides, gate
 RNG and atomic reader failures. New custom-object integration awaits native CI.
+
+Run42607026309 (4c1ad45) passed native validation and packaging.
+
+## Session ownership, persistence and custom-object rendering
+
+Session now owns custom objects and uses their measured movement flag for player
+steps, new enemy spawns and BFS routes. Appearance consumes the session's libc
+stream atomically; invalid positions/budgets do not commit state/RNG. Core world
+tiles remain separate from dynamic object collision. Preview room preparation
+can leave custom collision to Session while retaining its existing preview spawn.
+The portable CLI exposes this path with --room-objects. Full generation, object
+ordering/RNG across other record classes, original scheduling and pushing remain
+separate/unverified.
+
+Save v4 serializes custom type, position, labels/id, push/collision flags, sprite
+metadata and modeled animation fields, plus existing full RNG/session state.
+Reads v1/v2/v3; old swapped item-type migration applies only to v1/v2. Tests cover
+exact object roundtrip, future appearance draws, v3 normalization and malformed
+type/flag/position/number rejection. Thirteen portable groups pass; 256 supplied
+starting-character initializations pass again. Custom-object original comparison
+now also confirms the next eight MT outputs are unchanged in all2,292 fixtures.
+
+Native startup populates the starting preview's custom objects after character
+creation and draws SPR or zero-padded PNG sequences, resolving all resources
+within the selected data root. Fourteen original starting-room files/frames exist
+under the supplied root. Save reload prepares all object images before committing
+either session or image caches. The synthetic native object fixture checks SPR
+and PNG animation, blocked movement, exact save/reload and atomic rejection of
+invalid object resource paths. Actual native execution is pending this push.
+PNG sequence timing and drawing order remain presentation policy, not original
+visual parity. Preview still omits preceding full-level RNG consumption and other
+record constructors, so appearance sequences are not full-game verified.

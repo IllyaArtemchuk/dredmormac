@@ -149,5 +149,12 @@ if(APPLE)
     add_test(NAME native-inventory-window COMMAND $<TARGET_FILE:DredmorMac>
       ${CMAKE_BINARY_DIR}/native-inventory/scene.json --smoke-test)
     set_tests_properties(native-inventory-window PROPERTIES FIXTURES_REQUIRED native-inventory TIMEOUT 15)
+    add_test(NAME native-objects-fixture COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-objects
+      --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --objects)
+    set_tests_properties(native-objects-fixture PROPERTIES FIXTURES_SETUP native-objects)
+    add_test(NAME native-objects-window COMMAND $<TARGET_FILE:DredmorMac>
+      ${CMAKE_BINARY_DIR}/native-objects/scene.json --smoke-test)
+    set_tests_properties(native-objects-window PROPERTIES FIXTURES_REQUIRED native-objects TIMEOUT 15)
   endif()
 endif()

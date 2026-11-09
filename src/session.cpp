@@ -48,8 +48,21 @@ Actor* Session::enemy_at(Position position,std::uint64_t excluding) {
     for (auto& enemy:enemies_) if (enemy.id!=excluding && enemy.alive() && same(enemy.position,position)) return &enemy;
     return nullptr;
 }
+bool Session::passable(Position position) const {
+    if (!world_.passable(position)) return false;
+    for (const auto& object:custom_objects_) if (object.blocks_movement && same(object.position,position)) return false;
+    return true;
+}
+std::optional<std::size_t> Session::create_custom_object(const CustomRoomDefinition& definition,Position origin) {
+    auto candidate=random_.libc;auto object=create_custom_room_object(definition,origin,candidate);
+    if (!object) {random_.libc=candidate;return std::nullopt;}
+    if (custom_objects_.size()>=10000) throw std::runtime_error("session custom object limit exceeded");
+    if (object->position.x<0 || object->position.y<0 || object->position.x>=world_.width() || object->position.y>=world_.height())
+        throw std::invalid_argument("custom object outside session world");
+    custom_objects_.push_back(std::move(*object));random_.libc=candidate;return custom_objects_.size()-1;
+}
 std::uint64_t Session::spawn_enemy(Actor enemy) {
-    if (!world_.passable(enemy.position) || same(enemy.position,player_.position) || enemy_at(enemy.position) ||
+    if (!passable(enemy.position) || same(enemy.position,player_.position) || enemy_at(enemy.position) ||
         !enemy.alive() || enemy.health>enemy.secondary[0]) throw std::invalid_argument("invalid enemy spawn");
     if (enemies_.size()>=512) throw std::runtime_error("session enemy limit exceeded");
     if (enemy.id==std::numeric_limits<std::uint64_t>::max() || next_actor_==std::numeric_limits<std::uint64_t>::max())
@@ -125,7 +138,7 @@ std::optional<Position> Session::next_step(const Actor& enemy) const {
         auto p=queue.front();queue.pop();
         for (auto delta:directions) {
             Position next{p.x+delta.x,p.y+delta.y};
-            if (!world_.passable(next) || previous[index(next)]>=0) continue;
+            if (!passable(next) || previous[index(next)]>=0) continue;
             bool occupied=false;
             for (const auto& other:enemies_) if (other.id!=enemy.id && other.alive() && same(other.position,next)) {occupied=true;break;}
             if (occupied) continue;
@@ -148,6 +161,7 @@ void Session::step_impl(Action action) {
     events_.clear();if (!player_.alive()) return;
     if (world_.turn()==std::numeric_limits<std::uint64_t>::max()) throw std::overflow_error("turn counter exhausted");
     const auto destination=target(player_.position,action);
+    if (action!=Action::wait && !passable(destination)) {events_.push_back({EventKind::blocked,player_.id});return;}
     if (action!=Action::wait) if (auto* enemy=enemy_at(destination)) {
         attack(player_,*enemy);world_.step(Action::wait);enemy_turns();return;
     }
@@ -246,6 +260,13 @@ std::string Session::snapshot() const {
             first=false;
             out<<"{\"id\":"<<slots[i]->instance<<",\"quantity\":"<<slots[i]->quantity<<'}';
         }
+    }
+    out<<"],\"objects\":[";first=true;
+    for (const auto& object:custom_objects_) {
+        if (!first) out<<',';
+        first=false;
+        out<<"{\"kind\":"<<unsigned(object.kind)<<",\"name\":"<<quoted(object.name)<<",\"id\":"<<quoted(object.room_local_id)
+            <<",\"x\":"<<object.position.x<<",\"y\":"<<object.position.y<<",\"movement\":"<<object.blocks_movement<<",\"vision\":"<<object.blocks_vision<<'}';
     }
     out<<"]}";return out.str();
 }

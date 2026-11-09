@@ -99,13 +99,14 @@ RoomStamp RoomDefinition::numeric_template() const {
     for (const auto& node:source.children) points(node);
     return result;
 }
-World RoomDefinition::instantiate() const {
+World RoomDefinition::instantiate(bool custom_blockers) const {
     if (rows.empty() || rows.size()>512 || rows[0].empty() || rows[0].size()>512) throw std::runtime_error("invalid room size");
+    const auto preferred=custom_blockers?Position{-1,-1}:instantiate(true).player();
     std::set<char> floor={'.','^','@','s'},blocked={'#','!','X','P','W','L','I','G','d','D','S','i',' '};
     std::vector<Position> coordinate_blockers;
     std::function<void(const XmlNode&)> annotations=[&](const XmlNode& node) {
         const auto at=node.attribute("at");
-        const bool blocker=node.tag=="customblocker" || node.tag=="custombreakable" || node.tag=="pedestal" || node.tag=="element";
+        const bool blocker=(custom_blockers && node.tag=="customblocker") || node.tag=="custombreakable" || node.tag=="pedestal" || node.tag=="element";
         if (at.size()==1) {if (blocker) blocked.insert(at[0]);else floor.insert(at[0]);}
         if (blocker && node.integer("x") && node.integer("y")) coordinate_blockers.push_back({*node.integer("x"),*node.integer("y")});
         for (const auto& child:node.children) annotations(child);
@@ -128,6 +129,7 @@ World RoomDefinition::instantiate() const {
         collision.push_back(std::move(row));
     }
     if (spawn.x<0) throw std::runtime_error("room has no passable preview spawn");
+    if (!custom_blockers) spawn=preferred;
     collision[spawn.y][spawn.x]='@';std::string text;
     for (const auto& row:collision) text+=row+'\n';
     std::istringstream input(text);return World::read(input);

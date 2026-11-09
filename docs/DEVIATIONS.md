@@ -11,7 +11,10 @@
   and waiting consume a turn, blocked moves do not. No original comparison yet.
 - Preview imports only the first Starting Room and a small symbol subset.
   Vending machines and custom blockers block movement; doors are closed borders.
-  Conditional decorations, entities, scripts and their graphics are absent.
+  Custom blockers/engravings now populate and render from typed metadata, with
+  their appearance gate and basic state compared. Other entities/scripts remain
+  unfinished. Preview draws occur without preceding full-level generator/RNG
+  consumption or intervening entity constructors; no whole-level parity claim.
 - Preview spawn is the passable cell nearest the room center, not a recovered
   spawn policy. Wall and floor atlas crops are fixed, without adjacency rules.
 - Native SPR loading decodes all frames and assumes transparent palette index 0.
@@ -41,6 +44,7 @@
   are not supported. Malformed item integer strings are rejected more strictly
   than original atoi. These edge policies are not original parity claims.
 - Session XML saves are port-specific and not compatible with original saves.
+  Version4 preserves custom object state and accepts earlier port versions.
   Native Save/Load controls operate on the current prepared room. Cross-room
   rendering and original load/menu UI remain incomplete.
 - Embedded startup patch version is 1.1.4; additional suffix/mod state and

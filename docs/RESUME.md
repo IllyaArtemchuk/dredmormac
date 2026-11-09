@@ -273,3 +273,24 @@ custom-sprites.txt/custom-constructors.txt/custom-build-and-obstruction.txt hold
 sprite parsing, constructors, Build and SquareContainsObstruction. New custom
 source awaits nativeCI. Next: owning level/session/render integration and other
 record classes/population. Keep resource paths/data/decompiler output private.
+
+Custom run42607026309 passed nativeCI. Session now owns custom_objects; public
+create_custom_object uses libc RNG atomically, passable combines world + objects.
+Movement/enemy spawning/BFS use it. Save formatv4 persists all modeled custom
+fields; accepts v1..3 and applies swapped-item migration only to v1/v2. Thirteen
+local groups pass; save tests check exact object roundtrip/future draws/malformed
+fields/v3 migration. Original custom oracle now checks MT unchanged too (2,292
+matches). 256 starting-content initializations pass, report hash40c8db67...
+Native SpriteImage supports typed SPR/PNGseries; RoomView creates object images,
+draws them and prepares new caches atomically on load. Direct installation scene
+enables room_objects; prepared JSON may name the source room. Header bool
+instantiate(false) leaves custom collision dynamic but retains old preview spawn.
+Fixture content room marker b was corrected to1 and given synthetic sprite path;
+make-smoke-scene generates its assets. New --objects fixture has a blocking SPR
+and passable PNGseries; CMake adds native-objects fixture/window checks. Native
+source awaits actual Mac CI. Verify it and fix compile/runtime failures first.
+CLI dredmor-session --room-objects exercises original starting preview metadata;
+all14 referenced starting-room resources exist. Full generator consumption and
+intervening other constructors remain absent, so whole-game content parity is
+not claimed. Next: finish native verification, then other records/interactions,
+full-level session/render integration. No stopping at CI checkpoints.

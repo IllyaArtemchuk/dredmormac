@@ -12,12 +12,23 @@
 #include <sstream>
 #include <stdexcept>
 #include <chrono>
+#include <iomanip>
+#include <climits>
+
+static std::filesystem::path roomResource(const std::filesystem::path& root,const std::string& relative) {
+    if (root.empty() || relative.empty()) throw std::runtime_error("room object resource needs a data root/path");
+    const auto path=std::filesystem::canonical(root/relative);const auto within=path.lexically_relative(root);
+    if (within.empty() || *within.begin()=="..") throw std::runtime_error("room object resource escapes data root");
+    return path;
+}
 
 @interface SpriteImage : NSObject {
     dredmor::Sprite _sprite;
     NSArray<NSImage*> *_images;
+    uint64_t _seriesDelay;
 }
 - (instancetype)initWithPath:(NSString*)path;
+- (instancetype)initWithRoomSprite:(const dredmor::RoomSprite&)sprite root:(const std::filesystem::path&)root;
 - (NSImage*)frameAt:(uint64_t)milliseconds;
 @end
 @implementation SpriteImage
@@ -47,8 +58,30 @@
     }
     return self;
 }
+- (instancetype)initWithRoomSprite:(const dredmor::RoomSprite&)sprite root:(const std::filesystem::path&)root {
+    if (sprite.series.empty()) {
+        const auto path=roomResource(root,sprite.image);
+        return [self initWithPath:[NSString stringWithUTF8String:path.c_str()]];
+    }
+    self=[super init];
+    if (self) {
+        if (sprite.first<0 || sprite.count<1 || sprite.count>1000 || sprite.first>INT_MAX-sprite.count || sprite.rate<0)
+            throw std::runtime_error("room object PNG series exceeds supported bounds");
+        NSMutableArray<NSImage*> *images=[NSMutableArray array];
+        for (int i=0;i<sprite.count;++i) {
+            std::ostringstream relative;relative<<sprite.series<<std::setw(4)<<std::setfill('0')<<sprite.first+i<<".png";
+            const auto path=roomResource(root,relative.str());
+            NSImage *image=[[NSImage alloc] initWithContentsOfFile:[NSString stringWithUTF8String:path.c_str()]];
+            if (!image) throw std::runtime_error("cannot load room object PNG frame");
+            [images addObject:image];
+        }
+        _images=images;_seriesDelay=sprite.rate;
+    }
+    return self;
+}
 - (NSImage*)frameAt:(uint64_t)milliseconds {
-    return _images[_sprite.frames.empty()?0:_sprite.frame_at(milliseconds)];
+    if (!_sprite.frames.empty()) return _images[_sprite.frame_at(milliseconds)];
+    return _images[_seriesDelay?(milliseconds/_seriesDelay)%_images.count:0];
 }
 @end
 
@@ -60,6 +93,7 @@
     NSImage *_atlas;
     SpriteImage *_hero;
     NSMutableDictionary<NSNumber*,SpriteImage*> *_enemyImages;
+    NSArray<SpriteImage*> *_objectImages;
     NSTimer *_animationTimer;
     NSTimeInterval _animationStart;
     DredmorInventoryController *_inventoryController;
@@ -78,6 +112,7 @@
 - (void)pickUpItems:(id)sender;
 - (BOOL)smokeInventory;
 - (BOOL)smokeSkillSelection;
+- (BOOL)smokeCustomObjects;
 @end
 
 @implementation RoomView
@@ -117,6 +152,18 @@
             _session->character_profile(ranks,std::make_shared<const std::vector<dredmor::ItemDefinition>>(_content->items()),
                 std::move(skillRanks),std::make_shared<const std::vector<dredmor::AbilityDefinition>>(_content->abilities()));
         }
+        if (scene[@"room_objects"]) {
+            if (!_content || ![scene[@"room_objects"] isKindOfClass:NSString.class]) throw std::runtime_error("room objects need a content room name");
+            const auto& room=_content->room([scene[@"room_objects"] UTF8String]);
+            for (const auto& definition:room.custom_objects()) _session->create_custom_object(definition);
+        }
+        NSMutableArray<SpriteImage*> *objects=[NSMutableArray array];
+        for (const auto& object:_session->custom_objects()) {
+            SpriteImage *image=[[SpriteImage alloc] initWithRoomSprite:object.sprite root:_dataRoot];
+            if (!image) throw std::runtime_error("cannot prepare room object sprite");
+            [objects addObject:image];
+        }
+        _objectImages=objects;
         _rows = scene[@"rows"];
         if (_rows.count != (NSUInteger)_session->world().height()) return nil;
         for (id row in _rows)
@@ -192,6 +239,14 @@
     return NO;
 }
 - (BOOL)hasAnimatedHero { return [_hero frameAt:0]!=[_hero frameAt:100]; }
+- (BOOL)smokeCustomObjects {
+    if (_session->custom_objects().size()!=2 || _objectImages.count!=2) return NO;
+    const auto& solid=_session->custom_objects()[0];const auto& decoration=_session->custom_objects()[1];
+    if (!solid.blocks_movement || decoration.blocks_movement || !_session->world().passable(solid.position) || _session->passable(solid.position)) return NO;
+    if ([_objectImages[0] frameAt:0]==[_objectImages[0] frameAt:100] || [_objectImages[1] frameAt:0]==[_objectImages[1] frameAt:100]) return NO;
+    std::ostringstream before;_session->save(before);_session->step(dredmor::Action::east);std::ostringstream after;_session->save(after);
+    return before.str()==after.str() && !_session->events().empty() && _session->events()[0].kind==dredmor::EventKind::blocked;
+}
 - (void)saveToURL:(NSURL*)url {
     std::ostringstream output;_session->save(output);
     const auto bytes=output.str();
@@ -232,7 +287,13 @@
             images[@(enemy.id)]=image;
         }
     }
-    _session=std::move(loaded);_enemyImages=images;[_inventoryController refresh];self.needsDisplay=YES;
+    NSMutableArray<SpriteImage*> *objects=[NSMutableArray array];
+    for (const auto& object:loaded->custom_objects()) {
+        SpriteImage *image=[[SpriteImage alloc] initWithRoomSprite:object.sprite root:_dataRoot];
+        if (!image) throw std::runtime_error("cannot prepare saved room object sprite");
+        [objects addObject:image];
+    }
+    _session=std::move(loaded);_enemyImages=images;_objectImages=objects;[_inventoryController refresh];self.needsDisplay=YES;
 }
 - (void)showFailure:(const std::exception&)error {
     NSAlert *alert=[NSAlert new];alert.messageText=@"Cannot complete action";
@@ -262,6 +323,16 @@
         [self saveToURL:url];_session->step(dredmor::Action::wait);[self loadFromURL:url];
         std::ostringstream after;_session->save(after);
         if (before.str()!=after.str()) throw std::runtime_error("native save/load changed session state");
+        if (!_session->custom_objects().empty()) {
+            auto bad=before.str();const auto object=bad.find("<object "),start=bad.find(" image=\"",object);
+            if (start==std::string::npos) throw std::runtime_error("object save lacks image field");
+            const auto value=start+8,end=bad.find('"',value);bad.replace(value,end-value,"../unavailable-resource.png");
+            NSData *badData=[NSData dataWithBytes:bad.data() length:bad.size()];
+            if (![badData writeToURL:url options:NSDataWritingAtomic error:nullptr]) throw std::runtime_error("cannot write object rejection fixture");
+            bool rejected=false;try {[self loadFromURL:url];} catch(const std::exception&) {rejected=true;}
+            std::ostringstream unchanged;_session->save(unchanged);
+            if (!rejected || unchanged.str()!=before.str()) throw std::runtime_error("invalid saved object resource was not rejected atomically");
+        }
         [@"invalid save" writeToURL:url atomically:YES encoding:NSUTF8StringEncoding error:nullptr];
         bool rejected=false;
         try { [self loadFromURL:url]; } catch (const std::exception&) { rejected=true; }
@@ -364,6 +435,12 @@
                  fromRect:source operation:NSCompositingOperationSourceOver fraction:1
            respectFlipped:YES hints:nil];
     }
+    for (std::size_t i=0;i<_session->custom_objects().size();++i) {
+        const auto& object=_session->custom_objects()[i];NSImage *sprite=[_objectImages[i] frameAt:animationTime];
+        const CGFloat width=sprite.size.width*cell/32,height=sprite.size.height*cell/32;
+        [sprite drawInRect:NSMakeRect(20+object.position.x*cell+(cell-width)/2,20+(object.position.y+1)*cell-height,width,height)
+            fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1 respectFlipped:YES hints:nil];
+    }
     // Item icon rendering and original item placement remain separate work.
     // This marker exposes explicit developer-scene drops to the pickup control.
     [[NSColor colorWithRed:.95 green:.7 blue:.15 alpha:1] setFill];
@@ -412,14 +489,15 @@ static NSDictionary *sceneFromInstallation(const std::filesystem::path& selected
     const auto seed=selectSkills?static_cast<std::uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now()-startup).count()):0xD0ED;
     const auto& room=content.room("Starting Room");
-    const auto world=room.instantiate();
+    const auto world=room.instantiate(false);
     NSMutableArray<NSString*> *rows=[NSMutableArray array];
     for (const auto& row:room.rows) [rows addObject:[NSString stringWithUTF8String:row.c_str()]];
     auto path=[&](const std::filesystem::path& value) { return [NSString stringWithUTF8String:value.c_str()]; };
     NSMutableDictionary *scene=[@{@"name":@"Starting Room",@"policy":@"provisional-preview",@"rows":rows,
         @"collision":[NSString stringWithUTF8String:world.room_text().c_str()],
         @"atlas":path(root/"tilesets/basic.png"),@"hero":path(root/"sprites/hero/hero_idle_d.spr"),
-        @"data_root":path(root),@"seed":@(seed),@"starting_loadout":@YES,@"floor_crop":@[@0,@192,@32,@32],@"wall_crop":@[@0,@96,@32,@32]} mutableCopy];
+        @"data_root":path(root),@"seed":@(seed),@"starting_loadout":@YES,@"room_objects":@"Starting Room",
+        @"floor_crop":@[@0,@192,@32,@32],@"wall_crop":@[@0,@96,@32,@32]} mutableCopy];
     if (selectSkills) {
         DredmorSkillSelectionController *controller=[[DredmorSkillSelectionController alloc] initWithSkills:content.skills()];
         NSArray<NSNumber*> *skills=[controller runSelection];
@@ -517,6 +595,7 @@ int main(int argc,const char**argv) {
                 if (![[view snapshot] isEqualToString:expectedSnapshot] || ([scene[@"smoke_combat"] boolValue] && [view hasLivingEnemies]) ||
                     ([scene[@"smoke_animation"] boolValue] && ![view hasAnimatedHero]) ||
                     ([scene[@"smoke_inventory"] boolValue] && ![view smokeInventory]) ||
+                    ([scene[@"smoke_objects"] boolValue] && ![view smokeCustomObjects]) ||
                     ![view smokeSaveLoad] || ![view smokeSkillSelection]) {
                     fprintf(stderr,"native smoke failed: %s\n",[[view snapshot] UTF8String]); std::exit(1);
                 }

@@ -39,6 +39,11 @@ template<class T> T number(const std::string& text) {
     return result;
 }
 template<class T> T attribute_number(const XmlNode& node,std::string_view name) { return number<T>(attribute(node,name)); }
+bool flag(const XmlNode& node,std::string_view name) {
+    const auto value=attribute_number<unsigned>(node,name);
+    if (value>1) throw std::runtime_error("invalid saved flag");
+    return value!=0;
+}
 template<class T,std::size_t N> std::array<T,N> array(const XmlNode& node) {
     std::istringstream input(node.text);std::array<T,N> result;std::string token;
     for (auto& value:result) {if (!(input>>token)) throw std::runtime_error("save array too short");value=number<T>(token);}
@@ -130,7 +135,7 @@ InventoryItem read_item_instance(const XmlNode& node) {
 }
 }
 void Session::save(std::ostream& out) const {
-    out<<"<dredmor-session version=\"3\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
+    out<<"<dredmor-session version=\"4\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
        <<"\" content=\""<<signature(definitions_)<<"\">\n<room>"<<escape(world_.room_text())<<"</room>\n";
     write_actor(out,"player",player_);out<<"<enemies>\n";for (const auto& enemy:enemies_) write_actor(out,"enemy",enemy);out<<"</enemies>\n";
     out<<"<progress level=\""<<progression_.level<<"\" xp=\""<<progression_.experience<<"\" lifetime=\""<<progression_.lifetime_experience
@@ -150,7 +155,16 @@ void Session::save(std::ostream& out) const {
     write_array(out,"intrinsic-resistance",intrinsic_resistance_);
     out<<"<skills content=\""<<ability_signature(abilities_)<<"\">\n";
     for (auto skill:skills_) out<<"<skill id=\""<<skill.id<<"\" rank=\""<<skill.rank<<"\"/>\n";
-    out<<"</skills>\n</dredmor-session>\n";
+    out<<"</skills>\n<custom-objects>\n";
+    for (const auto& object:custom_objects_) {
+        const auto& sprite=object.sprite;
+        out<<"<object kind=\""<<unsigned(object.kind)<<"\" name=\""<<escape(object.name)<<"\" description=\""<<escape(object.description)
+            <<"\" id=\""<<escape(object.room_local_id)<<"\" x=\""<<object.position.x<<"\" y=\""<<object.position.y<<"\" push=\""<<unsigned(object.can_push)
+            <<"\" movement=\""<<object.blocks_movement<<"\" vision=\""<<object.blocks_vision<<"\" frame=\""<<object.frame<<"\" playing=\""<<object.playing
+            <<"\" looping=\""<<object.looping<<"\" image=\""<<escape(sprite.image)<<"\" series=\""<<escape(sprite.series)<<"\" first=\""<<sprite.first
+            <<"\" count=\""<<sprite.count<<"\" rate=\""<<sprite.rate<<"\"/>\n";
+    }
+    out<<"</custom-objects>\n</dredmor-session>\n";
     if (!out) throw std::runtime_error("cannot write session save");
 }
 Session Session::load(std::istream& input,std::shared_ptr<const std::vector<ItemDefinition>> definitions,
@@ -160,8 +174,8 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     if (input.bad()) throw std::runtime_error("cannot read session save");
     const auto root=parse_xml(content,"session save");
     const auto version=attribute(root,"version");
-    if (root.tag!="dredmor-session" || (version!="1" && version!="2" && version!="3")) throw std::runtime_error("unsupported session save version");
-    const bool legacy_types=version!="3";
+    if (root.tag!="dredmor-session" || (version!="1" && version!="2" && version!="3" && version!="4")) throw std::runtime_error("unsupported session save version");
+    const bool legacy_types=version=="1" || version=="2";
     if (attribute_number<std::uint64_t>(root,"content")!=signature(definitions,legacy_types)) throw std::runtime_error("save item content does not match loaded definitions");
     const auto turn=attribute_number<std::uint64_t>(root,"turn");
     if (turn==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("saved turn counter exhausted");
@@ -187,6 +201,21 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     const auto& random=child(root,"random");
     session.random_.libc.seed(attribute_number<std::uint32_t>(random,"libc"));
     session.random_.mt.restore({array<std::uint32_t,624>(random),attribute_number<std::size_t>(random,"index")});
+    if (version=="4") for (const auto& node:child(root,"custom-objects").children) {
+        if (node.tag!="object" || session.custom_objects_.size()>=10000) throw std::runtime_error("invalid saved custom object list");
+        const auto kind=attribute_number<unsigned>(node,"kind"),push=attribute_number<unsigned>(node,"push");
+        if (kind>1 || push>255) throw std::runtime_error("invalid saved custom object type/push");
+        CustomRoomObject object;object.kind=static_cast<CustomRoomKind>(kind);object.can_push=push;
+        object.position={attribute_number<int>(node,"x"),attribute_number<int>(node,"y")};
+        if (object.position.x<0 || object.position.y<0 || object.position.x>=session.world_.width() || object.position.y>=session.world_.height())
+            throw std::runtime_error("saved custom object outside room");
+        object.name=attribute(node,"name");object.description=attribute(node,"description");object.room_local_id=attribute(node,"id");
+        object.blocks_movement=flag(node,"movement");object.blocks_vision=flag(node,"vision");object.frame=attribute_number<std::uint32_t>(node,"frame");
+        object.playing=flag(node,"playing");object.looping=flag(node,"looping");
+        object.sprite.image=attribute(node,"image");object.sprite.series=attribute(node,"series");
+        object.sprite.first=attribute_number<int>(node,"first");object.sprite.count=attribute_number<int>(node,"count");object.sprite.rate=attribute_number<int>(node,"rate");
+        session.custom_objects_.push_back(std::move(object));
+    }
     Inventory::Bag bag{};Inventory::Belt belt{};
     auto validate_item=[&](const XmlNode& node) {
         if (node.tag!="item") throw std::runtime_error("invalid saved item node");

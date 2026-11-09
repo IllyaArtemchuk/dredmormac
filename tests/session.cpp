@@ -42,6 +42,22 @@ int main() {
         auto before=atomic.snapshot();bool rejected=false;
         try { atomic.step(static_cast<Action>(999)); } catch (const std::invalid_argument&) { rejected=true; }
         check(rejected && atomic.snapshot()==before);
+        auto objects=fixture();CustomRoomDefinition obstacle;obstacle.placement.relative={2,1};obstacle.sprite.image="fixture.spr";
+        check(objects.create_custom_object(obstacle)==0 && !objects.passable({2,1}) && objects.world().passable({2,1}));
+        objects.step(Action::east);check(objects.world().turn()==0 && objects.player().position.x==1 && objects.events()[0].kind==EventKind::blocked);
+        auto decorative=fixture();obstacle.kind=CustomRoomKind::engraving;
+        check(decorative.create_custom_object(obstacle)==0 && decorative.passable({2,1}));
+        decorative.step(Action::east);check(decorative.world().turn()==1 && decorative.player().position.x==2);
+        auto detour=fixture();obstacle.kind=CustomRoomKind::blocker;obstacle.placement.relative={4,1};detour.create_custom_object(obstacle);
+        enemy.position={5,1};enemy.health=enemy.secondary[0]=10;detour.spawn_enemy(enemy);detour.step(Action::wait);
+        check(detour.enemies()[0].position.x==5 && detour.enemies()[0].position.y==2);
+        auto bad_object=fixture();std::ostringstream before_object;bad_object.save(before_object);
+        obstacle.placement.relative={99,1};obstacle.placement.percent=0;rejected=false;
+        try {bad_object.create_custom_object(obstacle);} catch(const std::invalid_argument&) {rejected=true;}
+        std::ostringstream after_object;bad_object.save(after_object);check(rejected && before_object.str()==after_object.str());
+        obstacle.placement.percent=-1;check(!bad_object.create_custom_object(obstacle));
+        std::ostringstream skipped;bad_object.save(skipped);const auto skipped_xml=parse_xml(skipped.str());
+        check(skipped_xml.first("random")->attribute("libc")=="16807" && bad_object.custom_objects().empty());
         Progression xp;check(!xp.gain(10,10) && xp.experience==10);
         check(xp.gain(1,10) && xp.experience==0 && xp.level==1 && xp.unspent_points==1);
         std::cout<<"session: attacks, enemy turns, death, pickup, progression and atomic rejection passed\n";

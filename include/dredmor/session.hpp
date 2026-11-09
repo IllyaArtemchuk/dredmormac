@@ -3,6 +3,7 @@
 #include "dredmor/progression.hpp"
 #include "dredmor/random.hpp"
 #include "dredmor/world.hpp"
+#include "dredmor/room_records.hpp"
 #include <memory>
 
 namespace dredmor {
@@ -33,6 +34,9 @@ public:
     const Actor& player() const { return player_; }
     const std::vector<Actor>& enemies() const { return enemies_; }
     const std::vector<GroundItem>& ground_items() const { return ground_; }
+    const std::vector<CustomRoomObject>& custom_objects() const { return custom_objects_; }
+    bool passable(Position position) const;
+    std::optional<std::size_t> create_custom_object(const CustomRoomDefinition& definition,Position origin={0,0});
     const std::vector<TurnEvent>& events() const { return events_; }
     const Progression& progression() const { return progression_; }
     const Equipment& equipment() const { return equipment_; }
@@ -60,6 +64,7 @@ private:
     Actor player_;
     std::vector<Actor> enemies_;
     std::vector<GroundItem> ground_;
+    std::vector<CustomRoomObject> custom_objects_;
     std::vector<TurnEvent> events_;
     Inventory inventory_;
     Equipment equipment_;
