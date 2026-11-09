@@ -68,7 +68,8 @@ do not import GPL code or publish releases without resolving project licensing.
 
 Room-stamping loop comparison: scripts/verify_stamp.py, 1,024 matches. Private
 room-constructor.txt confirms arrays initially zero; digit script positions stay
-zero until later population. Numeric RoomDefinition::numeric_template is distinct
+zero until PointProperty resolves a reference during XML loading (earlier
+notes incorrectly deferred this to population). Numeric RoomDefinition::numeric_template is distinct
 from provisional instantiate collision. scripts/verify_templates.py compares all
 346 templates independently. Full generation remains pending.
 
@@ -228,3 +229,16 @@ FinalizeInLevel, RoomElementRecord ctor and XML property registrations. Common
 percent defaults100, can_push defaults1, id isroomlocal; Finalize places entity,
 assigns roomID string and can_push. Point/factory export currently running to
 room-point-and-factory.txt. Next: resolve at/x/y, appearance gate and element types.
+
+Door-transition run 42602928512 and punch-out run 42603410256 passed native CI.
+room_records.cpp adds take_room_point; verify_room_points.py matches 1,024 full
+PointProperty::SetFrom0x1ace5e executions with controlled tiny attribute maps,
+string/ASCII/erase boundaries. At consumes attribute, resolves marker and sets
+template kind1 immediately; explicitx/y consumes keys without changing geometry.
+Marker table remains available; duplicate row markers take last coordinate.
+Source numeric_template now applies common object/script point refs. Earlier
+notes wrongly kept all digits zero until population. Corrected all346 template
+checks pass; basegeometry64cases/67attempts passes after rerun. Thirteen local
+groups pass; native correction validation pending push.
+Next: common appearance gate and typed room object/element creation plans;
+finalize places entity, assigns room-local id and can_push. Scripts still raw.

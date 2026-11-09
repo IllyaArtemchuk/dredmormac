@@ -147,3 +147,10 @@ Content-pass punch-out now matches 2,048 original executions / 404,862 cells wit
 no imported routines supplied. Ordered neighbor clearing and above-floor walls
 are preserved. Twelve local groups pass. Object placement and full-level native
 integration remain unfinished.
+
+Door-transition run 42602928512 and punch-out run 42603410256 passed native CI.
+Point lookup now matches 1,024 original parser executions with library boundaries.
+Corrected numeric ingestion: referenced digit markers become floor during XML
+loading, including supplied script point references. All 346 templates match
+updated independent checks; corrected base arrays match 64 original geometries /
+67 attempts. Thirteen local groups pass; this ingestion correction awaits Mac CI.

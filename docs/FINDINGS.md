@@ -294,7 +294,9 @@ room counters. scripts/verify_stamp.py reproduces room-stamping.json privately.
 Numeric room ingestion now respects declared dimensions and clips rows to width.
 It retains separate kind/orientation/wall-marker arrays. Constructor at 0x19cedc
 zeroes all arrays. The original row callback records digit locations without
-changing that zero cell; later room scripts/content establish those positions.
+changing that zero cell. PointProperty::SetFrom converts referenced markers to
+floor during XML loading; the earlier assumption that this waits for population
+was incorrect and is corrected below.
 This differs from the conservative developer collision preview. All 346 supplied
 base/expansion templates match an independent XML-to-numeric expansion. That is
 an ingestion check of statically recovered mapping, not original parser execution
@@ -612,7 +614,7 @@ End-cap closing checks only the selected part and its immediate neighbor, not
 the far end; preserving this is required to match the original. Obstructed close
 returns one and emits a ticker message without changing state. The port exposes
 outcome/handled values; their integration with turn scheduling remains pending.
-Closed/open transitions clear/set bit four on all three cells, retaining other
+Closed/open transitions clear/set flag 0x04 on all three cells, retaining other
 bits and lock state. Animation/render fields and Clicked's lockpick/kick paths
 are excluded. Local tests cover these distinctions and atomic invalid queries.
 
@@ -629,3 +631,29 @@ rejects these malformed inputs atomically. Generated geometry has margins.
 The function is separate from object placement and does not change Session World.
 Local coverage checks overwritten adjacent markers, above-floor walls, retained
 metadata/floor count and atomic boundary rejection. Twelve local groups pass.
+
+Door-transition run 42602928512 (dfa1ce4) and punch-out run 42603410256 (e3247e9)
+passed native validation and package smoke.
+
+## Point references change templates during loading
+
+PointProperty::SetFrom (0x1ace5e) matches 1,024 original executions on small
+controlled attribute trees. Original lookup/comparison/control flow executes;
+strings, ASCII tolower/atoi and erase on one/two-node attribute maps are supplied.
+Found/missing result, coordinates, consumed attribute count and every template
+cell agree. Attributes are case insensitive; point prefixes concatenate directly
+with at/x/y (including targetat). An at reference resolves the last row-marker
+position and immediately writes numeric floor, without erasing the marker table.
+Explicit x/y consume both attributes but do not change numeric geometry. Partial
+x/y returns missing without consumption. Malformed errors are covered locally,
+not as original error-handler comparisons; overflow retains stated port policy.
+
+This corrects the earlier inference that digits stay void until population.
+The constructor/row callback alone did not establish the final loaded template.
+numeric_template now resolves common room objects and the supplied at-condition,
+move/create-action and spell-target point references during ingestion. Unused
+digits stay void. All 346 templates pass updated independent ingestion checks.
+Full geometry is rerun with corrected base arrays: 64 cases / 67 attempts, three
+rerolled cases, zero mismatches in cells/records/names/spawn and both RNG streams.
+This remains a controlled-array execution, not full original XML parser/expansion
+registration or room script-action parity. Thirteen local test groups pass.

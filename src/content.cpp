@@ -1,6 +1,7 @@
 #include "dredmor/content.hpp"
 #include "dredmor/selection.hpp"
 #include "dredmor/legacy_number.hpp"
+#include "dredmor/room_records.hpp"
 #include <algorithm>
 #include <functional>
 #include <limits>
@@ -36,6 +37,7 @@ RoomStamp RoomDefinition::numeric_template() const {
         integer("roomset",result.rules.room_set);
     }
     result.cells.resize(std::size_t(*width)*(*height));
+    RoomMarkers markers;
     for (std::size_t y=0;y<rows.size();++y) for (std::size_t x=0;x<std::min(rows[y].size(),std::size_t(*width));++x) {
         auto& cell=result.cells[y*(*width)+x];
         switch (const auto symbol=rows[y][x]) {
@@ -54,11 +56,30 @@ RoomStamp RoomDefinition::numeric_template() const {
         case 'I':cell.kind=10;break;
         case 'X':cell.kind=15;break;
         default:
-            // The original records digit coordinates without changing the
-            // zero-initialized cell. Later scripts/content establish that tile.
+            // A digit initially stays void. PointProperty::SetFrom changes it
+            // to floor when a room object or script references it during load.
             if (symbol<'1' || symbol>'9') throw std::runtime_error("unknown numeric room symbol: "+name);
+            markers[symbol]={int(x),int(y)};
         }
     }
+    std::function<void(const XmlNode&)> points=[&](const XmlNode& node) {
+        const auto tag=ascii_lower(node.tag);std::optional<std::string> prefix;
+        auto value=[&](std::string_view key) {
+            for (const auto& attribute:node.attributes) if (ascii_lower(attribute.first)==key) return attribute.second;
+            return std::string{};
+        };
+        if (tag=="customblocker" || tag=="customengraving" || tag=="custombreakable" || tag=="trap" || tag=="monster" ||
+            tag=="pedestal" || tag=="element" || tag=="loot" || tag=="horde") prefix="";
+        if (tag=="condition" && value("condition_type")=="at") prefix="";
+        if (tag=="action") {
+            const auto type=value("action_type");
+            if (type=="create" || type=="move") prefix="";
+            if (type=="spell") prefix="target";
+        }
+        if (prefix) {auto attributes=node.attributes;(void)take_room_point(attributes,*prefix,markers,result);}
+        if (tag=="script") for (const auto& child:node.children) points(child);
+    };
+    for (const auto& node:source.children) points(node);
     return result;
 }
 World RoomDefinition::instantiate() const {

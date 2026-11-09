@@ -11,6 +11,19 @@ NUMERIC_MAPPING={' ':(0,0,0),'#':(2,0,0),'!':(2,0,4),'.':(1,0,0),'S':(1,0,0),'s'
                  'W':(7,0,0),'L':(8,0,0),'G':(9,0,0),'I':(10,0,0),'X':(15,0,0)}
 NUMERIC_MAPPING.update({str(i):(0,0,0) for i in range(1,10)})
 
+def apply_points(room,cells,width):
+    markers={symbol:(x,y) for y,row in enumerate(room.findall('row')) for x,symbol in enumerate(row.get('text','')[:width]) if symbol in '123456789'}
+    object_tags={'customblocker','customengraving','custombreakable','trap','monster','pedestal','element','loot','horde'}
+    for node in room.iter():
+        tag=node.tag.lower();attributes={k.lower():v for k,v in node.attrib.items()};prefix=None
+        if tag in object_tags or (tag=='condition' and attributes.get('condition_type')=='at'):prefix=''
+        if tag=='action':
+            if attributes.get('action_type') in ('create','move'):prefix=''
+            elif attributes.get('action_type')=='spell':prefix='target'
+        if prefix is not None and prefix+'at' in attributes:
+            marker=attributes[prefix+'at'];x,y=markers[marker];index=y*width+x
+            cells[index]=(1,cells[index][1],cells[index][2])
+
 
 def numeric_rooms(path):
     """Independent template inputs for bounded original geometry execution."""
@@ -19,6 +32,7 @@ def numeric_rooms(path):
         width,height=int(room.get('width')),int(room.get('height'));cells=[(0,0,0)]*(width*height)
         for y,row in enumerate(room.findall('row')):
             for x,symbol in enumerate(row.get('text','')[:width]):cells[y*width+x]=NUMERIC_MAPPING[symbol]
+        apply_points(room,cells,width)
         flags={}
         for child in room:
             if child.tag.lower()=='flags':flags.update({key.lower():int(value) for key,value in child.attrib.items()})
@@ -42,6 +56,7 @@ def verify(root,port,expansions=False):
             cells=[(0,0,0)]*(width*height)
             for y,row in enumerate(rows):
                 for x,symbol in enumerate(row[:width]):cells[y*width+x]=mapping[symbol]
+            apply_points(room,cells,width)
             fingerprint=14695981039346656037
             for cell in cells:
                 for byte in cell:fingerprint=((fingerprint^byte)*1099511628211)&0xffffffffffffffff
