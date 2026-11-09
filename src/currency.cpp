@@ -30,6 +30,13 @@ CurrencyObject make_currency(std::int32_t amount,const std::vector<SkillRank>& s
 void currency_quantity_override(CurrencyObject& object,int amount) {
     if (amount>1) {object.quantity=amount;object.stackable=true;}
 }
+InventoryItem make_currency_item(const ItemDefinition& definition,std::uint32_t index,std::uint64_t instance,
+                                  std::int32_t amount,const std::vector<SkillRank>& skills,const std::vector<AbilityDefinition>& abilities) {
+    if (definition.kind!=ItemKind::currency || !instance) throw std::invalid_argument("invalid currency item identity");
+    const auto currency=make_currency(amount,skills,abilities);InventoryItem item;
+    item.instance=instance;item.definition=index;item.kind=ItemKind::currency;item.weapon_type=definition.weapon_type;
+    item.quantity=currency.quantity;item.stackable=currency.stackable;item.currency_value=currency.value;return item;
+}
 std::int32_t roll_currency(SpawnDepthContext depth,DarwinRandom& random) {
     const auto level=depth.alternate && depth.alternate_depth>=0?depth.alternate_depth:depth.depth;
     if (level<0) return 1;

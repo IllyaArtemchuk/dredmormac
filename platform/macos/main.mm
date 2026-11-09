@@ -220,6 +220,18 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
             }
             _session->create_ground_item(static_cast<std::uint32_t>(*index),{[value[@"x"] intValue],[value[@"y"] intValue]},quantity);
         }
+        if (scene[@"ground_currency"] && ![scene[@"ground_currency"] isKindOfClass:NSArray.class]) return nil;
+        for (id value in scene[@"ground_currency"]) {
+            if (!_content || ![value isKindOfClass:NSDictionary.class] ||
+                ![value[@"amount"] isKindOfClass:NSNumber.class] ||
+                ![value[@"x"] isKindOfClass:NSNumber.class] || ![value[@"y"] isKindOfClass:NSNumber.class])
+                throw std::runtime_error("developer currency requires content, amount and position");
+            const auto amount=[value[@"amount"] longLongValue];
+            if (amount<INT32_MIN || amount>INT32_MAX || [value[@"amount"] doubleValue]!=amount)
+                throw std::runtime_error("invalid ground currency amount");
+            _session->create_ground_currency(static_cast<std::int32_t>(amount),
+                {[value[@"x"] intValue],[value[@"y"] intValue]});
+        }
         _animationStart=NSProcessInfo.processInfo.systemUptime;
         __weak RoomView *weakSelf=self;
         _animationTimer=[NSTimer scheduledTimerWithTimeInterval:1.0/60 repeats:YES block:^(NSTimer *timer) {
@@ -384,7 +396,7 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
 - (BOOL)smokeInventory {
     const auto primary=_session->player().primary;const auto secondary=_session->player().secondary;
     [self pickUpItems:nil];[self showInventory:nil];
-    if ([self inventoryRows].count!=1) return NO;
+    if ([self inventoryRows].count!=1 || _session->player().zorkmids!=17) return NO;
     [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];
     [_inventoryController equipSelection:nil];
     if (!_session->equipment().slots()[0] || _session->inventory().bag()[0]) return NO;
@@ -460,9 +472,10 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
     [hero drawInRect:NSMakeRect(20+(p.x-.5)*cell,20+(p.y-1)*cell,cell*2,cell*2)
              fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1
        respectFlipped:YES hints:nil];
-    NSString *status=[NSString stringWithFormat:@"Turn %llu · HP %d/%d · Mana %d/%d\nArrows move/attack · . waits · G picks up · I inventory · ⌘S/⌘O%@",
+    NSString *status=[NSString stringWithFormat:@"Turn %llu · HP %d/%d · Mana %d/%d · Zorkmids %d\nArrows move/attack · . waits · G picks up · I inventory · ⌘S/⌘O%@",
                        (unsigned long long)world.turn(),_session->player().health,_session->player().secondary[0],
-                       _session->player().mana,_session->player().secondary[1],_session->player().alive()?@"":@" · You have died"];
+                       _session->player().mana,_session->player().secondary[1],_session->player().zorkmids,
+                       _session->player().alive()?@"":@" · You have died"];
     [status drawAtPoint:NSMakePoint(20,self.bounds.size.height-55)
         withAttributes:@{NSForegroundColorAttributeName:NSColor.whiteColor,
                          NSFontAttributeName:[NSFont systemFontOfSize:13]}];

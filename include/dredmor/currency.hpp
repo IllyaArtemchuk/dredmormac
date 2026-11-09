@@ -1,6 +1,7 @@
 #pragma once
 #include "dredmor/abilities.hpp"
 #include "dredmor/selection.hpp"
+#include "dredmor/inventory.hpp"
 
 namespace dredmor {
 struct CurrencyObject {
@@ -11,6 +12,9 @@ struct CurrencyObject {
 };
 CurrencyObject make_currency(std::int32_t amount,const std::vector<SkillRank>& skills={},
                              const std::vector<AbilityDefinition>& abilities={});
+InventoryItem make_currency_item(const ItemDefinition& definition,std::uint32_t index,std::uint64_t instance,
+                                  std::int32_t amount,const std::vector<SkillRank>& skills={},
+                                  const std::vector<AbilityDefinition>& abilities={});
 // Shared item-factory override changes Item quantity, not the separate money value.
 void currency_quantity_override(CurrencyObject& object,int amount);
 std::int32_t roll_currency(SpawnDepthContext depth,DarwinRandom& random);

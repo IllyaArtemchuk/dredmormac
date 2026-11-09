@@ -86,7 +86,7 @@ Arrow keys move or attack; `.` waits; G picks up and I opens inventory.
 Select an item and target slot, then Equip; select equipped gear to Unequip.
 Command-S saves the current port session;
 Command-O loads a port save for the same prepared room. Selected skills and
-passive abilities, custom room objects and RNG caches persist in version-five port saves; earlier port saves still load with item-type migration. Malformed saves fail
+passive abilities, custom room objects, currency and RNG caches persist in version-six port saves; earlier port saves still load with item-type migration. Malformed saves fail
 before replacing the current state. These saves are not original .sav files.
 Closing the window quits. Normal installation startup grants the selected skills’ starting items and
 class clothes. Prepared developer scenes keep empty loadouts unless configured.

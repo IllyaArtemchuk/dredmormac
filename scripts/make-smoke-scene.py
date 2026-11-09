@@ -51,6 +51,7 @@ if __name__=='__main__':
         if args.inventory:
             scene['data_root']=str(root)
             scene['ground_items']=[dict(name='Fixture cap',x=2,y=1)]
+            scene['ground_currency']=[dict(amount=17,x=2,y=1)]
             scene['smoke_inventory']=True
         if args.objects:
             (root/'game/rooms.xml').write_text('''<roomdb><room name="Starting Room" width="5" height="4">

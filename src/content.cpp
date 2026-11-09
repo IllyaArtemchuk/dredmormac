@@ -182,6 +182,8 @@ GameContent GameContent::load(const std::filesystem::path& root,bool expansions)
         item.name=subtype==0?"Lockpick":"Spores";item.icon=subtype==0?"items/lockpick.png":"items/fungus_spores.png";
         content.items_.push_back(std::move(item));
     }
+    ItemDefinition currency;currency.kind=ItemKind::currency;currency.builtin_subtype=2;
+    currency.name="Zorkmids";currency.icon="items/cash0.png";content.items_.push_back(std::move(currency));
     if (!found_tweaks) throw std::runtime_error("base tweakDB.xml is required");
     content.monsters_=load_monsters(content.catalog_);return content;
 }

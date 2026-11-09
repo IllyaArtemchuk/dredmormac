@@ -207,3 +207,14 @@ Currency core construction/rolls/transfers now match5,166 original cases with
 sprite/UI/config/library boundaries and unchanged MT draws. Typed zorkmidbuff
 metadata and kind10 are added. Currency value and stack quantity remain separate.
 Fifteen local groups pass; session wallet, pickup and persistence are next.
+
+Currency core run42615446594 passed native arm64 validation and relocated package
+smoke, also validating the Clang aggregate-initialization fix. Session wallet and
+separate currency_value payload are now integrated: movement/G pickup credits
+money independently of bag space or Item quantity, and give/take retain measured
+wrapping/debt behavior. Savev6 persists wallets/payloads and currency-bonus rule
+fingerprints; v1..5 migrate. A synthetic fixture emitted by the actual previous
+v5 serializer checks nonempty skills, objects and normal cache migration. Fifteen
+local groups pass. Native wallet display and the inventory smoke now check17
+zorkmids on pickup; this new integration awaits Mac CI. Scheduling/UI/audio parity
+and complete gameplay remain unfinished.

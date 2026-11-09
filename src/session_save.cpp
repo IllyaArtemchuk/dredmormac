@@ -80,7 +80,7 @@ std::uint64_t signature(const std::shared_ptr<const std::vector<ItemDefinition>>
     }
     return hash?hash:1;
 }
-std::uint64_t ability_signature(const std::shared_ptr<const std::vector<AbilityDefinition>>& definitions) {
+std::uint64_t ability_signature(const std::shared_ptr<const std::vector<AbilityDefinition>>& definitions,bool currency_fields=true) {
     if (!definitions) return 0;
     std::uint64_t hash=14695981039346656037ull;
     auto add=[&](const std::string& text){for (unsigned char c:text) {hash^=c;hash*=1099511628211ull;}hash^=0;hash*=1099511628211ull;};
@@ -95,6 +95,7 @@ std::uint64_t ability_signature(const std::shared_ptr<const std::vector<AbilityD
         for (auto n:ability.modifiers.secondary) add(std::to_string(n));
         for (auto n:ability.modifiers.damage) add(std::to_string(n));
         for (auto n:ability.modifiers.resistance) add(std::to_string(n));
+        if (currency_fields) {std::uint32_t bits;std::memcpy(&bits,&ability.currency_bonus,4);add(std::to_string(bits));}
         node(ability.source);
     }
     return hash?hash:1;
@@ -102,16 +103,17 @@ std::uint64_t ability_signature(const std::shared_ptr<const std::vector<AbilityD
 void write_actor(std::ostream& out,std::string_view tag,const Actor& actor) {
     out<<'<'<<tag<<" id=\""<<actor.id<<"\" name=\""<<escape(actor.name)<<"\" sprite=\""<<escape(actor.sprite)
        <<"\" x=\""<<actor.position.x<<"\" y=\""<<actor.position.y<<"\" hp=\""<<actor.health
-       <<"\" mana=\""<<actor.mana<<"\" reward=\""<<actor.experience_reward<<"\">\n";
+       <<"\" mana=\""<<actor.mana<<"\" reward=\""<<actor.experience_reward<<"\" zorkmids=\""<<actor.zorkmids<<"\">\n";
     write_array(out,"primary",actor.primary);write_array(out,"secondary",actor.secondary);
     write_array(out,"damage",actor.damage);write_array(out,"resistance",actor.resistance);
     out<<"</"<<tag<<">\n";
 }
-Actor read_actor(const XmlNode& node) {
+Actor read_actor(const XmlNode& node,bool currency_fields) {
     Actor actor;actor.id=attribute_number<std::uint64_t>(node,"id");actor.name=attribute(node,"name");actor.sprite=attribute(node,"sprite");
     actor.position={attribute_number<int>(node,"x"),attribute_number<int>(node,"y")};
     actor.health=attribute_number<std::int32_t>(node,"hp");actor.mana=attribute_number<std::int32_t>(node,"mana");
     actor.experience_reward=attribute_number<std::int32_t>(node,"reward");
+    if (currency_fields) actor.zorkmids=attribute_number<std::int32_t>(node,"zorkmids");
     actor.primary=array<std::int32_t,6>(child(node,"primary"));actor.secondary=array<std::int32_t,24>(child(node,"secondary"));
     actor.damage=array<std::int32_t,16>(child(node,"damage"));actor.resistance=array<std::int32_t,16>(child(node,"resistance"));
     if (!actor.id || actor.id==std::numeric_limits<std::uint64_t>::max() || actor.health<0 || actor.health>actor.secondary[0] || actor.mana<0 || actor.mana>actor.secondary[1])
@@ -122,6 +124,7 @@ void write_item(std::ostream& out,const InventoryItem& item,const std::string& e
     out<<"<item id=\""<<item.instance<<"\" kind=\""<<static_cast<std::uint32_t>(item.kind)<<"\" definition=\""<<item.definition
        <<"\" weapon=\""<<item.weapon_type<<"\" quantity=\""<<item.quantity<<"\" stackable=\""<<item.stackable<<"\"";
     if (item.charges) out<<" charges=\""<<*item.charges<<"\"";
+    if (item.currency_value) out<<" currency=\""<<*item.currency_value<<"\"";
     out<<' '<<extra<<"/>\n";
 }
 InventoryItem read_item_instance(const XmlNode& node) {
@@ -133,11 +136,16 @@ InventoryItem read_item_instance(const XmlNode& node) {
         item.charges=attribute_number<std::int32_t>(node,"charges");
         if (item.kind!=ItemKind::wand || *item.charges<0) throw std::runtime_error("invalid saved wand charges");
     }
+    if (node.attributes.count("currency")) {
+        item.currency_value=attribute_number<std::int32_t>(node,"currency");
+        if (item.kind!=ItemKind::currency) throw std::runtime_error("unexpected saved currency value");
+    }
+    if (item.kind==ItemKind::currency && !item.currency_value) throw std::runtime_error("saved currency value missing");
     item.stackable=stack!=0;return item;
 }
 }
 void Session::save(std::ostream& out) const {
-    out<<"<dredmor-session version=\"5\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
+    out<<"<dredmor-session version=\"6\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
        <<"\" content=\""<<signature(definitions_)<<"\">\n<room>"<<escape(world_.room_text())<<"</room>\n";
     write_actor(out,"player",player_);out<<"<enemies>\n";for (const auto& enemy:enemies_) write_actor(out,"enemy",enemy);out<<"</enemies>\n";
     out<<"<progress level=\""<<progression_.level<<"\" xp=\""<<progression_.experience<<"\" lifetime=\""<<progression_.lifetime_experience
@@ -179,19 +187,19 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     if (input.bad()) throw std::runtime_error("cannot read session save");
     const auto root=parse_xml(content,"session save");
     const auto version=attribute(root,"version");
-    if (root.tag!="dredmor-session" || (version!="1" && version!="2" && version!="3" && version!="4" && version!="5")) throw std::runtime_error("unsupported session save version");
+    if (root.tag!="dredmor-session" || (version!="1" && version!="2" && version!="3" && version!="4" && version!="5" && version!="6")) throw std::runtime_error("unsupported session save version");
     const bool legacy_types=version=="1" || version=="2";
     if (attribute_number<std::uint64_t>(root,"content")!=signature(definitions,legacy_types)) throw std::runtime_error("save item content does not match loaded definitions");
     const auto turn=attribute_number<std::uint64_t>(root,"turn");
     if (turn==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("saved turn counter exhausted");
-    std::istringstream rows(child(root,"room").text);auto world=World::restore(rows,turn);auto player=read_actor(child(root,"player"));
+    std::istringstream rows(child(root,"room").text);auto world=World::restore(rows,turn);auto player=read_actor(child(root,"player"),version=="6");
     if (player.position.x!=world.player().x || player.position.y!=world.player().y) throw std::runtime_error("saved player/room position mismatch");
     Session session(std::move(world),player,0,attribute_number<int>(root,"experience-n"));
     session.definitions_=std::move(definitions);session.next_actor_=attribute_number<std::uint64_t>(root,"next-actor");
     std::set<std::uint64_t> actors={player.id},items;
     for (const auto& node:child(root,"enemies").children) {
         if (node.tag!="enemy" || session.enemies_.size()>=512) throw std::runtime_error("invalid saved enemy list");
-        auto actor=read_actor(node);
+        auto actor=read_actor(node,version=="6");
         if (!actors.insert(actor.id).second || !session.world_.passable(actor.position)) throw std::runtime_error("invalid saved enemy identity/position");
         if (actor.alive()) {
             if ((actor.position.x==player.position.x && actor.position.y==player.position.y) || session.enemy_at(actor.position)) throw std::runtime_error("saved actors overlap");
@@ -206,13 +214,13 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     const auto& random=child(root,"random");
     session.random_.libc.seed(attribute_number<std::uint32_t>(random,"libc"));
     session.random_.mt.restore({array<std::uint32_t,624>(random),attribute_number<std::size_t>(random,"index")});
-    if (version=="5") {
+    if (version=="5" || version=="6") {
         const auto bits=attribute_number<std::uint32_t>(random,"normal-spare");float spare;
         std::memcpy(&spare,&bits,sizeof(spare));
         if (!std::isfinite(spare)) throw std::runtime_error("invalid saved normal cache");
         session.random_.normal.restore({flag(random,"normal-available"),spare});
     }
-    if (version=="4" || version=="5") for (const auto& node:child(root,"custom-objects").children) {
+    if (version=="4" || version=="5" || version=="6") for (const auto& node:child(root,"custom-objects").children) {
         if (node.tag!="object" || session.custom_objects_.size()>=10000) throw std::runtime_error("invalid saved custom object list");
         const auto kind=attribute_number<unsigned>(node,"kind"),push=attribute_number<unsigned>(node,"push");
         if (kind>1 || push>255) throw std::runtime_error("invalid saved custom object type/push");
@@ -265,7 +273,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
         const auto& selected=child(root,"skills");
         const auto content=attribute_number<std::uint64_t>(selected,"content");
         if (content) {
-            if (!session.definitions_ || !abilities || ability_signature(abilities)!=content)
+            if (!session.definitions_ || !abilities || ability_signature(abilities,version=="6")!=content)
                 throw std::runtime_error("save ability content does not match loaded definitions");
             std::set<int> seen;
             for (const auto& node:selected.children) {

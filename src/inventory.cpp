@@ -10,6 +10,7 @@ InventoryItem make_inventory_item(const ItemDefinition& definition,std::uint32_t
     switch (definition.kind) {
     case ItemKind::weapon:item.stackable=definition.weapon_type==5 || definition.weapon_type==6;break;
     case ItemKind::armour:break;
+    case ItemKind::currency:item.currency_value=1;break;
     case ItemKind::potion:case ItemKind::food:case ItemKind::gem:case ItemKind::mushroom:
     case ItemKind::reagent:case ItemKind::toolkit:case ItemKind::trap:item.stackable=true;break;
     case ItemKind::misc:

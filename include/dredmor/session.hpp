@@ -5,6 +5,7 @@
 #include "dredmor/world.hpp"
 #include "dredmor/room_records.hpp"
 #include "dredmor/selection.hpp"
+#include "dredmor/currency.hpp"
 #include <memory>
 
 namespace dredmor {
@@ -15,11 +16,11 @@ struct Actor {
     PrimaryStats primary{};
     SecondaryStats secondary{};
     Damage damage{},resistance{};
-    std::int32_t health=0,mana=0,experience_reward=0;
+    std::int32_t health=0,mana=0,experience_reward=0,zorkmids=0;
     bool alive() const { return health>0; }
 };
 struct GroundItem { InventoryItem item;Position position; };
-enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full };
+enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken };
 struct TurnEvent {
     EventKind kind;
     std::uint64_t actor=0,target=0;
@@ -47,6 +48,9 @@ public:
     std::uint64_t spawn_enemy(Actor enemy);
     void drop(InventoryItem item,Position position);
     std::uint64_t create_ground_item(std::uint32_t definition,Position position,std::int32_t quantity=1);
+    std::uint64_t create_ground_currency(std::int32_t amount,Position position);
+    void give_currency(std::int32_t amount);
+    void take_currency(std::int32_t amount);
     void step(Action action);
     void pickup();
     void equipment_profile(ClassRanks ranks,std::shared_ptr<const std::vector<ItemDefinition>> definitions);
@@ -85,6 +89,10 @@ private:
     void enemy_turns();
     std::optional<Position> next_step(const Actor& enemy) const;
     void rebuild_equipment();
+    std::uint64_t next_item_instance() const;
+    void currency_transfer_impl(std::int32_t amount,CurrencyOperation operation);
+    void pickup_impl();
+    void pickup_currency();
 };
 Actor make_player(const ClassRanks& ranks,std::string name="Player");
 }

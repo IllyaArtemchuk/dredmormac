@@ -18,6 +18,27 @@ Session fixture() {
     return session;
 }
 std::string saved(const Session& session) {std::ostringstream out;session.save(out);return out.str();}
+std::shared_ptr<const std::vector<ItemDefinition>> legacy_profile_items(bool with_currency) {
+    std::vector<ItemDefinition> items{read_item(parse_xml("<item name='Legacy fixture cap'><armour type='head' ac='1'/></item>"))};
+    for (int i=0;i<2;++i) {ItemDefinition item;item.name=i?"Spores":"Lockpick";item.kind=ItemKind::misc;item.builtin_subtype=i;items.push_back(item);}
+    if (with_currency) {ItemDefinition item;item.name="Zorkmids";item.kind=ItemKind::currency;item.builtin_subtype=2;items.push_back(item);}
+    return std::make_shared<const std::vector<ItemDefinition>>(std::move(items));
+}
+std::shared_ptr<const std::vector<AbilityDefinition>> legacy_profile_abilities() {
+    auto ability=read_ability(parse_xml("<ability name='Legacy fixture bonus' skill='0'><primarybuff id='0' amount='1'/><zorkmidbuff percent='0.25'/></ability>"));
+    return std::make_shared<const std::vector<AbilityDefinition>>(std::vector<AbilityDefinition>{ability});
+}
+Session legacy_profile(bool with_currency) {
+    std::istringstream room("#####\n#@..#\n#...#\n#####\n");Session session(World::read(room),make_player({3,2,2}),777);
+    std::vector<SkillRank> skills;for (int id=0;id<7;++id) skills.push_back({id,1});
+    session.character_profile({3,2,2},legacy_profile_items(with_currency),skills,legacy_profile_abilities());
+    session.inventory().insert({500,ItemKind::armour,0,0,1,false});
+    RoomStamp stamp{5,4,std::vector<TemplateCell>(20)};
+    auto object=read_custom_room_object(parse_xml("<customengraving x='2' y='2' png='fixture.spr' name='Legacy fixture decor' id='fixture-id'/>"),{},stamp);
+    session.create_custom_object(object);
+    std::vector<TrapCandidate> pool;for (int level=1;level<=20;++level) pool.push_back({level,false,true});
+    session.select_trap_candidate(pool,{2,false,-1},1.4f);return session;
+}
 void reject(std::string text) {
     bool rejected=false;
     try {std::istringstream input(text);Session::load(input);} catch (const std::exception&) {rejected=true;}
@@ -33,19 +54,21 @@ int main(int argc,char** argv) {
             original.step(action);loaded.step(action);
             check(original.snapshot()==loaded.snapshot() && saved(original)==saved(loaded));
         }
-        auto invalid=text;auto p=invalid.find("version=\"5\"");invalid.replace(p,11,"version=\"6\"");reject(invalid);
-        auto legacy=text;legacy.replace(legacy.find("version=\"5\""),11,"version=\"1\"");
+        auto invalid=text;auto p=invalid.find("version=\"6\"");invalid.replace(p,11,"version=\"7\"");reject(invalid);
+        auto legacy=text;legacy.replace(legacy.find("version=\"6\""),11,"version=\"1\"");
         p=legacy.find("<skills ");const auto end=legacy.find("</skills>\n",p);check(p!=std::string::npos && end!=std::string::npos);
         legacy.erase(p,end+10-p);std::istringstream legacy_input(legacy);auto legacy_loaded=Session::load(legacy_input);
         check(saved(legacy_loaded)==text);
-        auto version_three=text;version_three.replace(version_three.find("version=\"5\""),11,"version=\"3\"");
+        auto version_three=text;version_three.replace(version_three.find("version=\"6\""),11,"version=\"3\"");
         p=version_three.find("<custom-objects>");const auto objects_end=version_three.find("</custom-objects>\n",p);
         check(p!=std::string::npos && objects_end!=std::string::npos);version_three.erase(p,objects_end+18-p);
         std::istringstream version_three_input(version_three);check(saved(Session::load(version_three_input))==text);
-        auto version_four=text;version_four.replace(version_four.find("version=\"5\""),11,"version=\"4\"");
+        auto version_four=text;version_four.replace(version_four.find("version=\"6\""),11,"version=\"4\"");
         p=version_four.find(" normal-available=");const auto normal_end=version_four.find('>',p);
         check(p!=std::string::npos && normal_end!=std::string::npos);version_four.erase(p,normal_end-p);
         std::istringstream version_four_input(version_four);check(saved(Session::load(version_four_input))==text);
+        auto version_five=text;version_five.replace(version_five.find("version=\"6\""),11,"version=\"5\"");
+        std::istringstream version_five_input(version_five);check(saved(Session::load(version_five_input))==text);
         const std::string empty_normal="normal-available=\"0\" normal-spare=\"0\"";
         auto cached=text;p=cached.find(empty_normal);
         check(p!=std::string::npos);cached.replace(p,empty_normal.size(),"normal-available=\"1\" normal-spare=\"1067450368\"");
@@ -109,7 +132,26 @@ int main(int argc,char** argv) {
         duplicate.replace(location,13,"<skill id=\"0\"");
         mismatch=false;try {std::istringstream bad(duplicate);Session::load(bad,profile_items,abilities);} catch(const std::runtime_error&) {mismatch=true;}
         check(mismatch);
-        check(argc==2);
+        check(argc==3);
+        // Generated by the v5 serializer from df8cac9, using only synthetic data.
+        std::ifstream old_profile_input(argv[2]);check(old_profile_input.good());
+        auto old_profile=Session::load(old_profile_input,legacy_profile_items(true),legacy_profile_abilities());
+        auto reference_profile=legacy_profile(true);check(saved(old_profile)==saved(reference_profile));
+        check(old_profile.player().zorkmids==0 && old_profile.custom_objects().size()==1);
+        old_profile.create_ground_currency(100,old_profile.player().position);old_profile.pickup();
+        reference_profile.create_ground_currency(100,reference_profile.player().position);reference_profile.pickup();
+        check(old_profile.player().zorkmids==125 && saved(old_profile)==saved(reference_profile));
+        old_profile.create_ground_currency(19,{3,2});const auto cash_text=saved(old_profile);
+        std::istringstream cash_input(cash_text);auto cash_loaded=Session::load(cash_input,legacy_profile_items(true),legacy_profile_abilities());
+        check(saved(cash_loaded)==cash_text && cash_loaded.ground_items()[0].item.currency_value==23);
+        auto changed_currency_ability=std::make_shared<std::vector<AbilityDefinition>>(*legacy_profile_abilities());
+        changed_currency_ability->at(0).currency_bonus=.5f;bool currency_mismatch=false;
+        try {std::istringstream changed(cash_text);Session::load(changed,legacy_profile_items(true),changed_currency_ability);} catch(const std::runtime_error&) {currency_mismatch=true;}
+        check(currency_mismatch);
+        invalid=cash_text;p=invalid.find(" currency=\"23\"");check(p!=std::string::npos);invalid.erase(p,std::string(" currency=\"23\"").size());
+        bool currency_missing=false;try {std::istringstream missing(invalid);Session::load(missing,legacy_profile_items(true),legacy_profile_abilities());} catch(const std::runtime_error&) {currency_missing=true;}
+        check(currency_missing);
+        invalid=text;p=invalid.find("zorkmids=\"0\"");check(p!=std::string::npos);invalid.replace(p,std::string("zorkmids=\"0\"").size(),"zorkmids=\"2147483648\"");reject(invalid);
         auto trap=read_item(parse_xml("<item name='Fixture trap'><trap/></item>"));
         auto toolkit=read_item(parse_xml("<item name='Fixture toolkit'><toolkit/></item>"));
         auto migrated_definitions=std::make_shared<const std::vector<ItemDefinition>>(std::vector<ItemDefinition>{trap,toolkit});

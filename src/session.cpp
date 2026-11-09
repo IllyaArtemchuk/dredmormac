@@ -80,7 +80,8 @@ std::uint64_t Session::spawn_enemy(Actor enemy) {
 }
 void Session::drop(InventoryItem item,Position position) {
     if (!world_.passable(position) || !item.instance || item.quantity<1 || inventory_.find(item.instance) || ground_.size()>=10000 ||
-        (item.charges && (item.kind!=ItemKind::wand || *item.charges<0)))
+        (item.charges && (item.kind!=ItemKind::wand || *item.charges<0)) ||
+        (item.currency_value.has_value()!=(item.kind==ItemKind::currency)))
         throw std::invalid_argument("invalid ground item");
     if (definitions_ && (item.definition>=definitions_->size() || definitions_->at(item.definition).kind!=item.kind))
         throw std::invalid_argument("ground item definition mismatch");
@@ -88,8 +89,7 @@ void Session::drop(InventoryItem item,Position position) {
     for (const auto& existing:ground_) if (existing.item.instance==item.instance) throw std::invalid_argument("duplicate ground item");
     ground_.push_back({item,position});
 }
-std::uint64_t Session::create_ground_item(std::uint32_t definition,Position position,std::int32_t quantity) {
-    if (!definitions_ || definition>=definitions_->size() || quantity<1) throw std::invalid_argument("invalid ground item creation");
+std::uint64_t Session::next_item_instance() const {
     std::uint64_t identifier=1;
     auto observe=[&](const InventoryItem& item) {
         if (item.instance==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("item IDs exhausted");
@@ -99,9 +99,43 @@ std::uint64_t Session::create_ground_item(std::uint32_t definition,Position posi
     for (const auto& slot:inventory_.belt()) if (slot) observe(*slot);
     for (const auto& slot:equipment_.slots()) if (slot) observe(*slot);
     for (const auto& ground:ground_) observe(ground.item);
+    return identifier;
+}
+std::uint64_t Session::create_ground_item(std::uint32_t definition,Position position,std::int32_t quantity) {
+    if (!definitions_ || definition>=definitions_->size() || quantity<1) throw std::invalid_argument("invalid ground item creation");
+    const auto identifier=next_item_instance();
     auto next=*this;
-    auto item=make_inventory_item(definitions_->at(definition),definition,identifier,next.random_.libc);item.quantity=quantity;
+    InventoryItem item;
+    if (definitions_->at(definition).kind==ItemKind::currency) {
+        static const std::vector<AbilityDefinition> empty;
+        item=make_currency_item(definitions_->at(definition),definition,identifier,1,skills_,abilities_?*abilities_:empty);
+        if (quantity>1) item.stackable=true;
+    } else item=make_inventory_item(definitions_->at(definition),definition,identifier,next.random_.libc);
+    item.quantity=quantity;
     next.drop(item,position);*this=std::move(next);return identifier;
+}
+std::uint64_t Session::create_ground_currency(std::int32_t amount,Position position) {
+    if (!definitions_) throw std::invalid_argument("currency creation needs item definitions");
+    const auto definition=std::find_if(definitions_->begin(),definitions_->end(),[](const auto& item){return item.kind==ItemKind::currency && item.builtin_subtype==2;});
+    if (definition==definitions_->end()) throw std::invalid_argument("currency definition missing");
+    const auto identifier=next_item_instance();static const std::vector<AbilityDefinition> empty;
+    const auto item=make_currency_item(*definition,std::uint32_t(definition-definitions_->begin()),identifier,amount,skills_,abilities_?*abilities_:empty);
+    drop(item,position);return identifier;
+}
+void Session::currency_transfer_impl(std::int32_t amount,CurrencyOperation operation) {
+    const auto result=transfer_currency(player_.zorkmids,amount,operation);
+    events_.push_back({result.money_sound?EventKind::currency_given:EventKind::currency_taken,player_.id,0,result.delta});
+    player_.zorkmids=result.balance;
+}
+void Session::give_currency(std::int32_t amount) {auto next=*this;next.currency_transfer_impl(amount,CurrencyOperation::give);*this=std::move(next);}
+void Session::take_currency(std::int32_t amount) {auto next=*this;next.currency_transfer_impl(amount,CurrencyOperation::take);*this=std::move(next);}
+void Session::pickup_currency() {
+    for (auto item=ground_.begin();item!=ground_.end();) {
+        if (item->item.kind!=ItemKind::currency || !same(item->position,player_.position)) {++item;continue;}
+        if (!item->item.currency_value) throw std::logic_error("currency item lacks value");
+        currency_transfer_impl(*item->item.currency_value,CurrencyOperation::give);
+        events_.push_back({EventKind::pickup,player_.id,item->item.instance,*item->item.currency_value});item=ground_.erase(item);
+    }
 }
 void Session::attack(Actor& attacker,Actor& defender) {
     Actor* source=&attacker;Actor* victim=&defender;
@@ -172,11 +206,14 @@ void Session::step_impl(Action action) {
     if (outcome==Outcome::blocked) { events_.push_back({EventKind::blocked,player_.id});return; }
     player_.position=world_.player();
     if (outcome==Outcome::moved) events_.push_back({EventKind::moved,player_.id});
+    if (outcome==Outcome::moved) pickup_currency();
     enemy_turns();
 }
 void Session::step(Action action) { auto next=*this;next.step_impl(action);*this=std::move(next); }
-void Session::pickup() {
+void Session::pickup() {auto next=*this;next.pickup_impl();*this=std::move(next);}
+void Session::pickup_impl() {
     events_.clear();if (!player_.alive()) return;
+    pickup_currency();
     for (auto item=ground_.begin();item!=ground_.end();) {
         if (!same(item->position,player_.position)) {++item;continue;}
         if (inventory_.insert(item->item).outcome==InsertOutcome::full) {
@@ -247,7 +284,7 @@ std::string Session::snapshot() const {
     std::ostringstream out;
     out<<"{\"turn\":"<<world_.turn()<<",\"player\":{\"id\":"<<player_.id<<",\"name\":"<<quoted(player_.name)
        <<",\"x\":"<<player_.position.x<<",\"y\":"<<player_.position.y<<",\"hp\":"<<player_.health
-       <<",\"mana\":"<<player_.mana<<",\"level\":"<<progression_.level<<",\"xp\":"<<progression_.experience<<"},\"enemies\":[";
+       <<",\"mana\":"<<player_.mana<<",\"zorkmids\":"<<player_.zorkmids<<",\"level\":"<<progression_.level<<",\"xp\":"<<progression_.experience<<"},\"enemies\":[";
     bool first=true;
     for (const auto& enemy:enemies_) {
         if (!first) out<<',';

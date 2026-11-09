@@ -869,3 +869,16 @@ not its Level argument. Wallet transfers wrap and allow negative balances. Only
 INT_MIN transfer is guarded, since the original virtual negative-amount delegation
 recurses indefinitely. Fifteen local groups pass; native currency validation and
 session wallet/pickup/save integration are next.
+
+Currency wallet integration uses the measured Give/Take arithmetic and constructor
+bonuses; pickup removes the money object and credits its value independently of
+Item quantity and bag capacity. Session actions retain provisional scheduling;
+these integration tests do not establish original turn-order parity. All mutations
+that can fail after pickup begins commit through a copied Session. The native
+inventory fixture now walks onto17 coins, checks the wallet and continues equipment
+and save/load smoke. Rendering still uses provisional ground markers and no coin
+sound/floating-text implementation. Savev6 preserves wallets/value payloads and
+adds typed currency-bonus bits to ability signatures. Earlier hashes remain valid
+for v1..5; a fixture produced by the actual df8cac9 v5 serializer exercises cached
+normal state, custom objects, nonempty skills and subsequent bonused pickup.
+Currency core run42615446594 passed actual arm64 Mac validation/package checks.

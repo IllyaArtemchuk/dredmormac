@@ -373,3 +373,15 @@ preview lookup. Native currency validation pending push. Next: Session balance,
 separate currency_value item payload, builtin appended afterLockpick/Spores,
 autopickup/G, savev6 and native wallet/smoke. New typed currency bonus must enter
 ability-content fingerprint with legacy v1..5 hash migration when Session uses it.
+
+Currency core run42615446594 passed actual Mac CI/package, resolving the earlier
+Clang initializer failure in the descendant. Session now owns player.zorkmids and
+InventoryItem.currency_value; create_ground_currency uses builtin subtype2,
+appended afterLockpick/Spores without shifting existing indices/fingerprints.
+Movement/G pickup bypasses bag capacity, credits the separate value only, and is
+atomic on transfer failure. Negative balances/wrapping persist. Savev6 includes
+wallets, payloads and currency_bonus float bits in ability hash; loaders1..5 use
+legacy hash. Synthetic tests/fixtures/port-v5-rng-objects.xml was generated using
+the df8cac9 serializer and synthetic skills/object/cache. Fifteen local groups
+pass; native wallet and17-zorkmid inventory smoke await new CI. Next: actual
+item/loot factories, activation and ordered population/full-level integration.

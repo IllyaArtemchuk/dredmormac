@@ -2,6 +2,8 @@
 #include <iostream>
 #include <stdexcept>
 #include <limits>
+#include "dredmor/session.hpp"
+#include <sstream>
 #define check(value) do { if (!(value)) throw std::runtime_error("currency assertion at line "+std::to_string(__LINE__)); } while(false)
 int main() {
     try {
@@ -30,6 +32,29 @@ int main() {
         transfer=transfer_currency(10,-3,CurrencyOperation::give);check(transfer.balance==7 && transfer.delta==-3 && !transfer.money_sound);
         check(transfer_currency(0,0,CurrencyOperation::give).money_sound && !transfer_currency(0,0,CurrencyOperation::take).money_sound);
         bool rejected=false;try {transfer_currency(0,std::numeric_limits<std::int32_t>::min(),CurrencyOperation::give);} catch(const std::overflow_error&) {rejected=true;}
+        check(rejected);
+        auto cap=read_item(parse_xml("<item name='Fixture cap'><armour type='head'/></item>"));
+        ItemDefinition currency;currency.name="Zorkmids";currency.kind=ItemKind::currency;currency.builtin_subtype=2;
+        auto definitions=std::make_shared<const std::vector<ItemDefinition>>(std::vector<ItemDefinition>{cap,currency});
+        std::istringstream map("#####\n#@..#\n#...#\n#####\n");Session session(World::read(map),make_player({3,2,2}),1);
+        session.equipment_profile({3,2,2},definitions);session.create_ground_currency(17,{2,1});
+        check(session.ground_items()[0].item.currency_value==17 && session.ground_items()[0].item.quantity==1);
+        session.step(Action::east);check(session.player().zorkmids==17 && session.ground_items().empty() && !session.inventory().bag()[0]);
+        for (std::uint64_t i=0;i<48;++i) check(session.inventory().insert({100+i,ItemKind::armour,0,0,1,false}).outcome==InsertOutcome::placed);
+        session.create_ground_currency(5,session.player().position);session.pickup();
+        check(session.player().zorkmids==22 && session.ground_items().empty());
+        session.create_ground_item(1,session.player().position,7);
+        check(session.ground_items()[0].item.currency_value==1 && session.ground_items()[0].item.quantity==7 && session.ground_items()[0].item.stackable);
+        session.pickup();check(session.player().zorkmids==23);
+        session.give_currency(-3);session.take_currency(-10);session.take_currency(100);check(session.player().zorkmids==-70);
+        auto state=[](const Session& value){std::ostringstream out;value.save(out);return out.str();};
+        std::istringstream saved(state(session));auto loaded=Session::load(saved,definitions);check(state(loaded)==state(session) && loaded.player().zorkmids==-70);
+        auto invalid=session;invalid.create_ground_currency(std::numeric_limits<std::int32_t>::min(),invalid.player().position);
+        const auto before=state(invalid);rejected=false;
+        try {invalid.pickup();} catch(const std::overflow_error&) {rejected=true;}
+        check(rejected && state(invalid)==before);
+        auto wrong=make_currency_item(currency,1,900,2);wrong.currency_value.reset();rejected=false;
+        try {session.drop(wrong,session.player().position);} catch(const std::invalid_argument&) {rejected=true;}
         check(rejected);
         std::cout<<"currency eligibility/order/rounding, value versus quantity, sprite thresholds, rolls and wallet wrap passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
