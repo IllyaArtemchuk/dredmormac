@@ -372,3 +372,12 @@ through weapon transfers. Port save version two stores skills and an ability
 content fingerprint, supports version-one port saves, and rejects missing/changed
 ability content and duplicate skills. Full serialized state and future equipment
 rebuilds agree after reload. Native integration smoke is awaiting the next push.
+
+Run 42589757941 (725e708) passed all eighteen tests and relocated app smoke with
+passive ability metadata in the synthetic installation, inventory and version-two
+save/reload path. New native skill selection offers eligible content skills,
+requires exactly seven, shows class counts, and passes selected IDs into the
+session profile. Deprecated entries are retained in content but hidden by the
+picker. Prepared JSON keeps its explicit/default developer profile. New synthetic
+native checks click skill checkboxes and verify selection count/order plus Begin
+button enable/disable. Native execution of that picker check is pending.

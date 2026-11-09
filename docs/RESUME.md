@@ -102,3 +102,8 @@ Weapon-family/archery/thrown ability rebuilding is still separate and missing.
 Save version 2 persists selected skills and ability fingerprint; load accepts v1.
 Native load now passes item and ability rules. Synthetic native fixture includes
 a passive to exercise this path on the next CI push.
+
+SkillSelectionController.* is added. Normal installation startup opens a skill
+picker, requiring exactly seven and hiding deprecated skills. Smoke startup
+uses the deterministic fixture profile, then separately drives the actual picker
+checkboxes and validates count/order and Begin enablement. Pending next Mac run.

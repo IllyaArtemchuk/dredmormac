@@ -31,7 +31,7 @@ Verified:
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
 - Nine local CTest groups pass, including deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42587414308 passed all eighteen checks, including
+- Actual macos-15 arm64 CI run 42589757941 passed all eighteen checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -80,5 +80,10 @@ match with no equipment/buffs/polymorph and supplied string comparison boundary.
 Typed abilities and character_profile now feed sessions/equipment. Save v2 stores
 seven skills and ability content identity; v1 port saves still load. Local tests
 verify passive eligibility across equip/unequip and exact save/reload. Native
-integration CI is pending. Weapon-specific abilities, active spells and effects
+integration CI passes. Weapon-specific abilities, active spells and effects
 remain incomplete.
+
+Native installation startup now offers an exactly-seven-skill picker, preserving
+database order and hiding deprecated entries. The selected IDs flow to class
+ranks, passive stats and saves. Prepared scenes retain explicit/default profiles
+for developer replay. Synthetic picker interaction is pending native execution.

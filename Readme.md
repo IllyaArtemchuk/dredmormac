@@ -72,7 +72,8 @@ The verified MT stream alone is not sufficient to claim deterministic combat.
 ## Native macOS handoff
 
 On an actual Mac, install Xcode command line tools, Python 3.11+ and CMake,
-then launch the app and choose your original installation. Prepared JSON scenes
+then launch the app, choose your original installation and select seven skills.
+Prepared JSON scenes
 remain available for explicit developer encounters.
 
 ```sh
@@ -84,7 +85,8 @@ build/macos-arm64/DredmorMac.app/Contents/MacOS/DredmorMac
 Arrow keys move or attack; `.` waits; G picks up and I opens inventory.
 Select an item and target slot, then Equip; select equipped gear to Unequip.
 Command-S saves the current port session;
-Command-O loads a port save for the same prepared room. Malformed saves fail
+Command-O loads a port save for the same prepared room. Selected skills and
+passive abilities persist in version-two port saves; earlier port saves still load. Malformed saves fail
 before replacing the current state. These saves are not original .sav files.
 Closing the window quits. The UI remains a developer room/encounter view.
 

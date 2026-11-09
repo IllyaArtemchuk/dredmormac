@@ -81,7 +81,7 @@ if(APPLE)
   enable_language(OBJCXX)
   set(CMAKE_OBJCXX_STANDARD 17)
   set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
-  add_executable(DredmorMac MACOSX_BUNDLE platform/macos/main.mm platform/macos/InventoryController.mm)
+  add_executable(DredmorMac MACOSX_BUNDLE platform/macos/main.mm platform/macos/InventoryController.mm platform/macos/SkillSelectionController.mm)
   target_link_libraries(DredmorMac PRIVATE dredmor_core "-framework Cocoa" "-framework UniformTypeIdentifiers")
   target_compile_options(DredmorMac PRIVATE -fobjc-arc)
   set_target_properties(DredmorMac PROPERTIES

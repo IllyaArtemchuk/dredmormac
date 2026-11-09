@@ -7,7 +7,7 @@
 namespace dredmor {
 struct SkillLoadout { std::string type,subtype;int amount=1;bool always=false; };
 struct StartingLoadout { int skill_id;SkillLoadout item; };
-struct SkillDefinition { int id;std::string name;int category;XmlNode source;std::vector<SkillLoadout> loadouts; };
+struct SkillDefinition { int id;std::string name;int category;XmlNode source;std::vector<SkillLoadout> loadouts;bool deprecated=false; };
 struct RoomDefinition {
     std::string name,layer;
     std::vector<std::string> rows;

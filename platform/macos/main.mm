@@ -1,6 +1,7 @@
 #import <Cocoa/Cocoa.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import "InventoryController.h"
+#import "SkillSelectionController.h"
 #include <dispatch/dispatch.h>
 #include <cstring>
 #include <cstdlib>
@@ -74,6 +75,7 @@
 - (void)showInventory:(id)sender;
 - (void)pickUpItems:(id)sender;
 - (BOOL)smokeInventory;
+- (BOOL)smokeSkillSelection;
 @end
 
 @implementation RoomView
@@ -312,6 +314,11 @@
     return !_session->equipment().slots()[0] && _session->inventory().bag()[0].has_value() &&
         primary==_session->player().primary && secondary==_session->player().secondary;
 }
+- (BOOL)smokeSkillSelection {
+    if (!_content) return YES;
+    DredmorSkillSelectionController *controller=[[DredmorSkillSelectionController alloc] initWithSkills:_content->skills()];
+    return [controller smokeTest];
+}
 - (void)keyDown:(NSEvent*)event {
     using dredmor::Action;
     Action action;
@@ -386,7 +393,7 @@
 }
 @end
 
-static NSDictionary *sceneFromInstallation(const std::filesystem::path& selected) {
+static NSDictionary *sceneFromInstallation(const std::filesystem::path& selected,BOOL selectSkills) {
     auto root=std::filesystem::canonical(selected);
     if (std::filesystem::is_directory(root/"Contents/MacOS")) root/="Contents/MacOS";
     const auto content=dredmor::GameContent::load(root);
@@ -395,10 +402,17 @@ static NSDictionary *sceneFromInstallation(const std::filesystem::path& selected
     NSMutableArray<NSString*> *rows=[NSMutableArray array];
     for (const auto& row:room.rows) [rows addObject:[NSString stringWithUTF8String:row.c_str()]];
     auto path=[&](const std::filesystem::path& value) { return [NSString stringWithUTF8String:value.c_str()]; };
-    return @{@"name":@"Starting Room",@"policy":@"provisional-preview",@"rows":rows,
+    NSMutableDictionary *scene=[@{@"name":@"Starting Room",@"policy":@"provisional-preview",@"rows":rows,
         @"collision":[NSString stringWithUTF8String:world.room_text().c_str()],
         @"atlas":path(root/"tilesets/basic.png"),@"hero":path(root/"sprites/hero/hero_idle_d.spr"),
-        @"data_root":path(root),@"floor_crop":@[@0,@192,@32,@32],@"wall_crop":@[@0,@96,@32,@32]};
+        @"data_root":path(root),@"floor_crop":@[@0,@192,@32,@32],@"wall_crop":@[@0,@96,@32,@32]} mutableCopy];
+    if (selectSkills) {
+        DredmorSkillSelectionController *controller=[[DredmorSkillSelectionController alloc] initWithSkills:content.skills()];
+        NSArray<NSNumber*> *skills=[controller runSelection];
+        if (!skills) return nil;
+        scene[@"skills"]=skills;
+    }
+    return scene;
 }
 
 int main(int argc,const char**argv) {
@@ -423,7 +437,10 @@ int main(int argc,const char**argv) {
             } else selected=[NSString stringWithUTF8String:argv[1]];
             try {
                 const std::filesystem::path path(selected.UTF8String);
-                if (std::filesystem::is_directory(path)) scene=sceneFromInstallation(path);
+                if (std::filesystem::is_directory(path)) {
+                    scene=sceneFromInstallation(path,!smoke);
+                    if (!scene) return 0;
+                }
                 else {
                     NSData *data=[NSData dataWithContentsOfFile:selected];
                     scene=data?[NSJSONSerialization JSONObjectWithData:data options:0 error:nullptr]:nil;
@@ -484,7 +501,8 @@ int main(int argc,const char**argv) {
                 [view keyDown:right]; [view keyDown:wait]; [view displayIfNeeded];
                 if (![[view snapshot] isEqualToString:expectedSnapshot] || ([scene[@"smoke_combat"] boolValue] && [view hasLivingEnemies]) ||
                     ([scene[@"smoke_animation"] boolValue] && ![view hasAnimatedHero]) ||
-                    ([scene[@"smoke_inventory"] boolValue] && ![view smokeInventory]) || ![view smokeSaveLoad]) {
+                    ([scene[@"smoke_inventory"] boolValue] && ![view smokeInventory]) ||
+                    ![view smokeSaveLoad] || ![view smokeSkillSelection]) {
                     fprintf(stderr,"native smoke failed: %s\n",[[view snapshot] UTF8String]); std::exit(1);
                 }
                 puts("native smoke: animated SPR, draw, movement, combat and atomic save/load passed");

@@ -90,6 +90,8 @@ GameContent GameContent::load(const std::filesystem::path& root,bool expansions)
                 for (const auto& child:node.children) if (child.tag=="loadout")
                     skill.loadouts.push_back({child.attribute("type"),child.attribute("subtype"),
                         child.integer("amount").value_or(1),child.integer("always").value_or(0)!=0});
+                for (const auto& child:node.children) if (child.tag=="flags")
+                    if (const auto deprecated=child.integer("deprecated")) skill.deprecated=*deprecated!=0;
                 content.skills_.push_back(std::move(skill));
             }
             if (database->source.filename()=="rooms.xml" && node.tag=="room") {
