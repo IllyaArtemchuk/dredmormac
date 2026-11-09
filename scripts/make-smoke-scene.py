@@ -71,7 +71,7 @@ if __name__=='__main__':
             (root/'game/spellDB.xml').write_text('''<spellDB><spell name="Fixture trap spell" type="target"><effect type="damage" slashing="8" affectsCaster="1" unblockable="1"/></spell></spellDB>''')
             (root/'dungeon/trap.spr').write_bytes(sprite());(root/'dungeon/origin.spr').write_bytes(sprite())
             (root/'dungeon/trap_hidden.png').write_bytes(png(32,32,(90,90,90,255)))
-            scene.update(data_root=str(root),room_objects='Starting Room',smoke_traps=True)
+            scene.update(data_root=str(root),room_objects='Starting Room',smoke_traps=True,seed=1)
         if args.monsters:
             (root/'game/rooms.xml').write_text('''<roomdb><room name="Starting Room" width="5" height="4">
 <row text="#####"/><row text="#...#"/><row text="#.21#"/><row text="#####"/>
