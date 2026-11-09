@@ -1473,3 +1473,36 @@ rollback. All25 local groups pass. Native trap smoke now also saves/resumes a
 countdown and a repeating heal/mana spell; current source awaits MacCI.
 
 Reference: supplied 1.1.4 i386 executable SHA256 a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d. Trigger default ctor9c32c/copy46002; payload remaining0, repeat4, spell8, percentc, caster10, gate fields14..20, parent string24. Original routines execute under Unicorn; C++ string/list/allocation, actor virtual identity, UI/audio boundaries are supplied. No supplied bytes or private reports are tracked.
+
+## Buff metadata and actor update order — 2026-11-10
+
+Scheduled sourceb780907 passed actual macos-15 arm64 run42697451427,
+job129432973508: all44 checks plus relocated development-app packaging. Native
+trap smoke exercised delayed countdown firing and three repeat heal/mana passes,
+including save/reload while both kinds were pending. No original assets uploaded.
+Further original call-site analysis traced GameTick2b480: level object virtual
+Update passes run before player virtual UpdateBuffs+Hittable::UpdateTriggers;
+Monster::Updatee9b1a updates triggers before buffs and subsequent AI, when43c==0.
+Session now runs each monster trigger pass before its AI, then player triggers.
+A test verifies a monster-created player trigger can fire in that same turn.
+Complete level-object ordering, speed/time flags and buff passes remain pending.
+
+Buff metadata is now typed from the actual Buff constructoradae4 and spell XML
+callback7c970 (StartElement; effect branch7fdf1): time/stacking/target/upkeep/equipment flags,
+strings and primary/secondary/damage/resistance modifiers. Unknown children stay
+in source. 1024 synthetic definitions plus all268 supplied buff definitions
+across base/expansion layers match actual original callback fields. No expansion
+merge/execution scope is inferred from this ingestion. Constructor and Bob
+initialization execute; SpriteMgr identities, string/ASCII/atof/allocation are
+controlled boundaries. Invalid modifier IDs reject instead of reproducing
+out-of-bounds writes. Highbuff aliases primarybuff; sightbuff replaces secondary18.
+The Hittable::UpdateBuffs44fc0 timer decision matches2048 original passes. A
+nonpermanent counter decrements with int32 wrapping and expires only below zero
+when useTimer is true. Untimed counters still decrement. Permanent counters do
+not decrement. Pending permanent buffs are deleted without virtual deapplication;
+other pending nonpermanent buffs deapply before deletion. Virtual stat removal
+and destruction are recording boundaries, not verified full buff side effects.
+All26 local groups pass. Buff application/stat rebuilding, stacking identity,
+upkeep, gates and native buff display remain unfinished; typed or XML buff casts
+still reject atomically, so metadata is not silently treated as active gameplay.
+Current order/metadata source awaits MacCI.

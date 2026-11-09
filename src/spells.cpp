@@ -123,7 +123,10 @@ SpellDefinition read_spell(const XmlNode& node) {
         if (key=="name") result.name=attribute.second;else if (key=="type") result.type=attribute.second;
     }
     if (result.name.empty()) throw std::invalid_argument("spell name missing");
-    for (const auto& child:node.children) if (lower(child.tag)=="effect") result.effects.push_back(read_spell_effect(child));
+    for (const auto& child:node.children) {
+        if (lower(child.tag)=="effect") result.effects.push_back(read_spell_effect(child));
+        else if (lower(child.tag)=="buff") result.buffs.push_back(read_buff(child));
+    }
     return result;
 }
 }

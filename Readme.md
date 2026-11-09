@@ -193,6 +193,7 @@ and the analysis Python environment. Keep the JSON reports outside the repositor
 | --- | --- |
 | Immediate trigger chains | `verify_triggers.py ORIGINAL_BINARY build/dredmor-trigger --out PRIVATE_REPORT.json` |
 | Scheduled spell creation and updates | `verify_scheduled.py ORIGINAL_BINARY build/dredmor-scheduled --out PRIVATE_REPORT.json` |
+| Buff metadata and timer decisions | `verify_buffs.py ORIGINAL_BINARY build/dredmor-buffs --content DATA_ROOT --out PRIVATE_REPORT.json` |
 | Mana arithmetic and mixed casts | `verify_spellpoints.py ORIGINAL_BINARY build/dredmor-spells build/dredmor-spell-cast --out PRIVATE_REPORT.json` |
 | Template targeting and base ingestion | `verify_maneuvers.py ORIGINAL_BINARY build/dredmor-maneuver --content DATA_ROOT --out PRIVATE_REPORT.json` |
 | Template casts with nested effects | `verify_maneuver_cast.py ORIGINAL_BINARY build/dredmor-maneuver-cast --out PRIVATE_REPORT.json` |

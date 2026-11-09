@@ -73,3 +73,11 @@
   reproduced. Missing dot child rejects rather than retaining a null spell.
   Save format8 is emitted when pending spells require persistence; otherwise7
   remains sufficient. Both are port formats, not original save compatibility.
+
+- Buff metadata and timer decisions are compared with the original (1024 synthetic
+  definitions,268 supplied definitions,2048 timer passes). This does not implement
+  active buff application, stacking, upkeep or stat-removal side effects; session
+  buff casts still fail atomically. Timed expiry occurs below zero in the original.
+- Scheduled session ordering now follows the identified GameTick/Monster::Update
+  relative order: monster triggers before its AI; player triggers after monster
+  updates. Complete object-queue order and speed/time flags remain unverified.

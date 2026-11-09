@@ -37,6 +37,10 @@ int main() {
         auto self=leaf;self.type="self";auto self_profile=std::make_shared<const std::vector<SpellDefinition>>(std::vector<SpellDefinition>{self});
         session=fixture(self_profile);session.cast_spell(root,{1,1},{5,2},2);session.update_triggers(2);session.update_triggers(2);
         check(session.player().health==95 && session.enemies()[0].health==100);
+        auto self_middle=middle;self_middle.type="self";
+        auto turn_profile=std::make_shared<const std::vector<SpellDefinition>>(std::vector<SpellDefinition>{self_middle,leaf});
+        session=fixture(turn_profile);session.cast_spell(next,{1,1},{5,2},2);session.step(Action::wait);
+        check(session.player().health==95 && session.player().triggers.empty() && session.enemies()[0].triggers.empty());
         auto cycle=spell("<spell name='Cycle' type='target'><effect type='trigger' spell='Cycle' amount='1'/></spell>");
         auto cyclic=std::make_shared<const std::vector<SpellDefinition>>(std::vector<SpellDefinition>{cycle});session=fixture(cyclic);session.cast_spell(cycle,{1,1},{1,1});const auto before=saved(session);bool rejected=false;
         try {session.step(Action::wait);} catch(const std::runtime_error&) {rejected=true;}check(rejected && saved(session)==before);
@@ -47,6 +51,8 @@ int main() {
             try {Session::load(data,{},{},profile);} catch(const std::exception&) {rejected=true;}check(rejected);
         }
         rejected=false;try {session.spell_profile(self_profile);} catch(const std::invalid_argument&) {rejected=true;}check(rejected && saved(session)==valid);
+        auto downgraded=valid;downgraded.replace(downgraded.find("version=\"8\""),11,"version=\"7\"");std::istringstream downgrade(downgraded);rejected=false;
+        try {Session::load(downgrade,{},{},profile);} catch(const std::exception&) {rejected=true;}check(rejected);
         // A blocked move consumes no turn and leaves scheduled state untouched.
         session.step(Action::north);check(session.world().turn()==0 && session.player().triggers[0].remaining==2);
         auto wrapping=root;wrapping.effects[0].amount=std::numeric_limits<std::int32_t>::min();session=fixture(profile);session.cast_spell(wrapping,{1,1},{1,1});session.update_triggers(1);

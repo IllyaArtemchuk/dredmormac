@@ -30,8 +30,8 @@ Verified:
 - Room-placement collision: 69,632 original executions match.
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
-- Twenty-five local CTest groups pass, including scheduled spells, deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42692141736 passed all forty-three checks, including
+- Twenty-six local CTest groups pass, including buff metadata, scheduled spells, deterministic session and save/load tests.
+- Actual macos-15 arm64 CI run 42697451427 passed all forty-four checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -647,3 +647,35 @@ Tests cover wait scheduling, no tick on blocked input, nested same-pass addition
 monster-caster self origin, wrap, resumed effects, malformed identities and cycle
 rollback. All25 local groups pass. Native trap smoke now also saves/resumes a
 countdown and a repeating heal/mana spell; current source awaits MacCI.
+
+
+Scheduled sourceb780907 passed actual macos-15 arm64 run42697451427,
+job129432973508: all44 checks plus relocated development-app packaging. Native
+trap smoke exercised delayed countdown firing and three repeat heal/mana passes,
+including save/reload while both kinds were pending. No original assets uploaded.
+Further original call-site analysis traced GameTick2b480: level object virtual
+Update passes run before player virtual UpdateBuffs+Hittable::UpdateTriggers;
+Monster::Updatee9b1a updates triggers before buffs and subsequent AI, when43c==0.
+Session now runs each monster trigger pass before its AI, then player triggers.
+A test verifies a monster-created player trigger can fire in that same turn.
+Complete level-object ordering, speed/time flags and buff passes remain pending.
+
+Buff metadata is now typed from the actual Buff constructoradae4 and spell XML
+callback7c970 (StartElement; effect branch7fdf1): time/stacking/target/upkeep/equipment flags,
+strings and primary/secondary/damage/resistance modifiers. Unknown children stay
+in source. 1024 synthetic definitions plus all268 supplied buff definitions
+across base/expansion layers match actual original callback fields. No expansion
+merge/execution scope is inferred from this ingestion. Constructor and Bob
+initialization execute; SpriteMgr identities, string/ASCII/atof/allocation are
+controlled boundaries. Invalid modifier IDs reject instead of reproducing
+out-of-bounds writes. Highbuff aliases primarybuff; sightbuff replaces secondary18.
+The Hittable::UpdateBuffs44fc0 timer decision matches2048 original passes. A
+nonpermanent counter decrements with int32 wrapping and expires only below zero
+when useTimer is true. Untimed counters still decrement. Permanent counters do
+not decrement. Pending permanent buffs are deleted without virtual deapplication;
+other pending nonpermanent buffs deapply before deletion. Virtual stat removal
+and destruction are recording boundaries, not verified full buff side effects.
+All26 local groups pass. Buff application/stat rebuilding, stacking identity,
+upkeep, gates and native buff display remain unfinished; typed or XML buff casts
+still reject atomically, so metadata is not silently treated as active gameplay.
+Current order/metadata source awaits MacCI.

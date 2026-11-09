@@ -248,6 +248,7 @@ bool Session::cast_spell_recursive(const SpellDefinition& spell,Position origin,
     std::size_t depth,std::size_t& remaining) {
     if (depth>=64 || !remaining) throw std::runtime_error("spell recursion execution budget exhausted");
     --remaining;
+    if (!spell.buffs.empty()) throw std::invalid_argument("spell buff application is not implemented");
     const bool maneuver=spell.type=="template";
     if (spell.type=="self") target=origin;
     else if (spell.type=="adjacent") {
@@ -463,15 +464,20 @@ std::optional<Position> Session::next_step(const Actor& enemy) const {
     return Position{step%width,step/width};
 }
 void Session::enemy_turns() {
-    // Provisional session turn boundary; the per-actor update above is measured,
-    // but the complete original player/monster action queue remains pending.
-    std::size_t remaining=4096;update_triggers_impl(player_,remaining);
-    for (auto& enemy:enemies_) update_triggers_impl(enemy,remaining);
-    for (auto& enemy:enemies_) if (enemy.alive() && player_.alive()) {
-        const auto dx=std::abs(enemy.position.x-player_.position.x),dy=std::abs(enemy.position.y-player_.position.y);
-        if (dx+dy==1) attack(enemy,player_);
-        else if (auto next=next_step(enemy)) { enemy.position=*next;events_.push_back({EventKind::moved,enemy.id});activate_traps_impl(enemy); }
+    // GameTick updates level objects before player triggers; Monster::Update
+    // updates its triggers before AI. The full object queue, speed flags and
+    // buff passes are still outside this provisional session scheduler.
+    std::size_t remaining=4096;
+    for (auto& enemy:enemies_) {
+        if (!player_.alive()) break;
+        update_triggers_impl(enemy,remaining);
+        if (enemy.alive() && player_.alive()) {
+            const auto dx=std::abs(enemy.position.x-player_.position.x),dy=std::abs(enemy.position.y-player_.position.y);
+            if (dx+dy==1) attack(enemy,player_);
+            else if (auto next=next_step(enemy)) { enemy.position=*next;events_.push_back({EventKind::moved,enemy.id});activate_traps_impl(enemy); }
+        }
     }
+    update_triggers_impl(player_,remaining);
 }
 void Session::step_impl(Action action) {
     events_.clear();if (!player_.alive()) return;

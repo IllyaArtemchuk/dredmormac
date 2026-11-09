@@ -2,6 +2,7 @@
 #include "dredmor/items.hpp"
 #include "dredmor/world.hpp"
 #include "dredmor/random.hpp"
+#include "dredmor/buffs.hpp"
 #include <memory>
 
 namespace dredmor {
@@ -28,6 +29,7 @@ struct SpellEffectDefinition {
 struct SpellDefinition {
     std::string name,type,layer;
     std::vector<SpellEffectDefinition> effects;
+    std::vector<BuffDefinition> buffs;
     XmlNode source;
     std::shared_ptr<const std::vector<ManeuverTemplate>> maneuvers;
 };
