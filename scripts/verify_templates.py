@@ -27,8 +27,14 @@ def verify(root,port,expansions=False):
             fingerprint=14695981039346656037
             for cell in cells:
                 for byte in cell:fingerprint=((fingerprint^byte)*1099511628211)&0xffffffffffffffff
-            shop=int(int(room.get('shop','0'))!=0);zoo=int(int(room.get('zoo','0'))!=0)
-            expected.append(f'{width} {height} {shop} {zoo} {fingerprint:x}')
+            flags=dict(shop=0,zoo=0,minlevel=0,maxlevel=25,roomset=0,quest=0,special=0,digglegod=0,notraps=0,nomonsters=0,noblockers=0,notreasure=0)
+            for child in room:
+                if child.tag.lower()!='flags': continue
+                for key,value in child.attrib.items():
+                    key=key.lower()
+                    if key in flags:flags[key]=int(value) if key in ('minlevel','maxlevel','roomset') else int(int(value)!=0)
+            fields=[width,height]+[flags[key] for key in ('shop','zoo','minlevel','maxlevel','roomset','quest','special','digglegod','notraps','nomonsters','noblockers','notreasure')]
+            expected.append(' '.join(map(str,fields))+f' {fingerprint:x}')
             total_cells+=len(cells)
     args=[str(port.resolve()),str(root)]+(['--expansions'] if expansions else [])
     actual=subprocess.check_output(args,text=True).splitlines()

@@ -22,16 +22,19 @@ int main(int argc,char** argv) {
         check(rejected);
         dredmor::RoomDefinition geometry;
         geometry.name="Geometry fixture";geometry.source=dredmor::XmlNode{};
-        geometry.source.attributes={{"width","6"},{"height","4"},{"shop","1"},{"zoo","1"}};
+        geometry.source=dredmor::parse_xml("<room width='6' height='4'><flags shop='1' zoo='1' minLevel='2' maxLevel='8' roomset='1' special='1'/><flags NoMonsters='1'/></room>");
         geometry.rows={"!P@^Dd","WL GIX","Ssi123",".     ignored outside declared width"};
         auto numeric=geometry.numeric_template();
         check(numeric.width==6 && numeric.height==4 && numeric.shop && numeric.zoo);
+        check(numeric.rules.minimum_level==2 && numeric.rules.maximum_level==8 && numeric.rules.room_set==1 && numeric.rules.unique && numeric.rules.no_monsters);
         check(numeric.cells[0].kind==2 && numeric.cells[0].wall_marker==4);
         check(numeric.cells[1].wall_marker==1 && numeric.cells[2].wall_marker==2 && numeric.cells[3].wall_marker==3);
         check(numeric.cells[4].kind==6 && numeric.cells[4].door_orientation==0 && numeric.cells[5].door_orientation==1);
         check(numeric.cells[6].kind==7 && numeric.cells[7].kind==8 && numeric.cells[8].kind==0);
         check(numeric.cells[9].kind==9 && numeric.cells[10].kind==10 && numeric.cells[11].kind==15);
         check(numeric.cells[12].kind==1 && numeric.cells[13].kind==1 && numeric.cells[14].kind==1 && numeric.cells[15].kind==0);
+        geometry.source.children.clear();geometry.source.attributes["shop"]="1";
+        numeric=geometry.numeric_template();check(!numeric.shop && numeric.rules.maximum_level==25);
         std::cout<<"content-to-session definitions, selected classes, variant stats and room collision passed\n";
     } catch (const std::exception& e) {std::cerr<<e.what()<<'\n';return 1;}
 }

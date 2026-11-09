@@ -31,7 +31,7 @@ Verified:
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
 - Ten local CTest groups pass, including deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42594615983 passed all nineteen checks, including
+- Actual macos-15 arm64 CI run 42596610606 passed all nineteen checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -109,5 +109,10 @@ Equipped weapon training now enters the correct pre-scaling flat-stat stage.
 1,024 original equip+rebuild executions / 63,488 fields match, including 235
 melee-plus-bow cases. Bow damage bonuses no longer leak into melee damage.
 Updated local checks and 256 original-content initializations pass; this new
-weapon-training integration awaits native CI. Dual wield/spells/triggers remain
+weapon-training integration passes native CI. Dual wield/spells/triggers remain
 incomplete.
+
+Room child-flag ingestion is corrected and covers level bounds, sets, quest/
+unique/god/population flags. Independent comparison now checks all those fields
+across 346 templates. Whitespace in the supplied expansion loadout amount parses
+with original atoi-style prefix semantics. Full level generation remains pending.

@@ -20,10 +20,16 @@ private:
     std::vector<std::uint8_t> cells_;
 };
 struct TemplateCell { std::uint8_t kind=0,door_orientation=0,wall_marker=0; };
+struct RoomPlacementRules {
+    int minimum_level=0,maximum_level=25,room_set=0;
+    bool quest=false,unique=false,diggle_god=false;
+    bool no_traps=false,no_monsters=false,no_blockers=false,no_treasure=false;
+};
 struct RoomStamp {
     int width=0,height=0;
     std::vector<TemplateCell> cells;
     bool shop=false,zoo=false;
+    RoomPlacementRules rules{};
 };
 struct DungeonCell {
     std::uint8_t kind=0,room_id=0,door_flags=0;

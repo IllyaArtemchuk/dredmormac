@@ -1,5 +1,6 @@
 #include "dredmor/content.hpp"
 #include "dredmor/selection.hpp"
+#include "dredmor/legacy_number.hpp"
 #include <algorithm>
 #include <functional>
 #include <limits>
@@ -8,12 +9,31 @@
 #include <stdexcept>
 
 namespace dredmor {
+namespace {
+std::string ascii_lower(std::string value) {
+    for (auto& c:value) if (c>='A' && c<='Z') c=static_cast<char>(c-'A'+'a');
+    return value;
+}
+std::optional<int> legacy_attribute(const XmlNode& node,std::string_view key) {
+    for (const auto& attribute:node.attributes) if (ascii_lower(attribute.first)==key) return legacy_integer(attribute.second);
+    return std::nullopt;
+}
+}
 RoomStamp RoomDefinition::numeric_template() const {
-    const auto width=source.integer("width"),height=source.integer("height");
+    const auto width=legacy_attribute(source,"width"),height=legacy_attribute(source,"height");
     if (!width || !height || *width<1 || *height<1 || *width>512 || *height>512 || rows.size()>std::size_t(*height))
         throw std::runtime_error("invalid declared room dimensions: "+name);
     RoomStamp result;result.width=*width;result.height=*height;
-    result.shop=source.integer("shop").value_or(0)!=0;result.zoo=source.integer("zoo").value_or(0)!=0;
+    for (const auto& node:source.children) if (ascii_lower(node.tag)=="flags") {
+        auto flag=[&](std::string_view name,bool& target){if (const auto value=legacy_attribute(node,name)) target=*value!=0;};
+        auto integer=[&](std::string_view name,int& target){if (const auto value=legacy_attribute(node,name)) target=*value;};
+        flag("shop",result.shop);flag("zoo",result.zoo);flag("quest",result.rules.quest);
+        flag("special",result.rules.unique);flag("digglegod",result.rules.diggle_god);
+        flag("notraps",result.rules.no_traps);flag("nomonsters",result.rules.no_monsters);
+        flag("noblockers",result.rules.no_blockers);flag("notreasure",result.rules.no_treasure);
+        integer("minlevel",result.rules.minimum_level);integer("maxlevel",result.rules.maximum_level);
+        integer("roomset",result.rules.room_set);
+    }
     result.cells.resize(std::size_t(*width)*(*height));
     for (std::size_t y=0;y<rows.size();++y) for (std::size_t x=0;x<std::min(rows[y].size(),std::size_t(*width));++x) {
         auto& cell=result.cells[y*(*width)+x];
@@ -89,7 +109,7 @@ GameContent GameContent::load(const std::filesystem::path& root,bool expansions)
                 SkillDefinition skill{*id,node.attribute("name"),value,node,{}};
                 for (const auto& child:node.children) if (child.tag=="loadout")
                     skill.loadouts.push_back({child.attribute("type"),child.attribute("subtype"),
-                        child.integer("amount").value_or(1),child.integer("always").value_or(0)!=0});
+                        legacy_attribute(child,"amount").value_or(1),legacy_attribute(child,"always").value_or(0)!=0});
                 for (const auto& child:node.children) if (child.tag=="flags")
                     if (const auto deprecated=child.integer("deprecated")) skill.deprecated=*deprecated!=0;
                 content.skills_.push_back(std::move(skill));

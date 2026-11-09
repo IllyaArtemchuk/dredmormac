@@ -490,3 +490,24 @@ and that bow damage cannot augment melee. Session still permits at most one mele
 weapon; complete dual-wield transitions and spell/trigger updates remain pending.
 Re-run verify_equipped_passives.py for equipped-passive-stats.json privately.
 The 256 supplied-content character initializations pass again after this change.
+
+Run 42596610606 (17689fb) passed all nineteen checks and relocated package smoke
+with weapon training integrated into normal character creation and save/reload.
+
+## Room rule ingestion correction
+
+Original room parser flags are child <flags> attributes, not room-root attributes.
+Corrected numeric_template shop/zoo and added level bounds, room-set, quest,
+unique/special, diggle-god and population-suppression rules. Previous independent
+numeric-template checking shared the root-attribute assumption; it did not prove
+those semantics. The corrected independent parser now compares all rule fields
+for all 346 supplied templates. Base has 191 templates, six shops and three zoos,
+all room-set zero. Source annotations remain preserved for later population.
+
+A supplied expansion-three loadout contains amount=" 3". Original atoi accepts
+it; the new strict skill-loadout reader had rejected it and incidentally blocked
+unrelated template checks through GameContent. Added an ASCII whitespace/sign/
+decimal-prefix reader for original room/loadout integer attributes. Port save and
+CLI integer validation remain strict. Out-of-range source values saturate to
+int32 as a stated port policy; original overflow has not been executed. All ten
+local groups and corrected 346-template comparison pass.

@@ -154,6 +154,17 @@ Bow modifiers no longer augment melee damage. Dual melee still disabled.
 RepairWeaponSwitch.java restores two computed-jump overrides (plain references
 alone did not suffice) and is integrated into analyze-original.sh. Export is
 weapon-equip-repaired.txt privately. New source awaits native CI.
-Next investigation: numeric_template currently reads shop/zoo at room root but
-original parser reads child flags. Correct that before using generated rooms;
-verify_templates.py shares the root assumption and must be corrected too.
+Room rules are corrected to read child flags; verify_templates.py independently
+checks all fields over 346 templates. Base: 191 rooms, six shops, three zoos, all
+roomset zero. The supplied expansion3 loadout amount=" 3" requires original
+atoi-style prefix handling; legacy_number.hpp now supports room/loadout attrs.
+
+Weapon-training run 42596610606 passed nineteen checks + packaging smoke.
+Current work: full level-generation geometry. Private generation-flow.txt has
+GenLevelContent1. FIFO door loop picks MT-bounded templates until five eligible
+attempts; invalid candidates do not count. Scan candidate doors row-major, place
+on first fit, append new door positions in WriteTemplate's x-major order. Failed
+doors become wall; generation retries whole layout unless non-shop rooms >15
+and floorCount>2999 (short game >10 / >799). Need preserve GenRoomName RNG too.
+New private generation-names-and-size.txt exports GenRoomName (0xd3670) and
+GenLevelContent (0x65c80); headless log work/generation-names-and-size.log.
