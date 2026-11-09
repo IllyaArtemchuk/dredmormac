@@ -27,3 +27,12 @@ jobs:
         run: |
           export CMAKE_PREFIX_PATH="$(brew --prefix expat)"
           scripts/build-macos.sh
+      - name: Package and smoke-test relocated development app
+        run: |
+          python3 scripts/package-macos.py build/macos-arm64/DredmorMac.app build/DredmorMac-arm64-development.zip
+          build/macos-arm64/DredmorMac.app/Contents/MacOS/DredmorMac build/macos-arm64/native-combat/scene.json --smoke-test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DredmorMac-arm64-development-${{ github.run_number }}
+          path: build/DredmorMac-arm64-development.zip
+          retention-days: 14

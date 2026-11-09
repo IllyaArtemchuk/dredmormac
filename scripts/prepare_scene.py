@@ -54,7 +54,7 @@ def scene_rows(room):
     return rows, collision
 
 
-def prepare(root, out):
+def prepare(root, out, encounter=None):
     root = root.resolve(); out = out.resolve()
     room = ET.parse(root/'game/rooms.xml').getroot().find('room')
     if room is None or room.get('name') != 'Starting Room':
@@ -69,7 +69,26 @@ def prepare(root, out):
     scene = dict(name=room.get('name'),policy='provisional-preview',
                  rows=visual,collision='\n'.join(collision)+'\n',
                  atlas=str(atlas),hero=str(out/'hero.png'),
-                 floor_crop=[0,192,32,32],wall_crop=[0,96,32,32])
+                 floor_crop=[0,192,32,32],wall_crop=[0,96,32,32],data_root=str(root))
+    if encounter:
+        found=[]
+        def visit(node, inherited_sprite=None):
+            idle=node.find('idleSprite')
+            sprite=idle.get('down',inherited_sprite) if idle is not None else inherited_sprite
+            if node.get('name')==encounter: found.append(sprite)
+            for child in node.findall('monster'): visit(child,sprite)
+        for monster in ET.parse(root/'game/monDB.xml').getroot().findall('monster'): visit(monster)
+        if len(found)!=1 or not found[0]: raise ValueError('encounter monster missing or ambiguous')
+        image_path=(root/found[0]).resolve()
+        if not image_path.is_relative_to(root): raise ValueError('encounter sprite escapes data root')
+        payload=image_path.read_bytes()
+        (out/'encounter.png').write_bytes(spr_first_png(payload) if image_path.suffix.lower()=='.spr' else payload)
+        hero_position=next((x,y) for y,row in enumerate(collision) for x,c in enumerate(row) if c=='@')
+        candidates=[(x,y) for y,row in enumerate(collision) for x,c in enumerate(row)
+                    if c=='.' and abs(x-hero_position[0])+abs(y-hero_position[1])==1]
+        if not candidates: raise ValueError('no adjacent developer encounter spawn')
+        x,y=candidates[0]
+        scene['enemies']=[dict(name=encounter,x=x,y=y,image=str(out/'encounter.png'))]
     (out/'scene.json').write_text(json.dumps(scene,indent=2)+'\n')
     return scene
 
@@ -77,5 +96,6 @@ def prepare(root, out):
 if __name__ == '__main__':
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('data_root',type=Path); p.add_argument('--out',required=True,type=Path)
-    a=p.parse_args(); result=prepare(a.data_root,a.out)
+    p.add_argument('--encounter',help='Add an explicit developer encounter; not original Starting Room population')
+    a=p.parse_args(); result=prepare(a.data_root,a.out,a.encounter)
     print(f"Prepared {result['name']} (provisional preview)")

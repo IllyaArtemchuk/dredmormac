@@ -218,3 +218,22 @@ exact serialized state and subsequent randomized turns after reload, including
 dead players, equipped items, escaping, content mismatch and malformed saves.
 This is a new port save format, **not original .sav compatibility**. Its content
 signature detects changed item definitions; it is not an authentication mechanism.
+
+## Actual arm64 macOS validation
+
+Published source-only implementation branch and ran GitHub Actions on the
+standard macos-15 arm64 image. Run 42581482510, commit e20faf7a1e3cccd586d6499533314dbb440441be:
+https://github.com/IllyaArtemchuk/dredmormac/actions/runs/42581482510
+
+AppleClang 17.0.0.17000013 compiled the core and AppKit application; file identified
+the app as Mach-O 64-bit arm64. **All nine checks passed**, including session,
+save/load, real Darwin libc RNG comparison (36,864 outputs), and actual native
+window/draw/move/wait smoke. Original assets were not uploaded or used by CI.
+This clears the previous native-compilation blocker for the tested foundation,
+not complete-game or original-asset visual fidelity validation.
+
+Ghidra initially truncated many functions at a falsely noreturn allocator
+destructor import thunk. RepairAllocatorReturns.java clears that annotation and
+call-flow overrides before export. Re-running general analysis immediately
+rediscovers it, so export directly after repair. Complete Tileset::Load,
+Level::Draw and Player::AllocatePoints exports are now available privately.

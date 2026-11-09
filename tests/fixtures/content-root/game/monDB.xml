@@ -1,0 +1,3 @@
+<monDB><monster name="Fixture monster"><stats numFig="2" xpValue="5"/>
+<damage crushing="1"/><monster name="Fixture variant"><stats numRog="1" xpValue="10"/></monster>
+</monster></monDB>

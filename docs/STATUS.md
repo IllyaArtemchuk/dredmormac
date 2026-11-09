@@ -28,16 +28,18 @@ Verified:
 - Monster scaling: 2,048 original full-function fixtures / 61,440 fields match.
 - XP table: all 350 original thresholds in seven input configurations match.
 - Six local CTest groups pass, including deterministic session and save/load tests.
+- Actual macos-15 arm64 CI run 42581482510 passed all nine checks, including
+  AppKit window input/drawing and real libc RNG agreement. Source is on the
+  implementation branch; original files remain private and outside GitHub.
 - Ghidra successfully imported/analyzed the game; reproducible targeted exports.
 - Original Starting Room and hero SPR prepare successfully from supplied data.
 - Embedded startup version 1.1.4 traced through the formatter's actual arguments.
 - Reproducible replay NNEES.WW ends at x=4,y=6, turn=7 under provisional policy.
 
 Blockers and limits:
-- No actual Mac or original full-game execution available in this session.
-- New AppKit target has not been compiled; arm64 build and smoke test pending.
-  macos-15 arm64 CI and synthetic native-window test are prepared for the
-  implementation branch. First native run is pending. CI needs no original assets.
+- Original full-game reference execution is still unavailable. Native arm64
+  build and synthetic window smoke now work through actual Mac CI. Testing
+  original-asset rendering and complete gameplay remains pending.
 - Complete gameplay systems remain to be implemented and compared.
 - Additional version suffix/mod state and exact expansion scope remain unverified.
 - GameFrame broad suite: 424 passed, 11 failed. Remaining optional/unrelated
@@ -45,8 +47,8 @@ Blockers and limits:
 - Combat uses a separate imported libc rand() stream; MT verification alone
   does not establish deterministic combat.
 
-Current work: run the native branch CI, fix actual Mac issues, and connect the
-native scene renderer to the turn session and original content definitions.
+Current work: native scene renderer is being connected to the turn session and
+original content definitions, with combat-window CI and portable app packaging.
 DoRandomize and seed flow are identified; decision/arithmetic combat rules are
 compared, while complete DoCombat/triggers and original HP/death side-effect
 comparisons remain unfinished. Session HP/death behavior exists but is not yet

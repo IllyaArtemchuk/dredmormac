@@ -14,8 +14,9 @@
   spawn policy. Wall and floor atlas crops are fixed, without adjacency rules.
 - SPR exporter uses only the first frame, assumes transparent palette index 0,
   and rejects transparency trailers. Animation is not implemented.
-- Native AppKit frontend is written but has not been compiled or run on macOS.
-  The prepared synthetic window test and manual Mac CI workflow have not been run.
+- AppKit frontend compiles and runs on actual arm64 macOS CI; its synthetic
+  window/input smoke passes. Original-asset visual fidelity and full gameplay
+  validation remain pending. The UI remains a room/encounter view, not original UI.
 - Distance routine matches sampled original i386 execution, including wraparound.
   Unusual floating-point rounding modes have not been compared.
 - RNG interfaces match sampled original outputs and double bits. Seed flow across

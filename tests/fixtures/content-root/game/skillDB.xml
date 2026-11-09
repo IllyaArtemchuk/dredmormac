@@ -1,0 +1,9 @@
+<skillDB>
+  <skill id="0" name="Fixture 0" type="warrior"/>
+  <skill id="1" name="Fixture 1" type="wizard"/>
+  <skill id="2" name="Fixture 2" type="rogue"/>
+  <skill id="3" name="Fixture 3" type="warrior"/>
+  <skill id="4" name="Fixture 4" type="wizard"/>
+  <skill id="5" name="Fixture 5" type="rogue"/>
+  <skill id="6" name="Fixture 6" type="warrior"/>
+</skillDB>
