@@ -22,6 +22,7 @@ struct RoomDefinition {
     RoomStamp numeric_template() const;
     std::vector<RoomElementDefinition> elements() const;
     std::vector<CustomRoomDefinition> custom_objects() const;
+    std::vector<RoomPopulationRecord> population() const;
 };
 class GameContent {
 public:

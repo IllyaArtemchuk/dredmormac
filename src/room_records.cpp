@@ -2,6 +2,7 @@
 #include "dredmor/legacy_number.hpp"
 #include <stdexcept>
 #include <cstring>
+#include <type_traits>
 
 namespace dredmor {
 namespace {
@@ -129,6 +130,42 @@ std::optional<CustomRoomObject> create_custom_room_object(const CustomRoomDefini
     result.can_push=definition.placement.can_push;
     result.blocks_movement=!definition.passable.value_or(definition.kind==CustomRoomKind::engraving);
     result.blocks_vision=definition.vis_block.value_or(false);
+    random=candidate;return result;
+}
+RoomPopulationRecord read_room_population(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room) {
+    const auto tag=lower(node.tag);auto candidate=room;RoomPopulationRecord result;
+    if (tag=="monster") {RoomMonsterRecord record;record.name=attribute(node,"name").value_or("");result=record;}
+    else if (tag=="trap") {RoomTrapRecord record;record.name=attribute(node,"name").value_or("");result=record;}
+    else if (tag=="loot") {
+        RoomLootRecord record;record.type=attribute(node,"type").value_or("");record.subtype=attribute(node,"subtype").value_or("random");
+        record.amount=legacy_integer(attribute(node,"amount").value_or("1"));
+        record.artifact=legacy_integer(attribute(node,"artifact").value_or("0"))!=0;result=record;
+    } else if (tag=="horde") {
+        RoomHordeRecord record;record.name=attribute(node,"name").value_or("");
+        record.minimum=legacy_integer(attribute(node,"min").value_or("-1"));
+        record.additional=legacy_integer(attribute(node,"additional").value_or("-1"));result=record;
+    } else throw std::invalid_argument("expected room population record");
+    auto common=placement(node,markers,candidate);
+    std::visit([&](auto& record){record.placement=common;},result);room=std::move(candidate);return result;
+}
+RoomPopulationPlan plan_room_population(const RoomPopulationRecord& definition,Position origin,DarwinRandom& random) {
+    auto candidate=random;RoomPopulationPlan result;
+    std::visit([&](const auto& record) {
+        if (!appears(record.placement.percent,candidate)) return;
+        result.position={add(origin.x,record.placement.relative.x),add(origin.y,record.placement.relative.y)};
+        using Record=std::decay_t<decltype(record)>;
+        if constexpr (std::is_same_v<Record,RoomMonsterRecord>) {
+            result.name=record.name;result.request=record.name.empty()?PopulationRequest::random_monster:PopulationRequest::named_monster;
+        } else if constexpr (std::is_same_v<Record,RoomTrapRecord>) {
+            result.name=record.name;result.request=record.name.empty()?PopulationRequest::random_trap:PopulationRequest::named_trap;
+        } else if constexpr (std::is_same_v<Record,RoomLootRecord>) {
+            result.request=PopulationRequest::loot;result.type=record.type;result.subtype=record.subtype;
+            result.amount=record.amount;result.artifact=record.artifact;
+        } else {
+            result.request=PopulationRequest::horde;result.name=record.name;
+            result.minimum=record.minimum;result.additional=record.additional;
+        }
+    },definition);
     random=candidate;return result;
 }
 }

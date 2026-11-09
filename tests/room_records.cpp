@@ -74,6 +74,26 @@ int main() {
         check(rejected && room.cells[30].kind==0);
         definition.source=parse_xml("<room width='5' height='1'><customblocker at='1' png='fixture.spr'/><customengraving x='2' y='0' png='fixture.png'/></room>");
         auto customs=definition.custom_objects();check(customs.size()==2 && customs[0].kind==CustomRoomKind::blocker && customs[1].kind==CustomRoomKind::engraving);
+        auto population=read_room_population(parse_xml("<loot at='3' amount=' 7tail' artifact='1'/>"),markers,room);
+        const auto& loot=std::get<RoomLootRecord>(population);
+        check(loot.type.empty() && loot.subtype=="random" && loot.amount==7 && loot.artifact);
+        random.seed(1);auto request=plan_room_population(population,{10,20},random);
+        check(request.request==PopulationRequest::loot && request.position.x==12 && request.position.y==24 && request.amount==7 && request.artifact && random.state()==1);
+        population=read_room_population(parse_xml("<horde x='1' y='2'/>"),markers,room);
+        check(std::get<RoomHordeRecord>(population).minimum==-1 && std::get<RoomHordeRecord>(population).additional==-1);
+        request=plan_room_population(population,{0,0},random);check(request.request==PopulationRequest::horde && request.name.empty());
+        population=read_room_population(parse_xml("<monster x='1' y='0' percent='0'/>"),markers,room);
+        random.seed(1);request=plan_room_population(population,{2147483647,0},random);
+        check(request.request==PopulationRequest::random_monster && request.position.x==(-2147483647-1) && random.state()==16807);
+        std::get<RoomMonsterRecord>(population).placement.percent=-1;random.seed(1);request=plan_room_population(population,{0,0},random);
+        check(request.request==PopulationRequest::none && random.state()==16807);
+        population=read_room_population(parse_xml("<trap x='0' y='0' name='Fixture'/>"),markers,room);
+        request=plan_room_population(population,{0,0},random);check(request.request==PopulationRequest::named_trap && request.name=="Fixture");
+        room.cells[30].kind=0;rejected=false;
+        try {read_room_population(parse_xml("<monster at='3' x='1'/>"),markers,room);} catch(const std::invalid_argument&) {rejected=true;}
+        check(rejected && room.cells[30].kind==0);
+        definition.source=parse_xml("<room width='5' height='1'><monster at='1'/><loot at='2'/><trap at='3'/><horde at='4'/></room>");
+        auto records=definition.population();check(records.size()==4 && records[0].index()==0 && records[1].index()==2 && records[2].index()==1 && records[3].index()==3);
         std::cout<<"room point resolution, attribute consumption, marker floors and nested script references passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

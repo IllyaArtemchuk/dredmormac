@@ -37,6 +37,17 @@ std::vector<CustomRoomDefinition> RoomDefinition::custom_objects() const {
         result.push_back(read_custom_room_object(node,markers,numeric));
     return result;
 }
+std::vector<RoomPopulationRecord> RoomDefinition::population() const {
+    auto numeric=numeric_template();RoomMarkers markers;
+    for (std::size_t y=0;y<rows.size();++y) for (std::size_t x=0;x<std::min(rows[y].size(),std::size_t(numeric.width));++x)
+        if (rows[y][x]>='1' && rows[y][x]<='9') markers[rows[y][x]]={int(x),int(y)};
+    std::vector<RoomPopulationRecord> result;
+    for (const auto& node:source.children) {
+        const auto tag=ascii_lower(node.tag);
+        if (tag=="monster" || tag=="trap" || tag=="loot" || tag=="horde") result.push_back(read_room_population(node,markers,numeric));
+    }
+    return result;
+}
 RoomStamp RoomDefinition::numeric_template() const {
     const auto width=legacy_attribute(source,"width"),height=legacy_attribute(source,"height");
     if (!width || !height || *width<1 || *height<1 || *width>512 || *height>512 || rows.size()>std::size_t(*height))

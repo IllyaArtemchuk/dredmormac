@@ -751,3 +751,30 @@ invalid object resource paths. Actual native execution is pending this push.
 PNG sequence timing and drawing order remain presentation policy, not original
 visual parity. Preview still omits preceding full-level RNG consumption and other
 record constructors, so appearance sequences are not full-game verified.
+
+Run42608683842 (01a3e5e) passed all twenty-four native checks and relocated signed
+package smoke, including SPR/PNG-series custom objects and atomic resource reload.
+
+## Monster, trap, loot and horde record requests
+
+Typed population records preserve original common placement and source metadata,
+optional monster/trap/horde name, loot type/subtype/quantity/artifact and horde
+minimum/additional counts. Loot defaults to subtype random, quantity1, artifact0;
+horde bounds default -1/-1, deferring to spawn tweaks. RoomDefinition::population
+retains XML order among these four classes; it does not yet interleave every
+custom/element/script constructor in one content executor.
+
+verify_population_records.py matches2,132 original record executions at monster
+0x1a1342, trap0x1a0ffe, loot0x1a2c64 and horde0x1a331c. The compared normalized
+requests include appearance, wrapping position, named/random path, loot factory
+arguments, horde arguments and appearance RNG. Allocation/strings/rand, monster
+lookup, constructors, random monster/trap spawning, item factory, horde spawning
+and finalization are supplied boundaries. Original trap-name searching runs over
+controlled four-pool tables and finds the first match; selected database identity
+is not yet represented/resolved by the port plan. Constructor/spawn effects and
+their additional RNG are excluded. This is not a full population comparison.
+
+Independent ingestion matches all830 supplied population records in346 rooms:
+165 monster,102 trap,514 loot and49 horde. Thirteen local groups pass with defaults,
+coordinate wrapping, appearance draws, malformed metadata and cross-class order
+coverage. Factory implementations/session integration remain next.

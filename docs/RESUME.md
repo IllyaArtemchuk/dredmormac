@@ -294,3 +294,17 @@ all14 referenced starting-room resources exist. Full generator consumption and
 intervening other constructors remain absent, so whole-game content parity is
 not claimed. Next: finish native verification, then other records/interactions,
 full-level session/render integration. No stopping at CI checkpoints.
+
+Run42608683842 (01a3e5e) passed24 native checks/package, including new object windows.
+RoomMonsterRecord/RoomTrapRecord/RoomLootRecord/RoomHordeRecord definitions and
+RoomDefinition::population are added; normalized plan_room_population retains
+common gate/position and factory request arguments. verify_population_records.py
+matches2,132 original calls with lookup/constructor/spawn/item-factory/finalization
+boundaries; --content verifies830 records/346 rooms (165mon,102trap,514loot,49horde).
+Original trap name search executes over synthetic pools, but port plan leaves
+database identities unresolved. Actual constructors/spawn effects and extra RNG
+are not implemented by plans. Thirteen local groups pass. New source awaits Mac CI.
+Private population-record-properties.txt confirms loot subtype=random/amount1/
+artifact0, horde min/additional=-1. custom-room-records.txt holds all four Create
+functions. Next: actual factories and ordered full room content execution, then
+full-level integration; do not present request plans as populated/playable levels.

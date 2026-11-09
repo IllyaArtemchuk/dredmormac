@@ -1,6 +1,7 @@
 #pragma once
 #include "dredmor/generation.hpp"
 #include "dredmor/xml.hpp"
+#include <variant>
 
 namespace dredmor {
 using RoomAttributes=std::map<std::string,std::string,std::less<>>;
@@ -66,4 +67,21 @@ CustomRoomDefinition read_custom_room_object(const XmlNode& node,const RoomMarke
 // Basic constructor/metadata/collision state. Sprite I/O, tile/list registration,
 // room-id binding and subsequent interactions belong to the owning level.
 std::optional<CustomRoomObject> create_custom_room_object(const CustomRoomDefinition& definition,Position origin,DarwinRandom& random);
+struct RoomMonsterRecord {RoomObjectPlacement placement;std::string name;};
+struct RoomTrapRecord {RoomObjectPlacement placement;std::string name;};
+struct RoomLootRecord {RoomObjectPlacement placement;std::string type,subtype="random";int amount=1;bool artifact=false;};
+struct RoomHordeRecord {RoomObjectPlacement placement;std::string name;int minimum=-1,additional=-1;};
+using RoomPopulationRecord=std::variant<RoomMonsterRecord,RoomTrapRecord,RoomLootRecord,RoomHordeRecord>;
+enum class PopulationRequest {none,named_monster,random_monster,named_trap,random_trap,loot,horde};
+struct RoomPopulationPlan {
+    PopulationRequest request=PopulationRequest::none;
+    Position position{};
+    std::string name,type,subtype;
+    int amount=1,minimum=-1,additional=-1;
+    bool artifact=false;
+};
+RoomPopulationRecord read_room_population(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room);
+// Ordered request planning only: database resolution, constructors, loot factory,
+// random spawn/horde selection, entity flags and finalization remain external.
+RoomPopulationPlan plan_room_population(const RoomPopulationRecord& record,Position origin,DarwinRandom& random);
 }

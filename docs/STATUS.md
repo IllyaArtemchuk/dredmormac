@@ -177,3 +177,9 @@ local groups, 2,292 original object states (also unchanged MT stream), 992 metad
 definitions and256 starting characters pass. New native object fixture and atomic
 asset-load checks await Mac CI. Preview construction still omits full generator
 RNG and intervening object constructors; complete content parity is not claimed.
+
+Custom session/render run42608683842 passed all24 native checks and package smoke.
+Population request planning now matches2,132 original record executions with
+constructor/spawn/finalizer boundaries. Independent ingestion matches830 monster,
+trap, loot and horde records across346 rooms. Thirteen local groups pass. Actual
+population factories/ordering and complete gameplay remain unfinished.
