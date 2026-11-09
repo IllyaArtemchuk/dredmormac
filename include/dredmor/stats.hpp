@@ -22,4 +22,13 @@ SecondaryStats default_percentages();
 // Skill/equipment/buff aggregation takes place outside this calculation.
 SecondaryStats derive_secondary(const PrimaryStats& primary,
     const SecondaryStats& flat={},const SecondaryStats& percent=default_percentages());
+struct MonsterStatInput {
+    ClassRanks ranks{};
+    PrimaryStats definition_primary{},primary_flat{},primary_percent=default_primary_percentages();
+    SecondaryStats definition_secondary{},secondary_flat{},secondary_percent=default_percentages();
+    std::int32_t dungeon_level=0,health_per_level=0;
+    float health_scale=1.0f,health_percent_per_level=0.0f;
+};
+struct MonsterStats { PrimaryStats primary;SecondaryStats secondary; };
+MonsterStats derive_monster(const MonsterStatInput& input);
 }

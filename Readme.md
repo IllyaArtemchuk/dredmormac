@@ -85,10 +85,10 @@ has **not been compiled or smoke-tested on a Mac**. No SDK cross-compilation,
 signing, notarization or full-game compatibility is claimed. The original
 32-bit app needs a legacy macOS environment for full reference gameplay.
 
-The manual `Native arm64 macOS validation` GitHub Actions workflow targets the
+The branch/manual `Native arm64 macOS validation` GitHub Actions workflow targets the
 standard macos-15 arm64 runner. It builds the app and exercises a synthetic
-window/draw/move/wait test with no original game files. The workflow is prepared
-locally but has not been pushed or executed. Passing it would verify the native
+window/draw/move/wait test with no original game files. Its first run is pending.
+Passing it would verify the native
 foundation, not full-game fidelity or testing with original assets.
 
 ## GameFrame

@@ -6,6 +6,9 @@ analysis toolchain, inventory and original-routine comparisons. Milestone 2 has
 original asset loading, provisional room preparation and movement/replay code;
 original gameplay comparison and native rendering validation remain pending.
 Data ingestion, RNG and character stat calculations are now implemented and checked.
+The integration session now connects combat, enemy turns, inventory, equipment,
+health/death, progression and a new port save/load format. Scheduling/AI and
+complete gameplay parity remain unverified.
 
 Verified:
 - Drive archive downloaded, all ZIP CRCs valid; original retained outside git.
@@ -22,6 +25,9 @@ Verified:
 - Inventory: 3,840 original operations match all 57 slots after each operation.
 - Equipment eligibility: 684 original function executions match.
 - Typed metadata/modifiers parse for all 751 supplied item definitions.
+- Monster scaling: 2,048 original full-function fixtures / 61,440 fields match.
+- XP table: all 350 original thresholds in seven input configurations match.
+- Six local CTest groups pass, including deterministic session and save/load tests.
 - Ghidra successfully imported/analyzed the game; reproducible targeted exports.
 - Original Starting Room and hero SPR prepare successfully from supplied data.
 - Embedded startup version 1.1.4 traced through the formatter's actual arguments.
@@ -30,8 +36,8 @@ Verified:
 Blockers and limits:
 - No actual Mac or original full-game execution available in this session.
 - New AppKit target has not been compiled; arm64 build and smoke test pending.
-  Manual macos-15 arm64 CI workflow and synthetic native-window test are prepared
-  locally; neither has been run on a Mac. No original assets are required by CI.
+  macos-15 arm64 CI and synthetic native-window test are prepared for the
+  implementation branch. First native run is pending. CI needs no original assets.
 - Complete gameplay systems remain to be implemented and compared.
 - Additional version suffix/mod state and exact expansion scope remain unverified.
 - GameFrame broad suite: 424 passed, 11 failed. Remaining optional/unrelated
@@ -39,9 +45,11 @@ Blockers and limits:
 - Combat uses a separate imported libc rand() stream; MT verification alone
   does not establish deterministic combat.
 
-Current work: recover monster attribute/scaling rules and connect typed
-definitions, equipment and verified combat to a deterministic turn session.
+Current work: run the native branch CI, fix actual Mac issues, and connect the
+native scene renderer to the turn session and original content definitions.
 DoRandomize and seed flow are identified; decision/arithmetic combat rules are
-compared, while complete DoCombat, triggers and HP delivery remain unfinished.
+compared, while complete DoCombat/triggers and original HP/death side-effect
+comparisons remain unfinished. Session HP/death behavior exists but is not yet
+a full original transition comparison.
 Obtain original room captures and native Mac build evidence when Mac access is
 available. See RESUME.md.

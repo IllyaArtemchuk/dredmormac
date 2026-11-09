@@ -26,6 +26,7 @@ public:
     using Belt=std::array<std::optional<InventoryItem>,belt_capacity>;
     const Bag& bag() const { return bag_; }
     const Belt& belt() const { return belt_; }
+    static Inventory restore(const Bag& bag,const Belt& belt);
     InsertResult insert(const InventoryItem& item,bool prefer_belt=true);
     bool place(const InventoryItem& item,int x,int y);
     std::optional<InventoryItem> remove(std::uint64_t instance);

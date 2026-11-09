@@ -31,6 +31,15 @@ World World::read(std::istream& input) {
 bool World::passable(Position p) const {
     return p.x >= 0 && p.y >= 0 && p.x < width() && p.y < height() && tile(p.x, p.y) == '.';
 }
+World World::restore(std::istream& input,std::uint64_t turn) {
+    auto world=read(input);world.turn_=turn;return world;
+}
+std::string World::room_text() const {
+    auto rows=rows_;rows.at(player_.y).at(player_.x)='@';
+    std::string output;
+    for (const auto& row:rows) output+=row+'\n';
+    return output;
+}
 Outcome World::step(Action action) {
     Position next = player_;
     switch (action) {

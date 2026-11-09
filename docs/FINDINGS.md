@@ -178,3 +178,43 @@ case-insensitive tag/attribute comparisons and last-assignment wins for repeated
 primary/secondary buff IDs. The typed reader preserves these rules; unsupported
 effects remain in each definition's source tree. Integer syntax is stricter than
 original atoi for malformed input; supplied definitions parse successfully.
+
+## Monster scaling, progression and integration session
+
+Monster::RebuildAttributes at 0xe42ac matches **2,048 full original executions /
+61,440 fields**, supplying only tweakVal/tweakValf configuration read boundaries.
+Tests cover class ranks, definition and live modifiers, percentage scaling and
+HP scaling at nonpositive/positive dungeon levels. Floating-point contraction is
+disabled so separate original single-precision operations remain separate.
+Nested monster definitions clone parent fields before sparse child overrides;
+the original callback at 0xdca60 confirms that copy behavior. Typed loading keeps
+the source ancestry for effects not yet executed.
+
+The original tweak callback at 0x179870 maintains independent integer and float
+maps for each difficulty, copying global entries to all three maps. Missing ival
+or fval initializes its corresponding value to zero. Monster HP's flat-per-level
+read uses tweakVal even though that supplied setting uses fval; no automatic
+float-to-int fallback is applied by the replacement.
+
+FillXPTable at 0x116d10 matches **350 original thresholds** for seven values of
+experience n (all 50 entries each). Threshold i is n*(i*(i+1)/2+1), with original
+32-bit wrapping. GiveExperience at 0x116c60 uses strict greater-than, resets
+current-level XP after allocation, and records score XP at four times the award.
+AllocatePoints instructions increment level and unspent points and refill HP/MP.
+Only threshold generation has an execution comparison; complete level-up/UI
+side effects have not been executed as a reference transition.
+
+Session connects movement, measured combat decisions, provisional cardinal BFS
+enemy turns, health/death, pickup, equipment transfers and XP. Tests exercise
+encounters, chase order, death, inventory pickup and atomic failed actions. The
+session is an integration model, not verified full original turn scheduling/AI.
+It currently permits one melee weapon; dual-wield, fumbles, buffs and spell
+triggers remain pending. Equipment metadata/modifiers work without artifacts or
+encrusting; complete aggregate parity is not yet claimed.
+
+Versioned session XML saves room/player location and turn, actor stats, inventory,
+equipment, ground items, progression and both complete RNG states. Tests compare
+exact serialized state and subsequent randomized turns after reload, including
+dead players, equipped items, escaping, content mismatch and malformed saves.
+This is a new port save format, **not original .sav compatibility**. Its content
+signature detects changed item definitions; it is not an authentication mechanism.

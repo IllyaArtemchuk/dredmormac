@@ -15,5 +15,7 @@ python_cmd=python3
 "$python_cmd" scripts/verify_combat.py "$data_root/dredmor" build/dredmor-combat --out "$report_root/combat.json"
 "$python_cmd" scripts/verify_inventory.py "$data_root/dredmor" build/dredmor-inventory --out "$report_root/inventory-rules.json"
 "$python_cmd" scripts/verify_equipment.py "$data_root/dredmor" build/dredmor-equip --out "$report_root/equipment-slots.json"
+"$python_cmd" scripts/verify_monster.py "$data_root/dredmor" build/dredmor-monster --out "$report_root/monster-stats.json"
+"$python_cmd" scripts/verify_xp.py "$data_root/dredmor" build/dredmor-xp --out "$report_root/xp-table.json"
 "$python_cmd" scripts/verify_catalog.py "$data_root" build/dredmor-data --out "$report_root/catalog-base.json"
 "$python_cmd" scripts/verify_catalog.py "$data_root" build/dredmor-data --expansions --out "$report_root/catalog-all.json"

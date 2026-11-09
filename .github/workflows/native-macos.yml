@@ -1,5 +1,8 @@
 name: Native arm64 macOS validation
 on:
+  push:
+    branches:
+      - implementation/native-foundation
   workflow_dispatch:
 permissions:
   contents: read
@@ -17,7 +20,9 @@ jobs:
       - name: Check host architecture
         run: test "$(uname -m)" = arm64
       - name: Install build tools
-        run: brew install cmake expat
+        run: |
+          brew install cmake expat
+          python3 -m pip install unicorn==2.1.4
       - name: Build arm64 and run tests including synthetic native window
         run: |
           export CMAKE_PREFIX_PATH="$(brew --prefix expat)"

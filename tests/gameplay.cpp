@@ -1,6 +1,8 @@
 #include "dredmor/combat.hpp"
 #include "dredmor/inventory.hpp"
 #include "dredmor/random.hpp"
+#include "dredmor/monsters.hpp"
+#include "dredmor/equipment.hpp"
 #include <iostream>
 #include <stdexcept>
 #define check(value) do { if (!(value)) throw std::runtime_error("gameplay assertion at line "+std::to_string(__LINE__)); } while(false)
@@ -33,6 +35,21 @@ int main() {
         check(item.can_equip(EquipmentSlot::head) && !item.can_equip(EquipmentSlot::chest));
         DarwinRandom darwin(1);
         for (auto expected:{16807,282475249,1622650073,984943658,1144108930}) check(darwin.next()==expected);
+        auto parent=read_monster(parse_xml("<monster name='Parent'><stats numFig='2' xpValue='5'/><damage crushing='1' acidic='2'/><idleSprite down='fixture.spr'/></monster>"));
+        auto variant=read_monster(parse_xml("<monster name='Variant'><stats numRog='1' xpValue='10'/><damage acidic='0' voltaic='2'/></monster>"),&parent);
+        check(variant.ranks==ClassRanks({2,0,1}) && variant.damage[0]==1 && variant.damage[10]==0 && variant.damage[6]==2);
+        check(variant.idle_sprites[3]=="fixture.spr" && variant.source_chain.size()==2);
+        auto tweaks=Tweaks::read(parse_xml("<tweakDB><tweak name='a' ival='2'/><easy><tweak name='a' ival='3'/><tweak name='float only' fval='9'/></easy></tweakDB>"));
+        check(tweaks.integer(Difficulty::easy,"a")==3 && tweaks.integer(Difficulty::hard,"a")==2);
+        check(tweaks.integer(Difficulty::easy,"float only")==0 && tweaks.real(Difficulty::easy,"float only")==9);
+        std::vector<ItemDefinition> definitions={item};
+        Inventory pack;Equipment worn;
+        check(pack.insert({100,ItemKind::armour,0,-1,1,false},false).outcome==InsertOutcome::placed);
+        check(!equip_from_inventory(pack,worn,100,EquipmentSlot::feet,definitions) && pack.find(100));
+        check(equip_from_inventory(pack,worn,100,EquipmentSlot::head,definitions) && !pack.find(100));
+        auto equipped=worn.rebuild({3,2,2},definitions);
+        check(equipped.secondary[9]==8 && equipped.resistance[7]==3);
+        check(unequip_to_inventory(pack,worn,EquipmentSlot::head) && pack.find(100));
         std::cout<<"combat, inventory, typed items and RNG fixtures passed\n";
     } catch (const std::exception& e) { std::cerr<<e.what()<<'\n';return 1; }
 }

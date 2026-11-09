@@ -28,7 +28,8 @@ PrimaryStats derive_primary(const ClassRanks& ranks,const PrimaryStats& flat,con
         primary[i]=std::max(0,truncate(static_cast<float>(multiply(add(primary[i],flat[i]),percent[i])/100)));
     return primary;
 }
-SecondaryStats derive_secondary(const PrimaryStats& p,const SecondaryStats& flat,const SecondaryStats& percent) {
+namespace {
+SecondaryStats raw_secondary(const PrimaryStats& p,bool player) {
     const auto burly=p[0],sage=p[1],nimble=p[2],caddish=p[3],stubborn=p[4],savvy=p[5];
     SecondaryStats s{};
     s[0]=add(burly,caddish);
@@ -43,14 +44,39 @@ SecondaryStats derive_secondary(const PrimaryStats& p,const SecondaryStats& flat
     s[9]=nimble/3;
     s[11]=stubborn/2;
     // Retain the two single-precision multiplies used by the original SSE code.
-    const float sneak_first=static_cast<float>(add(savvy,nimble))*1.5f;
-    s[12]=std::max(0,add(truncate(sneak_first*0.5f),-20));
-    s[17]=1;
+    if (player) {
+        const float sneak_first=static_cast<float>(add(savvy,nimble))*1.5f;
+        s[12]=std::max(0,add(truncate(sneak_first*0.5f),-20));
+        s[17]=1;
+    }
+    return s;
+}
+}
+SecondaryStats derive_secondary(const PrimaryStats& p,const SecondaryStats& flat,const SecondaryStats& percent) {
+    auto s=raw_secondary(p,true);
     for (std::size_t i=0;i<s.size();++i) {
         const auto scaled=multiply(add(s[i],flat[i]),percent[i])/100;
         s[i]=truncate(static_cast<float>(scaled));
         if (i!=13 && i!=14 && i!=18) s[i]=std::max(0,s[i]);
     }
     return s;
+}
+MonsterStats derive_monster(const MonsterStatInput& input) {
+    MonsterStats result;
+    PrimaryStats primary_flat;
+    for (std::size_t i=0;i<6;++i) primary_flat[i]=add(input.definition_primary[i],input.primary_flat[i]);
+    result.primary=derive_primary(input.ranks,primary_flat,input.primary_percent);
+    auto base=raw_secondary(result.primary,false);
+    for (std::size_t i=0;i<24;++i) base[i]=add(base[i],input.definition_secondary[i]);
+    if (input.dungeon_level>0) {
+        const auto initial=truncate(static_cast<float>(base[0])*input.health_scale);
+        const float multiplier=static_cast<float>(input.dungeon_level)*input.health_percent_per_level+1.0f;
+        base[0]=add(truncate(multiplier*static_cast<float>(initial)),multiply(input.dungeon_level,input.health_per_level));
+    }
+    for (std::size_t i=0;i<24;++i) {
+        const auto scaled=multiply(add(base[i],input.secondary_flat[i]),input.secondary_percent[i])/100;
+        result.secondary[i]=std::max(0,truncate(static_cast<float>(scaled)));
+    }
+    return result;
 }
 }

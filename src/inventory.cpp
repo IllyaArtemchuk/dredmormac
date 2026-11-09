@@ -19,6 +19,16 @@ void Inventory::validate_new(const InventoryItem& item) const {
     if (!item.instance || item.quantity<1) throw std::invalid_argument("invalid inventory instance/quantity");
     if (find(item.instance)) throw std::invalid_argument("inventory instance already owned");
 }
+Inventory Inventory::restore(const Bag& bag,const Belt& belt) {
+    Inventory inventory;
+    for (std::size_t i=0;i<bag.size();++i) if (bag[i]) {
+        inventory.validate_new(*bag[i]);inventory.bag_[i]=bag[i];
+    }
+    for (std::size_t i=0;i<belt.size();++i) if (belt[i]) {
+        inventory.validate_new(*belt[i]);inventory.belt_[i]=belt[i];
+    }
+    return inventory;
+}
 InsertResult Inventory::insert(const InventoryItem& item,bool prefer_belt) {
     validate_new(item);
     auto merge=[&](auto& slots,InventoryLocation location)->std::optional<InsertResult> {

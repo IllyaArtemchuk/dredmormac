@@ -16,6 +16,9 @@ class OriginalI386:
         self.info = macho(self.data)
         if not self.info or self.info.get('bits') != 32 or self.info['cpu'] != 7:
             raise ValueError('expected thin i386 Mach-O')
+        self.addresses={}
+        for symbol in self.info['symbols']:
+            if symbol['address']: self.addresses.setdefault(symbol['name'],symbol['address'])
         self.machine = Uc(UC_ARCH_X86, UC_MODE_32)
         self.machine.reg_write(UC_X86_REG_FPCW,0x37f)
         self.machine.reg_write(UC_X86_REG_MXCSR,0x1f80)
@@ -30,7 +33,8 @@ class OriginalI386:
         self.thunks={}
 
     def address(self, symbol):
-        return next(s['address'] for s in self.info['symbols'] if s['name']==symbol and s['address'])
+        try:return self.addresses[symbol]
+        except KeyError:raise ValueError(f'original symbol missing: {symbol}') from None
 
     def call(self, symbol, *args, floating=False, budget=200000):
         from unicorn.x86_const import UC_X86_REG_ESP, UC_X86_REG_EAX, UC_X86_REG_EIP

@@ -9,6 +9,10 @@ void Random::seed(std::uint32_t value) {
         state_[i] = 1812433253u * (state_[i-1] ^ (state_[i-1] >> 30)) + static_cast<std::uint32_t>(i);
     index_ = state_.size();
 }
+void Random::restore(const State& state) {
+    if (state.index>625) throw std::invalid_argument("invalid MT19937 state index");
+    state_=state.words;index_=state.index;
+}
 void Random::seed(const std::vector<std::uint32_t>& key) {
     if (key.empty()) throw std::invalid_argument("RNG seed key must not be empty");
     seed(19650218u);

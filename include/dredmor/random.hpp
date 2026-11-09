@@ -9,6 +9,7 @@ namespace dredmor {
 // Explicit state keeps sequences independent of the host's unsigned-long size.
 class Random {
 public:
+    struct State { std::array<std::uint32_t,624> words;std::size_t index; };
     Random() = default;
     explicit Random(std::uint32_t value) { seed(value); }
     void seed(std::uint32_t value);
@@ -19,6 +20,8 @@ public:
     double real_half_open() { return u32() * (1.0 / 4294967296.0); }
     double real_open() { return (static_cast<double>(u32()) + 0.5) * (1.0 / 4294967296.0); }
     double real53();
+    State state() const { return {state_,index_}; }
+    void restore(const State& state);
 private:
     std::array<std::uint32_t, 624> state_{};
     std::size_t index_ = 625;
