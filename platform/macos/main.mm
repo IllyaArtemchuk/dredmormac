@@ -141,6 +141,7 @@ static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
 - (void)showInventory:(id)sender;
 - (void)pickUpItems:(id)sender;
 - (BOOL)smokeInventory;
+- (BOOL)smokeRoomMonsters;
 - (BOOL)smokeArtifact;
 - (BOOL)smokeSkillSelection;
 - (BOOL)smokeCustomObjects;
@@ -197,6 +198,11 @@ static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
                 else if constexpr (std::is_same_v<T,dredmor::RoomPedestalRecord>) _session->create_pedestal(definition);
                 else if constexpr (std::is_same_v<T,dredmor::RoomLootRecord>)
                     _session->create_room_loot(definition,_content->item_factory_tables(),_content->loot_context());
+                else if constexpr (std::is_same_v<T,dredmor::RoomMonsterRecord>) {
+                    if (!definition.name.empty()) _session->create_room_monster(definition,[&](const auto& plan,auto& random) {
+                        return _content->create_monster(plan.name,plan.position,dredmor::Difficulty::medium,0,random.libc);
+                    });
+                }
                 else if constexpr (std::is_same_v<T,dredmor::BreakableRoomDefinition>) {
                     NSArray<SpriteImage*> *prepared=nil;
                     const auto created=_session->create_breakable(definition,{0,0},[&](const auto& value) {
@@ -237,6 +243,11 @@ static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
             }
         }
         _enemyImages=[NSMutableDictionary dictionary];
+        for (const auto& enemy:_session->enemies()) {
+            const auto path=roomResource(_dataRoot,enemy.sprite);
+            SpriteImage *image=[[SpriteImage alloc] initWithPath:[NSString stringWithUTF8String:path.c_str()]];
+            if (!image) throw std::runtime_error("cannot prepare room monster sprite");_enemyImages[@(enemy.id)]=image;
+        }
         if (scene[@"enemies"] && ![scene[@"enemies"] isKindOfClass:NSArray.class]) return nil;
         for (id value in scene[@"enemies"]) {
             if (![value isKindOfClass:NSDictionary.class] || ![value[@"name"] isKindOfClass:NSString.class] ||
@@ -519,6 +530,11 @@ static dredmor::BreakableFrames breakableFrames(NSArray<SpriteImage*> *images) {
         _session->inventory().bag()[0]->room_local_id=="fixture-loot" && _session->inventory().bag()[0]->can_push==0 &&
         primary==_session->player().primary && secondary==_session->player().secondary;
 }
+- (BOOL)smokeRoomMonsters {
+    if (_session->enemies().size()!=1 || _enemyImages.count!=1) return NO;
+    const auto& enemy=_session->enemies()[0];
+    return enemy.room_spawned && enemy.room_local_id=="fixture-monster" && enemy.can_push==0 && !enemy.sprite.empty();
+}
 - (BOOL)smokeSkillSelection {
     if (!_content) return YES;
     DredmorSkillSelectionController *controller=[[DredmorSkillSelectionController alloc] initWithSkills:_content->skills()];
@@ -749,6 +765,7 @@ int main(int argc,const char**argv) {
                     ([scene[@"smoke_animation"] boolValue] && ![view hasAnimatedHero]) ||
                     ([scene[@"smoke_inventory"] boolValue] && ![view smokeInventory]) ||
                     ([scene[@"smoke_artifact"] boolValue] && ![view smokeArtifact]) ||
+                    ([scene[@"smoke_room_monsters"] boolValue] && ![view smokeRoomMonsters]) ||
                     ([scene[@"smoke_objects"] boolValue] && ![view smokeCustomObjects]) ||
                     ([scene[@"smoke_breakables"] boolValue] && ![view smokeBreakables]) ||
                     ![view smokeSaveLoad] || ![view smokeSkillSelection]) {

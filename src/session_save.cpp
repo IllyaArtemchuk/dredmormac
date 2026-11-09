@@ -103,13 +103,21 @@ std::uint64_t ability_signature(const std::shared_ptr<const std::vector<AbilityD
 void write_actor(std::ostream& out,std::string_view tag,const Actor& actor) {
     out<<'<'<<tag<<" id=\""<<actor.id<<"\" name=\""<<escape(actor.name)<<"\" sprite=\""<<escape(actor.sprite)
        <<"\" x=\""<<actor.position.x<<"\" y=\""<<actor.position.y<<"\" hp=\""<<actor.health
-       <<"\" mana=\""<<actor.mana<<"\" reward=\""<<actor.experience_reward<<"\" zorkmids=\""<<actor.zorkmids<<"\">\n";
+       <<"\" mana=\""<<actor.mana<<"\" reward=\""<<actor.experience_reward<<"\" zorkmids=\""<<actor.zorkmids<<"\"";
+    if (!actor.room_local_id.empty() || actor.can_push!=1 || actor.room_spawned)
+        out<<" room-id=\""<<escape(actor.room_local_id)<<"\" push=\""<<unsigned(actor.can_push)<<"\" room-spawned=\""<<actor.room_spawned<<"\"";
+    out<<">\n";
     write_array(out,"primary",actor.primary);write_array(out,"secondary",actor.secondary);
     write_array(out,"damage",actor.damage);write_array(out,"resistance",actor.resistance);
     out<<"</"<<tag<<">\n";
 }
-Actor read_actor(const XmlNode& node,bool currency_fields) {
+Actor read_actor(const XmlNode& node,bool currency_fields,bool room_fields) {
     Actor actor;actor.id=attribute_number<std::uint64_t>(node,"id");actor.name=attribute(node,"name");actor.sprite=attribute(node,"sprite");
+    const bool has_room=node.attributes.count("room-id") || node.attributes.count("push") || node.attributes.count("room-spawned");
+    if (has_room && !room_fields) throw std::runtime_error("actor room metadata requires save version seven");
+    if (has_room) {
+        actor.room_local_id=attribute(node,"room-id");actor.can_push=attribute_number<std::uint8_t>(node,"push");actor.room_spawned=flag(node,"room-spawned");
+    }
     actor.position={attribute_number<int>(node,"x"),attribute_number<int>(node,"y")};
     actor.health=attribute_number<std::int32_t>(node,"hp");actor.mana=attribute_number<std::int32_t>(node,"mana");
     actor.experience_reward=attribute_number<std::int32_t>(node,"reward");
@@ -253,14 +261,14 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     if (attribute_number<std::uint64_t>(root,"content")!=signature(definitions,legacy_types)) throw std::runtime_error("save item content does not match loaded definitions");
     const auto turn=attribute_number<std::uint64_t>(root,"turn");
     if (turn==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("saved turn counter exhausted");
-    std::istringstream rows(child(root,"room").text);auto world=World::restore(rows,turn);auto player=read_actor(child(root,"player"),version=="6" || version=="7");
+    std::istringstream rows(child(root,"room").text);auto world=World::restore(rows,turn);auto player=read_actor(child(root,"player"),version=="6" || version=="7",version=="7");
     if (player.position.x!=world.player().x || player.position.y!=world.player().y) throw std::runtime_error("saved player/room position mismatch");
     Session session(std::move(world),player,0,attribute_number<int>(root,"experience-n"));
     session.definitions_=std::move(definitions);session.next_actor_=attribute_number<std::uint64_t>(root,"next-actor");
     std::set<std::uint64_t> actors={player.id},items;
     for (const auto& node:child(root,"enemies").children) {
         if (node.tag!="enemy" || session.enemies_.size()>=512) throw std::runtime_error("invalid saved enemy list");
-        auto actor=read_actor(node,version=="6" || version=="7");
+        auto actor=read_actor(node,version=="6" || version=="7",version=="7");
         if (!actors.insert(actor.id).second || !session.world_.passable(actor.position)) throw std::runtime_error("invalid saved enemy identity/position");
         if (actor.alive()) {
             if ((actor.position.x==player.position.x && actor.position.y==player.position.y) || session.enemy_at(actor.position)) throw std::runtime_error("saved actors overlap");

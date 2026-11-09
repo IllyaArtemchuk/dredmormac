@@ -18,6 +18,9 @@ struct Actor {
     SecondaryStats secondary{};
     Damage damage{},resistance{};
     std::int32_t health=0,mana=0,experience_reward=0,zorkmids=0;
+    std::string room_local_id;
+    std::uint8_t can_push=1;
+    bool room_spawned=false;
     bool alive() const { return health>0; }
 };
 struct GroundItem { InventoryItem item;Position position; };
@@ -62,6 +65,8 @@ public:
         std::string_view type,std::string_view subtype,int quantity,bool artifact,Position position);
     RoomLootCreation create_room_loot(const RoomLootRecord& record,const ItemFactoryTables& tables,
         const ItemFactoryContext& context,Position origin={0,0});
+    std::optional<std::uint64_t> create_room_monster(const RoomMonsterRecord& record,
+        const std::function<Actor(const RoomPopulationPlan&,GameRandom&)>& constructor,Position origin={0,0});
     void give_currency(std::int32_t amount);
     void take_currency(std::int32_t amount);
     void step(Action action);

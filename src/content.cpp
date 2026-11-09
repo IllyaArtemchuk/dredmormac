@@ -240,6 +240,12 @@ Actor GameContent::make_monster(std::string_view name,Position position,Difficul
     actor.health=stats.secondary[0];actor.mana=stats.secondary[1];actor.damage=definition.damage;actor.resistance=definition.resistance;
     actor.experience_reward=definition.experience;actor.sprite=definition.idle_sprites[3];return actor;
 }
+Actor GameContent::create_monster(std::string_view name,Position position,Difficulty difficulty,int dungeon_level,DarwinRandom& random) const {
+    const auto& definition=monster(name);auto input=tweaks_.monster_input(definition,difficulty,dungeon_level);
+    input.ranks=monster_creation_ranks(input.ranks,tweaks_.integer(difficulty,"monster level adder"),random);
+    const auto stats=derive_monster(input);auto actor=make_monster(name,position,difficulty,dungeon_level);
+    actor.primary=stats.primary;actor.secondary=stats.secondary;actor.health=stats.secondary[0];actor.mana=stats.secondary[1];return actor;
+}
 ClassRanks GameContent::starting_ranks(const std::vector<int>& skill_ids) const {
     if (skill_ids.size()!=7 || std::set<int>(skill_ids.begin(),skill_ids.end()).size()!=7) throw std::invalid_argument("select exactly seven distinct skills");
     ClassRanks ranks{};

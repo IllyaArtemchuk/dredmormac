@@ -2,6 +2,7 @@
 #include "dredmor/catalog.hpp"
 #include "dredmor/combat.hpp"
 #include "dredmor/stats.hpp"
+#include "dredmor/random.hpp"
 
 namespace dredmor {
 struct MonsterDefinition {
@@ -16,6 +17,9 @@ struct MonsterDefinition {
 };
 MonsterDefinition read_monster(const XmlNode& node,const MonsterDefinition* parent=nullptr);
 std::vector<MonsterDefinition> load_monsters(const Catalog& catalog);
+// Constructor difficulty adjustment, before RebuildAttributes. Uses the libc
+// stream and the original multiply-high mapping over three class ranks.
+ClassRanks monster_creation_ranks(ClassRanks ranks,int level_adder,DarwinRandom& random);
 enum class Difficulty : std::size_t { easy,medium,hard };
 class Tweaks {
 public:

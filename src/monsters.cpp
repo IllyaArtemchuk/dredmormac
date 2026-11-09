@@ -3,9 +3,21 @@
 #include <cstdlib>
 #include <cmath>
 #include <functional>
+#include <cstring>
 #include <stdexcept>
 
 namespace dredmor {
+ClassRanks monster_creation_ranks(ClassRanks ranks,int level_adder,DarwinRandom& random) {
+    const auto steps=level_adder<0?-std::int64_t(level_adder):std::int64_t(level_adder);
+    if (steps>1000000) throw std::invalid_argument("monster level adjustment exceeds execution budget");
+    for (std::int64_t i=0;i<steps;++i) {
+        const auto index=(std::uint64_t(static_cast<std::uint32_t>(random.next()))*6)>>32;
+        const std::uint32_t bits=std::uint32_t(ranks[index])+(level_adder<0?0xffffffffU:1U);
+        std::memcpy(&ranks[index],&bits,4);
+    }
+    if (level_adder<0) for (auto& rank:ranks) rank=std::max(0,rank);
+    return ranks;
+}
 namespace {
 std::string lower(std::string value) {
     for (auto& c:value) if (c>='A' && c<='Z') c=static_cast<char>(c-'A'+'a');

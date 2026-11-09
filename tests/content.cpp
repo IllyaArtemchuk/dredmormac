@@ -27,6 +27,33 @@ int main(int argc,char** argv) {
         auto enemy=content.make_monster("Fixture variant",{2,1},dredmor::Difficulty::medium);
         check(enemy.health==11 && enemy.damage[0]==1 && enemy.experience_reward==10);
         check(content.tweaks().integer(dredmor::Difficulty::medium,"monster additional HP per level")==0);
+        dredmor::DarwinRandom creation_random(17);const auto created_enemy=content.create_monster("Fixture variant",{2,1},dredmor::Difficulty::medium,0,creation_random);
+        check(created_enemy.primary==enemy.primary && creation_random.state()==17);
+        // Rejected records bypass construction; failures roll back its RNG and IDs.
+        std::istringstream monster_map("#####\n#@..#\n#...#\n#####\n");
+        dredmor::Session room_monsters(dredmor::World::read(monster_map),dredmor::make_player({3,2,2}),1);
+        auto save=[](const dredmor::Session& value){std::ostringstream out;value.save(out);return out.str();};
+        dredmor::RoomMonsterRecord monster_record;monster_record.name="Fixture variant";monster_record.placement.relative={3,2};
+        monster_record.placement.percent=-1;int calls=0;
+        auto constructor=[&](const auto& plan,auto& random) {++calls;check(plan.request==dredmor::PopulationRequest::named_monster);
+            return content.create_monster(plan.name,plan.position,dredmor::Difficulty::medium,0,random.libc);};
+        check(!room_monsters.create_room_monster(monster_record,constructor) && calls==0);
+        monster_record.placement.percent=100;monster_record.placement.id="room-monster";monster_record.placement.can_push=255;
+        const auto room_enemy=room_monsters.create_room_monster(monster_record,constructor);
+        check(room_enemy && calls==1 && room_monsters.enemies()[0].room_spawned && room_monsters.enemies()[0].room_local_id=="room-monster");
+        check(room_monsters.enemies()[0].can_push==255);
+        const auto occupied_save=save(room_monsters);bool failed=false;
+        try {room_monsters.create_room_monster(monster_record,[&](const auto& plan,auto& random) {random.libc.next();return constructor(plan,random);});}
+        catch(const std::invalid_argument&) {failed=true;}
+        check(failed && save(room_monsters)==occupied_save);
+        std::istringstream monster_input(occupied_save);auto loaded_monsters=dredmor::Session::load(monster_input);check(save(loaded_monsters)==occupied_save);
+        room_monsters.step(dredmor::Action::wait);loaded_monsters.step(dredmor::Action::wait);check(save(loaded_monsters)==save(room_monsters));
+        auto bad_monster=occupied_save;const auto push=bad_monster.find("push=\"255\"");check(push!=std::string::npos);
+        bad_monster.replace(push,10,"push=\"256\"");failed=false;
+        try {std::istringstream invalid(bad_monster);dredmor::Session::load(invalid);} catch(const std::runtime_error&) {failed=true;}
+        check(failed);
+        dredmor::DarwinRandom rank_random(1);check(dredmor::monster_creation_ranks({-2,0,4},0,rank_random)==dredmor::ClassRanks({-2,0,4}));
+        check(dredmor::monster_creation_ranks({-2,0,4},-1,rank_random)==dredmor::ClassRanks({0,0,4}));
         bool rejected=false;try {content.starting_ranks({0,0,1,2,3,4,5});} catch (const std::invalid_argument&) {rejected=true;}
         check(rejected);
         dredmor::RoomDefinition geometry;

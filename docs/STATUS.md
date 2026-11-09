@@ -320,3 +320,22 @@ Item room IDs/push survive ground, inventory, equipment and optional savev7
 metadata. Local rollback, container migration, malformed push and resumed mixed
 record/factory tests pass; all20 groups pass. Native inventory/artifact fixtures
 now use room-defined loot; this source awaits its own Mac CI run.
+
+Monster::Monster eeace→ee45c changes class ranks with tweak "monster level adder"
+before RebuildAttributes: each positive/negative step consumes libc rand and uses
+multiply-high(rand*6), selecting0..2. Negative adjustment clamps ranks after all
+steps; zero does not clamp. monster_creation_ranks implements wrapping updates,
+with a1million-step port budget (not an original limit). Full original Monster/
+Hittable/GameObj constructors and RebuildAttributes match2048 fixtures /69632 fields
+using sprite-rebuild and tweak/library/allocation inputs. This covers ranks,
+primary/secondary stats and libc state, excluding sprite/effects/selection parity.
+GameContent::create_monster applies this adjustment; make_monster retains the
+stat-only helper. Session room-monster construction runs after its appearance
+gate, calls the supplied named/random constructor with owned RNG, marks room_spawned
+(original468=1), and persists room ID/push/marker in optional savev7 actor metadata.
+Failure/overlap rolls back construction/RNG/IDs; rejected appearances skip callback.
+Native ordered supported records now include named monsters with original sprite
+lookup and a new synthetic native-monsters fixture. Random monster/horde/trap/
+element population, full effects/AI/scripts and full-level play remain unfinished.
+Twenty local groups pass. New Mac validation is pending; room-loot run42632516392
+was still queued at this checkpoint. No archive/toolchain blocker currently exists.

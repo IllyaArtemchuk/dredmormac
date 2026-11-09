@@ -33,6 +33,7 @@ if __name__=='__main__':
     p.add_argument('--artifact',action='store_true',help='Artifact instance in the inventory fixture')
     p.add_argument('--objects',action='store_true',help='Synthetic persisted SPR/PNG-series room objects')
     p.add_argument('--breakables',action='store_true',help='Synthetic breakable and pedestal interaction fixture')
+    p.add_argument('--monsters',action='store_true',help='Named room monster with constructor difficulty adjustment')
     args=p.parse_args();out=args.output.resolve();out.mkdir(parents=True,exist_ok=True)
     (out/'atlas.png').write_bytes(png(384,640,(70,80,95,255)))
     (out/'hero.png').write_bytes(png(64,64,(40,180,150,255)))
@@ -49,12 +50,22 @@ if __name__=='__main__':
     if args.artifact and not args.inventory:p.error('--artifact requires --inventory')
     if args.objects and (not args.content_source or args.inventory or args.combat):p.error('--objects requires --content-source and excludes inventory/combat')
     if args.breakables and (not args.content_source or args.inventory or args.combat or args.objects):p.error('--breakables requires --content-source and excludes inventory/combat/objects')
+    if args.monsters and (not args.content_source or args.inventory or args.combat or args.objects or args.breakables):p.error('--monsters requires --content-source and excludes other fixture types')
     if args.content_source:
         root=out/'installation';shutil.copytree(args.content_source,root,dirs_exist_ok=True)
         (root/'tilesets').mkdir(exist_ok=True);(root/'sprites/hero').mkdir(parents=True,exist_ok=True)
         (root/'tilesets/basic.png').write_bytes(png(384,640,(70,80,95,255)))
         (root/'sprites/hero/hero_idle_d.spr').write_bytes(sprite())
         (root/'dungeon').mkdir(exist_ok=True);(root/'dungeon/fixture.spr').write_bytes(sprite())
+        if args.monsters:
+            (root/'game/rooms.xml').write_text('''<roomdb><room name="Starting Room" width="5" height="4">
+<row text="#####"/><row text="#...#"/><row text="#..1#"/><row text="#####"/>
+<monster at="1" name="Fixture variant" id="fixture-monster" can_push="0"/></room></roomdb>''')
+            monsters=ET.parse(root/'game/monDB.xml');ET.SubElement(monsters.getroot()[0],'idleSprite',{'down':'dungeon/fixture.spr'})
+            monsters.write(root/'game/monDB.xml',encoding='unicode')
+            tweaks=ET.parse(root/'game/tweakDB.xml');ET.SubElement(tweaks.getroot(),'tweak',{'name':'monster level adder','ival':'3'})
+            tweaks.write(root/'game/tweakDB.xml',encoding='unicode')
+            scene.update(data_root=str(root),room_objects='Starting Room',smoke_room_monsters=True)
         if args.inventory:
             scene['data_root']=str(root)
             (root/'game/rooms.xml').write_text('''<roomdb><room name="Starting Room" width="5" height="4">

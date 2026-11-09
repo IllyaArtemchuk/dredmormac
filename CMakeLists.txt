@@ -219,5 +219,12 @@ if(APPLE)
     add_test(NAME native-objects-window COMMAND $<TARGET_FILE:DredmorMac>
       ${CMAKE_BINARY_DIR}/native-objects/scene.json --smoke-test)
     set_tests_properties(native-objects-window PROPERTIES FIXTURES_REQUIRED native-objects TIMEOUT 15)
+    add_test(NAME native-monsters-fixture COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-monsters
+      --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --monsters)
+    set_tests_properties(native-monsters-fixture PROPERTIES FIXTURES_SETUP native-monsters)
+    add_test(NAME native-monsters-window COMMAND $<TARGET_FILE:DredmorMac>
+      ${CMAKE_BINARY_DIR}/native-monsters/scene.json --smoke-test)
+    set_tests_properties(native-monsters-window PROPERTIES FIXTURES_REQUIRED native-monsters TIMEOUT 15)
   endif()
 endif()
