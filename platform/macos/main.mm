@@ -594,8 +594,9 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
         }
         [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];
         for (NSString *key in @[@"\uf702",@"\uf703"]) {
+            const unsigned short code=[key isEqualToString:@"\uf702"]?123:124;
             NSEvent *event=[NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:0 timestamp:0
-                windowNumber:self.window.windowNumber context:nil characters:key charactersIgnoringModifiers:key isARepeat:NO keyCode:0];[self keyDown:event];
+                windowNumber:self.window.windowNumber context:nil characters:key charactersIgnoringModifiers:key isARepeat:NO keyCode:code];[self keyDown:event];
         }
         if (_session->traps()[0].charges!=0 || !_session->traps()[0].pending_destruction ||
             _session->player().health!=_session->player().secondary[0]-14 || _session->passable(_session->traps()[1].origin)) return fail("second activation");
