@@ -26,15 +26,28 @@ void register_factory_item(ItemFactoryTables& tables,std::uint32_t index,const I
         }
     }
 }
+GearBuckets build_gear_buckets(const std::vector<ItemDefinition>& definitions,const ItemFactoryTables::Pool& named,ItemKind kind) {
+    if (kind!=ItemKind::weapon && kind!=ItemKind::armour) throw std::invalid_argument("invalid gear bucket kind");
+    // splitUpItemLists populates levels0..19. Two empty upper buckets make the
+    // selector's higher clamp values descend safely instead of reading globals.
+    GearBuckets buckets(22);
+    for (auto index:named) {
+        const auto& item=definitions.at(index);
+        if (item.kind==kind && !item.special && item.level>=0 && item.level<20) buckets[item.level].push_back(index);
+    }
+    return buckets;
+}
 namespace {
-bool needs_artifact(const ItemDefinition& definition) {
-    if (definition.kind!=ItemKind::weapon && definition.kind!=ItemKind::armour) return false;
+bool item_flag(const ItemDefinition& definition,std::string_view name) {
     for (const auto& attribute:definition.source.attributes) {
         auto key=attribute.first;
         for (auto& c:key) if (c>='A' && c<='Z') c+=('a'-'A');
-        if (key=="artifact") return legacy_integer(attribute.second)!=0;
+        if (key==name) return legacy_integer(attribute.second)!=0;
     }
     return false;
+}
+bool needs_artifact(const ItemDefinition& definition) {
+    return (definition.kind==ItemKind::weapon || definition.kind==ItemKind::armour) && item_flag(definition,"artifact");
 }
 }
 std::optional<InventoryItem> make_loot_item(const std::vector<ItemDefinition>& definitions,
@@ -77,8 +90,14 @@ std::optional<InventoryItem> make_loot_item(const std::vector<ItemDefinition>& d
         for (auto entry:pool) {const auto& item=definitions.at(entry);traps.push_back({item.level,item.special,item.debug});}
         index=pool.at(select_trap(traps,candidate,context.depth,context.trap_deviation).index);
     } else if (type=="weapon" || type=="armour") {
-        (void)artifact;
-        throw std::runtime_error("random weapon/armour loot generation is not implemented");
+        if (artifact) throw std::runtime_error("artifact loot generation is not implemented");
+        const auto kind=type=="weapon"?ItemKind::weapon:ItemKind::armour;
+        const auto buckets=build_gear_buckets(definitions,tables.named[context.level_set],kind);
+        std::vector<GearCandidate> gear;gear.reserve(definitions.size());
+        for (const auto& item:definitions) gear.push_back({item.weapon_type,item_flag(item,"craftoutput"),item_flag(item,"artifact"),false,item.special,item.debug});
+        const auto selected=type=="weapon"?select_weapon(gear,buckets,candidate,context.depth,context.trap_deviation):
+            select_armour(gear,buckets,candidate,context.depth,context.trap_deviation);
+        index=static_cast<std::uint32_t>(selected.index);
     }
     if (!index) return std::nullopt;
     const auto& definition=definitions.at(*index);

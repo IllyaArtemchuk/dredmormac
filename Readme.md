@@ -139,8 +139,8 @@ exports. This workflow has successfully analyzed the supplied Mach-O.
 `dredmor-factory` exercises simple loot creation using explicit ordered item
 registration tables. Compare with `scripts/verify_factory.py ORIGINAL_BINARY
 build/dredmor-factory --out PRIVATE_REPORT.json`. It covers named/misc/currency,
-reagent/component, potion, wand, bolts and trap paths. Random weapon/armour and
-artifact generation remain incomplete and fail explicitly. Session loot creation
+reagent/component, potion, wand, bolts and trap paths. Non-artifact weapon/armour selection and construction are implemented;
+artifact generation remains incomplete and fails explicitly. Session loot creation
 retains constructor results and RNG across saves; full room population is pending.
 
 `dredmor-item-tables DATA_ROOT` emits ordered base registration tables. Compare
@@ -148,3 +148,10 @@ synthetic original loader callbacks and supplied base ingestion with
 `scripts/verify_item_tables.py ORIGINAL_BINARY build/dredmor-item-tables
 --content DATA_ROOT --out PRIVATE_REPORT.json`. Base table registration is
 implemented; expansion conversion/merge behavior remains unfinished.
+
+`verify_gear_selection.py ORIGINAL_BINARY build/dredmor-gear-selection --out
+PRIVATE_REPORT.json` compares full weapon/armour selection. `verify_gear_buckets.py
+ORIGINAL_BINARY build/dredmor-gear-buckets --content DATA_ROOT --out
+PRIVATE_REPORT.json` checks original bucketing and independent base ingestion.
+These preserve the selectors' different alternate-depth and retry rules; exhausted
+or invalid tables fail atomically under a port resource guard.

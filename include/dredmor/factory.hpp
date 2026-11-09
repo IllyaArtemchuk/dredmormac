@@ -15,6 +15,8 @@ struct ItemFactoryTables {
 // and do not append. Only the low four level-set mask bits are observed.
 void register_factory_item(ItemFactoryTables& tables,std::uint32_t index,const ItemDefinition& definition,
                            std::uint32_t level_sets,bool converted=false);
+GearBuckets build_gear_buckets(const std::vector<ItemDefinition>& definitions,const ItemFactoryTables::Pool& named,
+                              ItemKind kind);
 struct ItemFactoryContext {
     std::size_t level_set=0;
     SpawnDepthContext depth;
@@ -22,8 +24,8 @@ struct ItemFactoryContext {
     float trap_deviation=0;
 };
 // Named and non-artifact simple loot construction, including currency, misc,
-// reagent/component, potion, wand, bolts and trap. Random weapon/armour/artifact
-// generation requires further recovered code and throws before state commits.
+// reagent/component, potion, wand, bolts, trap and non-artifact weapon/armour.
+// Artifact generation requires further recovered code and throws atomically.
 std::optional<InventoryItem> make_loot_item(const std::vector<ItemDefinition>& definitions,
     const ItemFactoryTables& tables,const ItemFactoryContext& context,std::string_view type,
     std::string_view subtype,int quantity,bool artifact,std::uint64_t instance,GameRandom& random,

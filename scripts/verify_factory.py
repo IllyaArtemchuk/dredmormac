@@ -3,7 +3,7 @@
 
 Full outer/named factory control flow runs. Simple item constructors are recording
 boundaries; currency constructors/Build run with the existing sprite boundary.
-Random weapon/armour/artifact paths are excluded here.
+Artifact generation paths are excluded here.
 """
 import argparse
 import hashlib
@@ -76,6 +76,16 @@ class Factory(Currency):
                 self.write(outer+offset*16,array,array+len(pool)*4,array+len(pool)*4,0)
         pool=tables[5];array=self.allocate(max(4,len(pool)*4));self.write(array,*[entries[i] for i in pool])
         self.write(self.original.address('_reagentEntries'),array,array+len(pool)*4,array+len(pool)*4,0)
+        if kind in ['weapon','armour'] and subtype=='random':
+            item_kind=1 if kind=='weapon' else 2
+            base=self.original.address('_weaponsByLevel' if item_kind==1 else '_armourByLevel')
+            for bucket in range(22):
+                outer=self.allocate(64)
+                for group in range(4):
+                    pool=[i for i in tables[0][group] if definitions[i][1]==item_kind and definitions[i][4]==bucket and bucket<20 and not definitions[i][5]]
+                    array=self.allocate(max(4,len(pool)*4));self.write(array,*[entries[i] for i in pool])
+                    self.write(outer+group*16,array,array+len(pool)*4,array+len(pool)*4,0)
+                self.write(base+bucket*12,outer,outer+64,outer+64)
         types=self.allocate(8);self.string(types,kind);self.string(types+4,subtype)
         pointer=self.original.call('__Z35CreateItemFromTypeAndSubtypeStringsSsSsP5Levelib',types,types+4,self.level,quantity,artifact,budget=1000000)
         if pointer:
@@ -102,7 +112,7 @@ def encode(case):
 def fixture(rng,index):
     definitions=[]
     for group in range(4):
-        for kind in range(13):definitions.append([f'Pool{group}-Kind{kind}',kind,-1,5,1,False,False])
+        for kind in range(13):definitions.append([f'Pool{group}-Kind{kind}',kind,-1,0,1,False,False])
     definitions[3][0]=definitions[16][0]='Duplicate'
     definitions[0][0]=definitions[29][0]='Unsupported first'
     definitions.extend([['Lockpick',6,0,-1,0,False,False],['Spores',6,1,-1,0,False,False],['Zorkmids',10,2,-1,0,False,False]])
@@ -113,11 +123,11 @@ def fixture(rng,index):
         for pool in pools:pool.extend(rng.choices(pool,k=rng.randrange(4)))
     reagents=rng.sample([group*13+kind for group in range(4) for kind in [3,5,7,8,9,11]],rng.randrange(1,20))
     tables=[named,*sets,reagents]
-    types=['misc','zorkmids','reagent','component','potion','wand','bolts','unknown','MISC','food','mushroom','trap']
+    types=['misc','zorkmids','reagent','component','potion','wand','bolts','unknown','MISC','food','mushroom','trap','weapon','armour']
     kind=types[index%len(types)];subtype=rng.choice(['random','lockpick','lockpicks','spores','Duplicate','Unsupported first','missing','zorkmids','Zorkmids','',rng.choice(definitions)[0]])
     if index%3==0:subtype='random'
     return [rng.getrandbits(32),rng.randrange(4),rng.choice([-1,0,1,5,20]),bool(rng.randrange(2)),rng.choice([-1,0,2,10]),rng.choice([0,1,10,100]),rng.choice([0.0,1.4,1.7]),
-            kind,subtype,rng.choice([-1,0,1,2,17,2147483647]),bool(rng.randrange(2)),definitions,tables]
+            kind,subtype,rng.choice([-1,0,1,2,17,2147483647]),False if kind in ['weapon','armour'] and subtype=='random' else bool(rng.randrange(2)),definitions,tables]
 
 
 def verify(binary,port):
@@ -136,7 +146,7 @@ def verify(binary,port):
         if a!=b:raise AssertionError(f'factory fixture {index}, {cases[index][7:11]}: {a} != {b}')
     if len(actual)!=len(expected):raise AssertionError('factory output count differs')
     return dict(binary_sha256=hashlib.sha256(oracle.original.data).hexdigest(),cases=len(cases),mismatches=0,
-                scope='complete outer/named factory control flow for simple loot and actual random-trap selector; four ordered synthetic registration pools; simple constructors recorded, actual currency constructors/Build with sprite boundary, trap log/tweak boundaries; selected constructor/definition, quantity override, separate currency value, libc/normal state and next eight MT draws compared; base simple-constructor stack flags, random weapon/armour/artifact paths and real table registration excluded')
+                scope='complete outer/named factory control flow for non-artifact loot, actual trap/weapon/armour selectors; explicit ordered synthetic registration/level pools; simple constructors recorded, actual currency constructors/Build with sprite boundary, normal log/tweak boundaries; selected constructor/definition, quantity override, separate currency value, libc/normal state and next eight MT draws compared; base simple-constructor stack flags, artifact generation and real table registration excluded')
 
 
 if __name__=='__main__':

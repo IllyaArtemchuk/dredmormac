@@ -17,4 +17,16 @@ struct TrapSelection {std::size_t index=0;int target_level=1;unsigned attempts=0
 // and tweak deviation. Entity construction and table registration are separate.
 TrapSelection select_trap(const std::vector<TrapCandidate>& pool,GameRandom& random,
                           SpawnDepthContext depth,float deviation);
+struct GearCandidate {
+    int weapon_type=0;
+    bool craft_output=false,artifact=false,artifact_spawned=false,special=false,debug=false;
+};
+using GearBuckets=std::vector<std::vector<std::size_t>>;
+struct GearSelection {std::size_t index=0;int target_level=0,bucket=0;std::size_t draws=0;};
+// Buckets are ordered item-level tables. Selection starts at target+1, then
+// descends. Exhaustion/invalid buckets and budget overflow fail atomically.
+GearSelection select_weapon(std::vector<GearCandidate>& entries,const GearBuckets& buckets,GameRandom& random,
+    SpawnDepthContext depth,float deviation,bool allow_artifact=false,int offset=0,std::size_t draw_budget=1000000);
+GearSelection select_armour(const std::vector<GearCandidate>& entries,const GearBuckets& buckets,GameRandom& random,
+    SpawnDepthContext depth,float deviation,int offset=0,std::size_t draw_budget=1000000);
 }

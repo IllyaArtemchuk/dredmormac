@@ -239,3 +239,14 @@ sets0..2, leaving3 empty. GameContent exposes base tables; expansion tables rema
 explicitly unavailable until conversion/merging is implemented. Native developer
 named ground items now use the measured factory and tables. Sixteen local groups
 pass; this registration/native integration awaits MacCI.
+
+Registration/native run42619110918 passed27 native checks/package. Weapon/armour
+selection now matches2,048 full original executions, including cached normals,
+alternate-depth branches, offset wrapping, weapon rejection/downshift and artifact
+spawn flags. splitUpItemLists bucketing matches256 original fixtures /8,228 entries
+and independent supplied-base ingestion. Non-artifact gear is connected to factory
+creation; expanded2,100-case full-factory comparison passes with actual gear/trap
+selectors. Seventeen local groups pass. Artifact generation still throws atomically.
+Upper weapon target buckets outside the original20 populated levels are empty in
+the port, and exhausted/invalid tables or retry-budget overflow fail atomically;
+these safety policies are not original behavior claims. New gear source awaits MacCI.

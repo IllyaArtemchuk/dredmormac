@@ -414,3 +414,24 @@ catalog table getter throws instead of guessing. Native ground_items now use nam
 factory/tables; inventory fixture exercises this next CI push. Sixteen local groups
 pass. Next factory gaps: random weapon/armour selectors, artifact creation; then
 ordered room content/population and full-level native integration.
+
+Registration/native run42619110918 passed27 Mac checks/package. Gear selectors in
+selection.cpp now match2,048 full original GetRandomWeapon4e270/GetRandomArmour4eb80
+calls: normal+MT actual, tweak/log/libc boundaries, chosen entry, artifact-spawned
+flags, libc/cache/nextMT8. Weapon alternate>=0 consumes second normal but keeps the
+original target; armour uses it. Initial means are depth, not+1. Offset wraps, clamp
+weapon0..20/armour0..18; actual bucket is target+1. Weapon lowers target after100
+rejects, resetting counter0 (next lower bucket can get101 draws); armour does not
+lower nonempty all-invalid pools. Weapon excludes craft/debug/special/type5/6 and
+artifact unless allowed+notspawned, then marks spawned; armour ignores artifacts.
+Port guards exhausted buckets and draw budgets atomically. Factory only connects
+non-artifact gear; artifact generation remains guarded, so session unique-artifact
+state has not been added yet.
+build_gear_buckets mirrors splitUpItemLists4f400: levels0..19, named pool order,
+matchingkind and !special; higher two port buckets empty for safe descending.
+verify_gear_buckets.py matches256 fixtures /8,228 entries + supplied base ingestion.
+verify_factory.py expanded actual gear selectors still matches2,100 cases. Seventeen
+local groups pass; gear source awaits MacCI. Private weapon-armour-selection.txt
+and item-level-buckets.txt are exports; keep them private. Next: artifact creation
+and special factory artifact branch (decompiler weapon loop needs disassembly),
+then room content/population ordering and full-level session/native integration.

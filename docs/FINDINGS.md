@@ -932,3 +932,37 @@ base tables; expanded catalogs reject table access until conversion is recovered
 Native named developer ground items now use this path. Sixteen local groups pass;
 registration/native changes await MacCI. Factory run42618377334 passed27 checks
 and relocated packaged-app smoke on actual arm64 macOS.
+
+## Weapon and armour selection
+
+select_weapon/select_armour match2,048 full original function executions with
+actual MT/box_muller, supplied tweak/log/libc boundaries, explicit ordered item-
+level buckets and varied cache states, flags, offsets and depths. Selected entry,
+artifact-spawned flags, libc/cache and next8 MT draws match. Weapon starts with
+truncated normal at mean depth plus wrapping offset. Alternate negative uses
+libc bucket0..19; alternate nonnegative consumes a new normal but discards its
+value. Armour instead uses that alternate sample plus offset. Targets clamp to
+0..20 and0..18, respectively, then lookup starts at bucket target+1. Weapon tries
+100 draws before decrementing target/resetting counter0; an immediately lower
+nonempty bucket then permits101 draws. Empty buckets decrement/reset via the
+outer loop. Armour descends only empty buckets and otherwise retries indefinitely.
+Port budgets/exhaustion guards fail atomically instead of reading unrelated globals
+or looping forever; these are deliberate edge policies.
+
+Weapon eligibility excludes craftoutput, debug, special and types5/6. Artifacts
+require allow-artifact and not-yet-spawned; accepted artifacts mark that bit.
+Non-artifact entries ignore that bit. Armour excludes craftoutput/special/debug
+and ignores artifact status/uniqueness. Full selector tests cover these differences.
+Factory currently invokes only non-artifact gear paths; artifact generation remains
+explicitly unsupported, and no session artifact-uniqueness persistence is claimed.
+
+build_gear_buckets reproduces full splitUpItemLists4f400 in256 fixtures /8,228
+entries, with actual bucketing/vector growth and supplied allocation/string
+boundaries. All20 levels/four sets/both gear types compare. Entries match kind/
+level and !special, preserving named table order; other eligibility happens later.
+Supplied-base weapon/armour buckets agree with independent ingestion. Two extra
+empty port buckets allow high weapon targets to descend safely; original upper
+out-of-array reads are excluded. Expanded full factory comparison still matches
+2,100 cases with actual gear/trap selectors and simple-constructor boundaries.
+Seventeen local groups pass. Registration/native run42619110918 passed27 Mac checks
+and packaged-app smoke; gear integration MacCI pending.
