@@ -55,7 +55,16 @@ ItemDefinition read_item(const XmlNode& source) {
             else if (type=="hands") item.armour_type=10;
             else if (type=="waist") item.armour_type=11;
             else if (type=="sleeve") item.armour_type=12;
-        } else if (tag=="food") { item.kind=ItemKind::food;item.food_hp=integer(child,"hp");item.food_mp=integer(child,"mp"); }
+        } else if (tag=="food") {
+            item.kind=ItemKind::food;
+            for (const auto& field:child.attributes) {
+                const auto key=lower(field.first);
+                if (key=="hp") item.food_hp=legacy_integer(field.second);
+                else if (key=="mp") item.food_mp=legacy_integer(field.second);
+                else if (key=="meat") item.food_meat=legacy_integer(field.second)!=0;
+                else if (key=="effect") item.cast_spell=field.second;
+            }
+        }
         else if (tag=="potion" || tag=="casts") {
             if (tag=="potion") item.kind=ItemKind::potion;
             for (const auto& field:child.attributes) if (lower(field.first)=="spell") item.cast_spell=field.second;

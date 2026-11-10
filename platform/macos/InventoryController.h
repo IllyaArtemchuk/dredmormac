@@ -3,7 +3,7 @@
 - (NSArray<NSDictionary*>*)inventoryRows;
 - (BOOL)equipInventoryInstance:(uint64_t)instance slot:(NSInteger)slot;
 - (BOOL)unequipInventorySlot:(NSInteger)slot;
-- (BOOL)drinkInventoryPotion:(uint64_t)instance;
+- (BOOL)useInventoryConsumable:(uint64_t)instance;
 @end
 
 @interface DredmorInventoryController : NSWindowController<NSTableViewDataSource>
@@ -13,5 +13,5 @@
 - (void)refresh;
 - (void)equipSelection:(id)sender;
 - (void)unequipSelection:(id)sender;
-- (void)drinkSelection:(id)sender;
+- (void)useSelection:(id)sender;
 @end

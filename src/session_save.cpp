@@ -154,6 +154,12 @@ std::uint64_t consumable_signature(const std::shared_ptr<const std::vector<ItemD
     }
     return any?(hash?hash:1):0;
 }
+std::uint64_t nutrition_signature(const std::shared_ptr<const std::vector<ItemDefinition>>& definitions) {
+    std::uint64_t hash=14695981039346656037ull;bool any=false;
+    auto add=[&](std::int32_t value){for (unsigned char c:std::to_string(value)) {hash^=c;hash*=1099511628211ull;}hash^=0;hash*=1099511628211ull;};
+    if (definitions) for (const auto& item:*definitions) if (item.kind==ItemKind::food && item.builtin_subtype<0) {any=true;add(item.food_hp);add(item.food_mp);add(item.food_meat);}
+    return any?(hash?hash:1):0;
+}
 std::uint64_t casting_signature(const std::shared_ptr<const std::vector<SpellDefinition>>& spells,
                                 const std::shared_ptr<const std::vector<AbilityDefinition>>& abilities) {
     std::uint64_t hash=14695981039346656037ull;
@@ -339,6 +345,8 @@ void Session::save(std::ostream& out) const {
     if (depth_state) out<<"<depth-context depth=\""<<depth_context_.depth<<"\" alternate=\""<<depth_context_.alternate<<"\" alternate-depth=\""<<depth_context_.alternate_depth<<"\"/>\n";
     const auto consumables=consumable_signature(definitions_);
     if (consumables) out<<"<consumable-rules content=\""<<consumables<<"\"/>\n";
+    const auto nutrition=nutrition_signature(definitions_);
+    if (nutrition) out<<"<nutrition-rules content=\""<<nutrition<<"\"/>\n";
     if (regeneration_) {
         const auto& r=*regeneration_;
         out<<"<regeneration hp-turns=\""<<r.health_turns<<"\" mp-turns=\""<<r.mana_turns<<"\" hp-clock=\""<<r.health_clock<<"\" mp-clock=\""<<r.mana_clock
@@ -470,6 +478,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
         if (rules.attributes.count("buffs") && attribute_number<std::uint64_t>(rules,"buffs")!=buffs_signature(spells)) throw std::runtime_error("save buff content does not match loaded definitions");
     }
     if (root.first("consumable-rules") && (!modern || attribute_number<std::uint64_t>(child(root,"consumable-rules"),"content")!=consumable_signature(definitions))) throw std::runtime_error("save consumable content does not match loaded definitions");
+    if (root.first("nutrition-rules") && (!modern || attribute_number<std::uint64_t>(child(root,"nutrition-rules"),"content")!=nutrition_signature(definitions))) throw std::runtime_error("save food content does not match loaded definitions");
     const auto turn=attribute_number<std::uint64_t>(root,"turn");
     if (turn==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("saved turn counter exhausted");
     std::istringstream rows(child(root,"room").text);auto world=World::restore(rows,turn);auto player=read_actor(child(root,"player"),version=="6" || modern,modern,monster_fields,corpse_fields);

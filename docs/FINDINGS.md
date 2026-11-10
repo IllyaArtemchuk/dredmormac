@@ -1845,3 +1845,48 @@ pointers before executing the gathered list; percentage100 bypasses RNG, other
 percentages use strict '<'. Equipment traversal and melee-family gates need to
 be completed/compared before food/attack trigger integration. No food consumer
 or WalkBuffs execution was added by the regeneration change.
+
+
+Configured regeneration/rebuild commit34ef5a1 passed arm64 run42733979458,
+job129558609093: all58 checks and relocated packaged-app smoke. The earlier
+regeneration commit0f79a29 also passed58 in run42733649842/job129557521098.
+Food/booze inventory self-consumption now uses the measured recovery counters.
+Case-insensitive food attributes retain omitted fields across repeated tags, use
+legacy atoi semantics, and bind effect= spell refs; casts can overwrite the ref.
+Typed hp/mp/meat fields get a separate nutrition content identity on saves.
+Session::eat_food adds signed counters with32-bit wrap, runs each learned vegan
+flag's Fallen Vegan spell for meat then the item's linked internal spell, consumes
+one item in place and advances the provisional room scheduler. Missing item spell
+refs still consume; missing required dietary spells and unsupported/cyclic effects
+roll back the entire action. Food checks stackability as well as quantity, unlike
+potion consumption. Food requires configured regeneration rules, preserving manual/
+legacy sessions without invented recovery rates.
+Vampirism's restriction is a selected-skill-name check (Player::HasAbility115a3e),
+NOT learned ability-name presence. The same persisted skill-name-derived vampire
+flag used by natural HP regeneration supplies that gate. Exactly mp==0 is blocked;
+negative mp is nonzero and bypasses the restriction, matching the original. Vegan
+flags are read from learned abilities' flags veganism attribute; each eligible flag
+can cast its penalty. Reactive foodBuff/boozeBuff/consumableBuff WalkBuffs traversal
+is still unfinished. Applicable hooks reject atomically instead of silently losing
+spells. None of those three hook tags occur in the supplied base/three expansion
+XML layers, but this restriction matters to mods and future trigger integration.
+verify_food.py matches1024 two-use original Food::UsedOn13f9d2/Hittable::Update4493a
+sequences with port save/reload between uses: HP/MP, nutrition, quantities, accepted
+uses and dietary/item spell-call arguments/order. Actual selected-skill-name and
+Ability::PlayerHasAbility eligibility routines run. WalkBuffs is a supplied boundary
+checking booze-food-consumable invocation order with no reactive spells; linked
+spells supply controlled -1MP, while the port runs its real resource effect. UI/
+audio/animation/inventory-removal/destruction/GameObj/mines are supplied. Paid
+player self-use/time-enabled cases only; shops/monster use, arbitrary linked effects,
+full object-queue ordering and original UI are excluded. Actual itemDBEntryC2/food/
+casts callbacks also match512 synthetic+49 supplied metadata roots across layers.
+All36 local groups pass, covering recovery across turns/reloads, accumulation,
+selected-name versus ability-name vampire distinction, meat penalty, missing-item
+no-op, typed food hash mismatch and unsupported hook/effect rollback. Native Use
+handles food and potions, and the HUD displays remaining food/booze counters. New
+food smoke uses a two-unit mixed meal through inventory controls, saves/reloads
+mid-recovery, consumes its last unit and checks resource/counter exhaustion.
+Food/native source awaits MacCI. Full floors/transitions, remaining spell/status
+and reactive combat effects, AI/death/object scheduling, original UI/audio/FOV and
+full end-to-end reference validation remain unfinished; this is still a room-based
+integration, not the complete game.

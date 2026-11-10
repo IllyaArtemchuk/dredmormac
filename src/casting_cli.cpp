@@ -52,6 +52,24 @@ int main(int argc,char** argv) {
                 regenerate(state,hp,max_hp,mp,max_mp,hp_bonus,mp_bonus,allowed);
                 std::cout<<hp<<' '<<mp<<' '<<state.health_clock<<' '<<state.mana_clock<<' '<<state.food<<' '<<state.booze<<'\n';
             }
+        } else if (argc==2 && std::string(argv[1])=="--food-metadata") {
+            std::string xml;while (std::getline(std::cin,xml)) if (!xml.empty()) {const auto item=read_item(parse_xml(xml));std::cout<<int(item.kind)<<' '<<item.food_hp<<' '<<item.food_mp<<' '<<item.food_meat<<' '<<std::quoted(item.cast_spell)<<'\n';}
+        } else if (argc==2 && std::string(argv[1])=="--foods") {
+            std::int32_t quantity,hp,mp;bool meat,linked,vampire,vegan;
+            while (std::cin>>quantity>>hp>>mp>>meat>>linked>>vampire>>vegan) {
+                auto items=std::make_shared<std::vector<ItemDefinition>>();auto food=read_item(parse_xml("<item name='Fixture food'><food effect='Gift'/></item>"));food.food_hp=hp;food.food_mp=mp;food.food_meat=meat;if (!linked) food.cast_spell.clear();items->push_back(food);
+                auto spells=std::make_shared<std::vector<SpellDefinition>>();for (const auto& xml:{"<spell name='Gift' type='self'><effect type='spellpoints' amount='-1'/></spell>","<spell name='Fallen Vegan' type='self'><effect type='spellpoints' amount='-1'/></spell>","<spell name='Drain' type='self'><effect type='heal' amount='-10'/><effect type='spellpoints' amount='-10'/></spell>"}) spells->push_back(read_spell(parse_xml(xml)));
+                auto abilities=std::make_shared<std::vector<AbilityDefinition>>();if (vampire) abilities->push_back(read_ability(parse_xml("<ability name='Vampirism' skill='0'/>")));if (vegan) abilities->push_back(read_ability(parse_xml("<ability name='Diet' skill='0'><flags veganism='1'/></ability>")));
+                std::istringstream map("#####\n#@..#\n#...#\n#####\n");Session session(World::read(map),make_player({20,20,20}),1);std::vector<SkillRank> skills;for (int i=0;i<7;++i) skills.push_back({i,1});session.character_profile({20,20,20},items,skills,abilities);session.spell_profile(spells);session.regeneration_profile(1000,1000,vampire);
+                session.cast_spell(spells->at(2),{1,1},{1,1});std::cout<<session.player().health<<' '<<session.player().secondary[0]<<' '<<session.player().mana<<' '<<session.player().secondary[1]<<' ';
+                const auto instance=session.create_ground_item(0,{1,1},quantity);session.pickup();
+                for (int i=0;i<2;++i) {
+                    const auto used=session.eat_food(instance);const auto item=session.inventory().find(instance);const auto& r=*session.regeneration();
+                    std::cout<<used<<' '<<session.player().health<<' '<<session.player().mana<<' '<<r.food<<' '<<r.booze<<' '<<(item?item->quantity:0)<<' '<<session.world().turn()<<' ';
+                    std::ostringstream saved;session.save(saved);std::istringstream restore(saved.str());session=Session::load(restore,items,abilities,spells);
+                }
+                std::cout<<'\n';
+            }
         } else if (argc==2 && std::string(argv[1])=="--metadata") {
             std::string xml;while (std::getline(std::cin,xml)) if (!xml.empty()) {
                 const auto casting=read_spell(parse_xml(xml)).casting;
@@ -63,6 +81,6 @@ int main(int argc,char** argv) {
             std::string xml;while (std::getline(std::cin,xml)) if (!xml.empty()) {
                 const auto ability=read_ability(parse_xml(xml));std::cout<<ability.cast_trigger_percent<<' '<<std::quoted(ability.cast_trigger)<<'\n';
             }
-        } else throw std::invalid_argument("Usage: dredmor-casting --costs | --metadata | --ability | --actions | --potions");
+        } else throw std::invalid_argument("Usage: dredmor-casting --costs | --metadata | --ability | --actions | --potions | --potion-metadata | --regeneration | --foods | --food-metadata");
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

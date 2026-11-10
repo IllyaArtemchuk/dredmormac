@@ -32,7 +32,7 @@
         equip.frame=NSMakeRect(210,28,110,28);[content addSubview:equip];
         NSButton *unequip=[NSButton buttonWithTitle:@"Unequip" target:self action:@selector(unequipSelection:)];
         unequip.frame=NSMakeRect(330,28,110,28);[content addSubview:unequip];
-        NSButton *drink=[NSButton buttonWithTitle:@"Drink" target:self action:@selector(drinkSelection:)];
+        NSButton *drink=[NSButton buttonWithTitle:@"Use" target:self action:@selector(useSelection:)];
         drink.frame=NSMakeRect(442,28,80,28);drink.autoresizingMask=NSViewMinXMargin;[content addSubview:drink];
         [self refresh];[window center];
     }
@@ -55,10 +55,10 @@
         ![self.inventoryOwner unequipInventorySlot:[_rows[row][@"slot"] integerValue]]) NSBeep();
     [self refresh];
 }
-- (void)drinkSelection:(id)sender {
+- (void)useSelection:(id)sender {
     const NSInteger row=_tableView.selectedRow;
     if (row<0 || row>=(NSInteger)_rows.count || [_rows[row][@"equipped"] boolValue] ||
-        ![self.inventoryOwner drinkInventoryPotion:[_rows[row][@"instance"] unsignedLongLongValue]]) NSBeep();
+        ![self.inventoryOwner useInventoryConsumable:[_rows[row][@"instance"] unsignedLongLongValue]]) NSBeep();
     [self refresh];
 }
 @end

@@ -37,6 +37,7 @@ if __name__=='__main__':
     p.add_argument('--traps',action='store_true',help='Automatic trap casting, charges, origins and persisted spell rules')
     p.add_argument('--casting',action='store_true',help='Learned player spells, targeted input, costs and saved cooldowns')
     p.add_argument('--regeneration',action='store_true',help='Configured natural resource clocks and native save/reload')
+    p.add_argument('--food',action='store_true',help='Inventory meals, recovery counters and persisted nutrition')
     args=p.parse_args();out=args.output.resolve();out.mkdir(parents=True,exist_ok=True)
     (out/'atlas.png').write_bytes(png(384,640,(70,80,95,255)))
     (out/'hero.png').write_bytes(png(64,64,(40,180,150,255)))
@@ -57,12 +58,20 @@ if __name__=='__main__':
     if args.traps and (not args.content_source or args.inventory or args.combat or args.objects or args.breakables or args.monsters):p.error('--traps requires --content-source and excludes other fixture types')
     if args.casting and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps])):p.error('--casting requires --content-source and excludes other fixture types')
     if args.regeneration and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting])):p.error('--regeneration requires --content-source and excludes other fixture types')
+    if args.food and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration])):p.error('--food requires --content-source and excludes other fixture types')
     if args.content_source:
         root=out/'installation';shutil.copytree(args.content_source,root,dirs_exist_ok=True)
         (root/'tilesets').mkdir(exist_ok=True);(root/'sprites/hero').mkdir(parents=True,exist_ok=True)
         (root/'tilesets/basic.png').write_bytes(png(384,640,(70,80,95,255)))
         (root/'sprites/hero/hero_idle_d.spr').write_bytes(sprite())
         (root/'dungeon').mkdir(exist_ok=True);(root/'dungeon/fixture.spr').write_bytes(sprite())
+        if args.food:
+            tweaks=ET.parse(root/'game/tweakDB.xml')
+            ET.SubElement(tweaks.getroot(),'tweak',{'name':'hpregenturns','ival':'1000'});ET.SubElement(tweaks.getroot(),'tweak',{'name':'spregenturns','ival':'1000'})
+            tweaks.write(root/'game/tweakDB.xml',encoding='unicode')
+            items=ET.parse(root/'game/itemDB.xml');items.getroot().append(ET.fromstring('<item name="Fixture meal"><food hp="3" mp="2" effect="Fixture gift"/></item>'));items.write(root/'game/itemDB.xml',encoding='unicode')
+            (root/'game/spellDB.xml').write_text('<spellDB><spell name="Fixture drain" type="self"><effect type="spellpoints" amount="-5"/><effect type="heal" amount="-5"/></spell><spell name="Fixture gift" type="self"><effect type="spellpoints" amount="-1"/></spell></spellDB>')
+            scene.update(data_root=str(root),smoke_food=True)
         if args.regeneration:
             tweaks=ET.parse(root/'game/tweakDB.xml')
             ET.SubElement(tweaks.getroot(),'tweak',{'name':'hpregenturns','ival':'2'});ET.SubElement(tweaks.getroot(),'tweak',{'name':'spregenturns','ival':'3'})

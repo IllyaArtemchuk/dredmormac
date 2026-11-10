@@ -101,6 +101,9 @@ add_test(NAME potion-consumption COMMAND potion-tests)
 add_executable(regeneration-tests tests/regeneration.cpp)
 target_link_libraries(regeneration-tests PRIVATE dredmor_core)
 add_test(NAME resource-regeneration COMMAND regeneration-tests)
+add_executable(food-tests tests/food.cpp)
+target_link_libraries(food-tests PRIVATE dredmor_core)
+add_test(NAME food-consumption COMMAND food-tests)
 add_executable(trap-runtime-tests tests/traps.cpp)
 target_link_libraries(trap-runtime-tests PRIVATE dredmor_core)
 add_test(NAME trap-runtime COMMAND trap-runtime-tests)
@@ -300,6 +303,13 @@ if(APPLE)
     add_test(NAME native-monsters-window COMMAND $<TARGET_FILE:DredmorMac>
       ${CMAKE_BINARY_DIR}/native-monsters/scene.json --smoke-test)
     set_tests_properties(native-monsters-window PROPERTIES FIXTURES_REQUIRED native-monsters TIMEOUT 15)
+    add_test(NAME native-food-fixture COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-food
+      --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --food)
+    set_tests_properties(native-food-fixture PROPERTIES FIXTURES_SETUP native-food)
+    add_test(NAME native-food-window COMMAND $<TARGET_FILE:DredmorMac>
+      ${CMAKE_BINARY_DIR}/native-food/scene.json --smoke-test)
+    set_tests_properties(native-food-window PROPERTIES FIXTURES_REQUIRED native-food TIMEOUT 15)
     add_test(NAME native-regeneration-fixture COMMAND ${Python3_EXECUTABLE}
       ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-regeneration
       --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --regeneration)

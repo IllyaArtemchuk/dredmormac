@@ -38,6 +38,7 @@ struct ItemDefinition {
     ItemModifiers modifiers;
     std::optional<TrapDefinition> trap;
     std::string cast_spell;
+    bool food_meat=false;
     XmlNode source; // Preserve unsupported effects; never silently discard them.
     bool can_equip(EquipmentSlot slot) const;
 };

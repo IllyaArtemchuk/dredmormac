@@ -1,4 +1,5 @@
 #include "dredmor/session.hpp"
+#include "dredmor/legacy_number.hpp"
 #include <algorithm>
 #include <cstring>
 #include <stdexcept>
@@ -15,6 +16,13 @@ std::int32_t wrapping_add(std::int32_t a,std::int32_t b) {
 bool learned(const AbilityDefinition& ability,const std::vector<SkillRank>& skills) {
     for (const auto& skill:skills) if (skill.id==ability.skill_id) return ability.level<skill.rank;
     return false;
+}
+std::string folded(std::string value) {for (auto& c:value) if (c>='A' && c<='Z') c+=32;return value;}
+bool vegan(const AbilityDefinition& ability) {
+    bool result=false;
+    for (const auto& node:ability.source.children) if (folded(node.tag)=="flags")
+        for (const auto& field:node.attributes) if (folded(field.first)=="veganism") result=legacy_integer(field.second)!=0;
+    return result;
 }
 }
 const SpellDefinition& Session::spell_definition(std::size_t index) const {
@@ -48,6 +56,46 @@ bool Session::drink_potion(std::uint64_t instance) {
         if (child!=spells_->end()) next.cast_spell_impl(*child,next.player_.position,next.player_.position,next.player_.id,true);
     }
     next.inventory_.consume_one(instance);next.world_.step(Action::wait);next.enemy_turns();*this=std::move(next);return true;
+}
+bool Session::eat_food(std::uint64_t instance) {
+    if (!player_.alive() || !definitions_) return false;
+    const auto item=inventory_.find(instance);if (!item || item->kind!=ItemKind::food) return false;
+    const auto& definition=definitions_->at(item->definition);
+    if (definition.kind!=ItemKind::food) throw std::invalid_argument("food definition mismatch");
+    if (!regeneration_) throw std::invalid_argument("food requires configured resource update rules");
+    // Player::HasAbility here scans selected skill names, like natural HP
+    // regeneration, rather than the learned ability entries.
+    if (!definition.food_mp && regeneration_->vampire) return false;
+    // Full WalkBuffs equipment/conditional traversal is still under recovery.
+    // Reject applicable unimplemented hooks instead of consuming food silently.
+    auto check_hooks=[&](const XmlNode& source) {
+        for (const auto& node:source.children) {
+            const auto tag=folded(node.tag);
+            if (tag=="consumablebuff" || (tag=="foodbuff" && definition.food_hp>0) || (tag=="boozebuff" && definition.food_mp>0))
+                throw std::invalid_argument("food reactive spell traversal is not implemented");
+        }
+    };
+    for (const auto& active:player_buffs_) check_hooks(buff_definition(active).source);
+    if (abilities_) for (const auto& ability:*abilities_) if (learned(ability,skills_)) check_hooks(ability.source);
+    for (const auto& slot:equipment_.slots()) if (slot) check_hooks(definitions_->at(slot->definition).source);
+    auto next=*this;next.events_.clear();
+    next.regeneration_->food=wrapping_add(next.regeneration_->food,definition.food_hp);
+    next.regeneration_->booze=wrapping_add(next.regeneration_->booze,definition.food_mp);
+    std::size_t remaining=4096;
+    auto cast=[&](const std::string& name,bool required) {
+        if (name.empty()) return;
+        const SpellDefinition* child=nullptr;
+        if (spells_) {const auto found=std::find_if(spells_->begin(),spells_->end(),[&](const auto& entry){return entry.name==name;});if (found!=spells_->end()) child=&*found;}
+        if (!child) {if (required) throw std::invalid_argument("food dietary spell is unavailable");return;}
+        next.cast_spell_recursive(*child,next.player_.position,next.player_.position,next.player_.id,true,0,remaining);
+    };
+    if (definition.food_meat && abilities_) for (const auto& ability:*abilities_)
+        if (learned(ability,skills_) && vegan(ability)) cast("Fallen Vegan",true);
+    cast(definition.cast_spell,false);
+    // Food checks stackability as well as quantity; Potion::UsedOn checks only
+    // quantity. Normal constructed food stacks, but retain this distinction.
+    if (item->stackable && item->quantity>0) next.inventory_.consume_one(instance);else next.inventory_.remove(instance);
+    next.world_.step(Action::wait);next.enemy_turns();*this=std::move(next);return true;
 }
 SpellUse Session::use_spell(std::size_t index,Position target) {
     if (!player_.alive()) return SpellUse::dead;

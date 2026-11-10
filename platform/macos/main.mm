@@ -154,6 +154,7 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
 - (NSMenu*)spellMenu;
 - (BOOL)smokeCasting;
 - (BOOL)smokeRegeneration;
+- (BOOL)smokeFood;
 - (void)selectSpell:(id)sender;
 - (void)castSelectedSpellAt:(dredmor::Position)target;
 - (void)pickUpItems:(id)sender;
@@ -547,9 +548,9 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
     if (!_inventoryController) _inventoryController=[[DredmorInventoryController alloc] initWithOwner:self];
     [_inventoryController refresh];[_inventoryController showWindow:nil];
 }
-- (BOOL)drinkInventoryPotion:(uint64_t)instance {
-    try {const bool result=_session->drink_potion(instance);[self recordBreakableAnimations];self.needsDisplay=YES;return result;}
-    catch (const std::exception& error) {fprintf(stderr,"potion failed: %s\n",error.what());return NO;}
+- (BOOL)useInventoryConsumable:(uint64_t)instance {
+    try {const bool result=_session->eat_food(instance) || _session->drink_potion(instance);if (result) [self recordBreakableAnimations];self.needsDisplay=YES;return result;}
+    catch (const std::exception& error) {fprintf(stderr,"consumable failed: %s\n",error.what());return NO;}
 }
 - (void)pickUpItems:(id)sender {
     try { _session->pickup();[_inventoryController refresh];self.needsDisplay=YES; }
@@ -699,6 +700,21 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
     NSArray<NSDictionary*> *rows=[self inventoryRows];
     return rows.count==1 && [rows[0][@"name"] isEqualToString:[NSString stringWithUTF8String:item->artifact->name.c_str()]];
 }
+- (BOOL)smokeFood {
+    if (!_session->regeneration()) return NO;
+    const auto hp=_session->player().health,mp=_session->player().mana;const auto turn=_session->world().turn();
+    const auto* drain=_content->find_spell("Fixture drain");if (!drain || !_session->cast_spell(*drain,_session->player().position,_session->player().position)) return NO;
+    for (std::size_t i=0;i<_content->items().size();++i) if (_content->items()[i].name=="Fixture meal") {
+        _session->create_ground_item(std::uint32_t(i),_session->player().position,2);_session->pickup();[self showInventory:nil];
+        [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];[_inventoryController useSelection:nil];
+        if (_session->player().health!=hp-4 || _session->player().mana!=mp-5 || _session->regeneration()->food!=2 || _session->regeneration()->booze!=1 || ![self smokeSaveLoad]) return NO;
+        [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];[_inventoryController useSelection:nil];[_inventoryController close];
+        if ([self inventoryRows].count || _session->regeneration()->food!=4 || _session->regeneration()->booze!=2 || ![self smokeSaveLoad]) return NO;
+        for (int n=0;n<4;++n) _session->step(dredmor::Action::wait);
+        [self display];return _session->player().health==hp && _session->player().mana==mp-3 && !_session->regeneration()->food && !_session->regeneration()->booze && _session->world().turn()==turn+6 && [self smokeSaveLoad];
+    }
+    return NO;
+}
 - (BOOL)smokeRegeneration {
     if (!_session->regeneration()) return NO;
     const auto hp=_session->player().health,mp=_session->player().mana;
@@ -728,9 +744,9 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
     for (std::size_t i=0;i<_content->items().size();++i) if (_content->items()[i].name=="Fixture potion") {
         _session->create_ground_item(std::uint32_t(i),_session->player().position,2);_session->pickup();
         [self showInventory:nil];[_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];
-        [_inventoryController drinkSelection:nil];
+        [_inventoryController useSelection:nil];
         if (_session->world().turn()!=turn+4 || _session->player().mana!=mana-8 || [self inventoryRows].count!=1 || ![self smokeSaveLoad]) return NO;
-        [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];[_inventoryController drinkSelection:nil];[_inventoryController close];
+        [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];[_inventoryController useSelection:nil];[_inventoryController close];
         return _session->world().turn()==turn+5 && _session->player().mana==mana-9 && [self inventoryRows].count==0 && [self smokeSaveLoad];
     }
     return NO;
@@ -896,6 +912,10 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
     }
     if (_session->player_buffs().size()>buffLabels.count) [buffLabels addObject:[NSString stringWithFormat:@"+%zu more",_session->player_buffs().size()-buffLabels.count]];
     NSString *buffStatus=_targetSpell?[NSString stringWithFormat:@"Click a target for %@ · Esc cancels",[NSString stringWithUTF8String:_session->spell_definition(*_targetSpell).name.c_str()]]:buffLabels.count?[NSString stringWithFormat:@"Buffs: %@",[buffLabels componentsJoinedByString:@" · "]]:@"Buffs: none";
+    if (!_targetSpell && _session->regeneration()) {
+        const auto& r=*_session->regeneration();
+        if (r.food>0 || r.booze>0) buffStatus=[NSString stringWithFormat:@"Food: %d · Booze: %d · %@",std::max(0,r.food),std::max(0,r.booze),buffStatus];
+    }
     NSMutableParagraphStyle *buffStyle=[[NSMutableParagraphStyle alloc] init];buffStyle.lineBreakMode=NSLineBreakByTruncatingTail;
     [buffStatus drawInRect:NSMakeRect(20,self.bounds.size.height-28,MAX(0,self.bounds.size.width-40),18)
         withAttributes:@{NSForegroundColorAttributeName:NSColor.lightGrayColor,NSFontAttributeName:[NSFont systemFontOfSize:12],NSParagraphStyleAttributeName:buffStyle}];
@@ -1031,6 +1051,7 @@ int main(int argc,const char**argv) {
                     ([scene[@"smoke_inventory"] boolValue] && ![view smokeInventory]) ||
                     ([scene[@"smoke_artifact"] boolValue] && ![view smokeArtifact]) ||
                     ([scene[@"smoke_room_monsters"] boolValue] && ![view smokeRoomMonsters]) ||
+                    ([scene[@"smoke_food"] boolValue] && ![view smokeFood]) ||
                     ([scene[@"smoke_regeneration"] boolValue] && ![view smokeRegeneration]) ||
                     ([scene[@"smoke_casting"] boolValue] && ![view smokeCasting]) ||
                     ([scene[@"smoke_traps"] boolValue] && ![view smokeTraps]) ||
