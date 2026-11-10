@@ -401,7 +401,7 @@ void Session::save(std::ostream& out) const {
             for (const auto& entry:spell_cooldowns_) out<<"<cooldown spell=\""<<entry.first<<"\" remaining=\""<<entry.second<<"\"/>\n";
             out<<"</spell-cooldowns>\n";
         }
-        out<<"<spell-rules casting=\""<<casting_signature(spells_,abilities_)<<"\" content=\""<<spell_signature(spells_)<<"\"";const auto maneuvers=maneuver_signature(spells_);
+        out<<"<spell-rules content=\""<<spell_signature(spells_)<<"\" casting=\""<<casting_signature(spells_,abilities_)<<"\"";const auto maneuvers=maneuver_signature(spells_);
         if (maneuvers) out<<" maneuvers=\""<<maneuvers<<"\"";
         const auto buffs=buffs_signature(spells_);if (buffs) out<<" buffs=\""<<buffs<<"\"";
         out<<"/>\n";
