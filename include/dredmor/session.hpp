@@ -110,6 +110,7 @@ public:
     // Player action, distinct from internal triggered casts. The room scheduler
     // and visibility remain provisional; unsupported effects throw atomically.
     SpellUse use_spell(std::size_t index,Position target);
+    bool drink_potion(std::uint64_t instance);
     // One measured Hittable::UpdateTriggers pass; does not advance the world.
     void update_triggers(std::uint64_t actor);
     const std::vector<ActiveBuff>& player_buffs() const {return player_buffs_;}

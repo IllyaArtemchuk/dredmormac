@@ -1769,3 +1769,35 @@ Prior gold-upkeep commitb1cb76b passed run42726567130/job129533591405: all50 che
 and relocated package smoke. Full game/floors/AI/remaining effects/UI/audio are
 still incomplete. Next work must integrate more original behavior, not infer a
 completion percentage from line counts or isolated comparison results.
+
+
+Casting commitc4651ad compiled and its native casting fixture passed on arm64 Mac;
+run42731600775 exposed an older trap smoke's positional XML attribute assumption.
+Compatibility fix82d0547 restored content-first output; run42732023110,
+job129552130079 passed all54 checks plus relocated packaged-app smoke.
+Potion use is now implemented for paid player inventory potions in the room session.
+Item potion/casts spell refs retain repeated-tag semantics and case folding. Actual
+itemDBEntryC2/StartElement callbacks match512 synthetic potion/casts sequences plus
+supplied potion roots across all four content layers. Actual Potion::UsedOn140d26
+matches1024 self-use cases: return, quantity/removal and all low-level spell-call
+arguments. UI/audio/animation/identify/destruction/inventory-removal are supplied
+boundaries; spell delivery supplies controlled MP changes, while the port executes
+its actual spellpoints effect. Shops, monster use, original identification/tutorial/
+achievements and caller turn scheduling are excluded from that comparison.
+Session::drink_potion executes the linked internal spell without player mana/gold/
+cooldown costs, consumes exactly one unit without relocating the stack, and then
+advances the provisional room scheduler. Missing spell refs still consume the item;
+unsupported or cyclic effects roll back the entire action. Separate consumable
+content identity guards typed refs on load without changing legacy item hashes.
+Native inventory now has Drink. Casting smoke also drinks a two-unit stack through
+the inventory controller, saves/reloads the remaining item, then consumes its last
+unit and verifies removal/resources/turns. All34 local groups pass; potion/native
+source awaits MacCI. Food::UsedOn13f9d2, Hittable::Update4493a and Player::Update12158c
+have been inspected for the next integration: food/booze add signed counters114/118;
+Hittable consumes positive counters and grants at most1HP/MP per update even at full
+resources (counter still decrements). Natural player regeneration uses independent
+clocks878/87c and max(1,wrapping(tweak-secondary regen)) intervals; Vampirism prevents
+natural HP gain. These food/natural regeneration paths are NOT implemented yet.
+The full reimplementation is still unfinished: complete floors/transitions, remaining
+spell/status/equipment triggers, AI/combat delivery, food/drink regeneration, original
+UI/audio/FOV and end-to-end original reference validation remain substantial work.

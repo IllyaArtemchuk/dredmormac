@@ -542,6 +542,10 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
     if (!_inventoryController) _inventoryController=[[DredmorInventoryController alloc] initWithOwner:self];
     [_inventoryController refresh];[_inventoryController showWindow:nil];
 }
+- (BOOL)drinkInventoryPotion:(uint64_t)instance {
+    try {const bool result=_session->drink_potion(instance);[self recordBreakableAnimations];self.needsDisplay=YES;return result;}
+    catch (const std::exception& error) {fprintf(stderr,"potion failed: %s\n",error.what());return NO;}
+}
 - (void)pickUpItems:(id)sender {
     try { _session->pickup();[_inventoryController refresh];self.needsDisplay=YES; }
     catch (const std::exception& error) { [self showFailure:error]; }
@@ -704,7 +708,16 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
     const auto point=[self convertPoint:NSMakePoint(20+1.5*cell,20+1.5*cell) toView:nil];
     NSEvent *click=[NSEvent mouseEventWithType:NSEventTypeLeftMouseDown location:point modifierFlags:0 timestamp:0
         windowNumber:self.window.windowNumber context:nil eventNumber:0 clickCount:1 pressure:1];[self mouseDown:click];
-    return !_targetSpell && _session->world().turn()==turn+3 && _session->player().mana==mana-7 && _session->spell_cooldown(cooldown)==2 && [self smokeSaveLoad];
+    if (_targetSpell || _session->world().turn()!=turn+3 || _session->player().mana!=mana-7 || _session->spell_cooldown(cooldown)!=2 || ![self smokeSaveLoad]) return NO;
+    for (std::size_t i=0;i<_content->items().size();++i) if (_content->items()[i].name=="Fixture potion") {
+        _session->create_ground_item(std::uint32_t(i),_session->player().position,2);_session->pickup();
+        [self showInventory:nil];[_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];
+        [_inventoryController drinkSelection:nil];
+        if (_session->world().turn()!=turn+4 || _session->player().mana!=mana-8 || [self inventoryRows].count!=1 || ![self smokeSaveLoad]) return NO;
+        [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];[_inventoryController drinkSelection:nil];[_inventoryController close];
+        return _session->world().turn()==turn+5 && _session->player().mana==mana-9 && [self inventoryRows].count==0 && [self smokeSaveLoad];
+    }
+    return NO;
 }
 - (void)keyDown:(NSEvent*)event {
     if (event.keyCode==53 && _targetSpell) { _targetSpell.reset();self.needsDisplay=YES;return; }

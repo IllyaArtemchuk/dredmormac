@@ -145,6 +145,15 @@ std::uint64_t buffs_signature(const std::shared_ptr<const std::vector<SpellDefin
     }
     return any?(hash?hash:1):0;
 }
+std::uint64_t consumable_signature(const std::shared_ptr<const std::vector<ItemDefinition>>& definitions) {
+    std::uint64_t hash=14695981039346656037ull;bool any=false;
+    if (definitions) for (const auto& item:*definitions) {
+        if (item.builtin_subtype>=0) continue;
+        for (unsigned char c:item.cast_spell) {hash^=c;hash*=1099511628211ull;any=true;}
+        hash^=0;hash*=1099511628211ull;
+    }
+    return any?(hash?hash:1):0;
+}
 std::uint64_t casting_signature(const std::shared_ptr<const std::vector<SpellDefinition>>& spells,
                                 const std::shared_ptr<const std::vector<AbilityDefinition>>& abilities) {
     std::uint64_t hash=14695981039346656037ull;
@@ -328,6 +337,8 @@ void Session::save(std::ostream& out) const {
     if (player_facing_!=2) out<<" facing=\""<<player_facing_<<"\"";
     out<<">\n<room>"<<escape(world_.room_text())<<"</room>\n";
     if (depth_state) out<<"<depth-context depth=\""<<depth_context_.depth<<"\" alternate=\""<<depth_context_.alternate<<"\" alternate-depth=\""<<depth_context_.alternate_depth<<"\"/>\n";
+    const auto consumables=consumable_signature(definitions_);
+    if (consumables) out<<"<consumable-rules content=\""<<consumables<<"\"/>\n";
     write_actor(out,"player",player_);out<<"<enemies>\n";for (const auto& enemy:enemies_) write_actor(out,"enemy",enemy);out<<"</enemies>\n";
     out<<"<progress level=\""<<progression_.level<<"\" xp=\""<<progression_.experience<<"\" lifetime=\""<<progression_.lifetime_experience
        <<"\" score=\""<<progression_.score_experience<<"\" points=\""<<progression_.unspent_points<<"\"/>\n";
@@ -451,6 +462,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
             throw std::runtime_error("save maneuver content does not match loaded definitions");
         if (rules.attributes.count("buffs") && attribute_number<std::uint64_t>(rules,"buffs")!=buffs_signature(spells)) throw std::runtime_error("save buff content does not match loaded definitions");
     }
+    if (root.first("consumable-rules") && (!modern || attribute_number<std::uint64_t>(child(root,"consumable-rules"),"content")!=consumable_signature(definitions))) throw std::runtime_error("save consumable content does not match loaded definitions");
     const auto turn=attribute_number<std::uint64_t>(root,"turn");
     if (turn==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("saved turn counter exhausted");
     std::istringstream rows(child(root,"room").text);auto world=World::restore(rows,turn);auto player=read_actor(child(root,"player"),version=="6" || modern,modern,monster_fields,corpse_fields);

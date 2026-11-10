@@ -32,6 +32,20 @@ int main(int argc,char** argv) {
                 session.use_spell(0,{1,1});std::ostringstream saved;session.save(saved);const auto xml=parse_xml(saved.str());
                 std::cout<<session.player().mana<<' '<<session.player().zorkmids<<' '<<session.spell_cooldown(0)<<' '<<session.world().turn()<<' '<<xml.first("random")->attributes.at("libc")<<'\n';
             }
+        } else if (argc==2 && std::string(argv[1])=="--potions") {
+            std::int32_t quantity,amount;bool linked;
+            while (std::cin>>quantity>>amount>>linked) {
+                auto items=std::make_shared<std::vector<ItemDefinition>>();items->push_back(read_item(parse_xml("<item name='Fixture'><potion spell='Effect'/></item>")));
+                auto spells=std::make_shared<std::vector<SpellDefinition>>();auto effect=read_spell(parse_xml("<spell name='Effect' type='self'><effect type='spellpoints' amount='0'/></spell>"));effect.effects[0].amount=amount;
+                if (linked) spells->push_back(effect);
+                std::istringstream map("#####\n#@..#\n#...#\n#####\n");Session session(World::read(map),make_player({20,20,20}),1);session.equipment_profile({20,20,20},items);session.spell_profile(spells);
+                auto prepare=effect;prepare.effects[0].amount=-10;session.cast_spell(prepare,{1,1},{1,1});
+                std::cout<<session.player().mana<<' '<<session.player().secondary[1]<<' ';
+                const auto instance=session.create_ground_item(0,{1,1},quantity);session.pickup();const auto used=session.drink_potion(instance);const auto remaining=session.inventory().find(instance);
+                std::cout<<used<<' '<<session.player().mana<<' '<<(remaining?remaining->quantity:0)<<' '<<session.world().turn()<<'\n';
+            }
+        } else if (argc==2 && std::string(argv[1])=="--potion-metadata") {
+            std::string xml;while (std::getline(std::cin,xml)) if (!xml.empty()) {const auto item=read_item(parse_xml(xml));std::cout<<int(item.kind)<<' '<<std::quoted(item.cast_spell)<<'\n';}
         } else if (argc==2 && std::string(argv[1])=="--metadata") {
             std::string xml;while (std::getline(std::cin,xml)) if (!xml.empty()) {
                 const auto casting=read_spell(parse_xml(xml)).casting;
@@ -43,6 +57,6 @@ int main(int argc,char** argv) {
             std::string xml;while (std::getline(std::cin,xml)) if (!xml.empty()) {
                 const auto ability=read_ability(parse_xml(xml));std::cout<<ability.cast_trigger_percent<<' '<<std::quoted(ability.cast_trigger)<<'\n';
             }
-        } else throw std::invalid_argument("Usage: dredmor-casting --costs | --metadata | --ability | --actions");
+        } else throw std::invalid_argument("Usage: dredmor-casting --costs | --metadata | --ability | --actions | --potions");
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

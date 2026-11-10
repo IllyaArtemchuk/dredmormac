@@ -41,6 +41,7 @@ public:
     InsertResult insert(const InventoryItem& item,bool prefer_belt=true);
     bool place(const InventoryItem& item,int x,int y);
     std::optional<InventoryItem> remove(std::uint64_t instance);
+    bool consume_one(std::uint64_t instance);
     std::optional<InventoryItem> split_one(std::uint64_t instance,std::uint64_t new_instance);
     const InventoryItem* find(std::uint64_t instance) const;
 private:

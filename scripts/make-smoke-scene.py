@@ -71,6 +71,9 @@ if __name__=='__main__':
 <spell name="Fixture target" type="targetfloor"><effect type="spellpoints" amount="-1"/></spell>
 <spell name="Fixture child" type="self"><effect type="spellpoints" amount="-1"/></spell>
 </spellDB>''')
+            items=ET.parse(root/'game/itemDB.xml')
+            items.getroot().append(ET.fromstring('<item name="Fixture potion"><potion spell="Fixture child"/></item>'))
+            items.write(root/'game/itemDB.xml',encoding='unicode')
             scene.update(data_root=str(root),smoke_casting=True)
         if args.traps:
             (root/'game/rooms.xml').write_text('''<roomdb><room name="Starting Room" width="5" height="4">

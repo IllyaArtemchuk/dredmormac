@@ -9,7 +9,7 @@
     NSWindow *window=[[NSPanel alloc] initWithContentRect:NSMakeRect(0,0,540,420)
         styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskResizable
         backing:NSBackingStoreBuffered defer:NO];
-    window.title=@"Inventory and Equipment";window.releasedWhenClosed=NO;window.contentMinSize=NSMakeSize(480,300);
+    window.title=@"Inventory and Equipment";window.releasedWhenClosed=NO;window.contentMinSize=NSMakeSize(540,300);
     self=[super initWithWindow:window];
     if (self) {
         _inventoryOwner=owner;
@@ -32,6 +32,8 @@
         equip.frame=NSMakeRect(210,28,110,28);[content addSubview:equip];
         NSButton *unequip=[NSButton buttonWithTitle:@"Unequip" target:self action:@selector(unequipSelection:)];
         unequip.frame=NSMakeRect(330,28,110,28);[content addSubview:unequip];
+        NSButton *drink=[NSButton buttonWithTitle:@"Drink" target:self action:@selector(drinkSelection:)];
+        drink.frame=NSMakeRect(442,28,80,28);drink.autoresizingMask=NSViewMinXMargin;[content addSubview:drink];
         [self refresh];[window center];
     }
     return self;
@@ -51,6 +53,12 @@
     const NSInteger row=_tableView.selectedRow;
     if (row<0 || row>=(NSInteger)_rows.count || ![_rows[row][@"equipped"] boolValue] ||
         ![self.inventoryOwner unequipInventorySlot:[_rows[row][@"slot"] integerValue]]) NSBeep();
+    [self refresh];
+}
+- (void)drinkSelection:(id)sender {
+    const NSInteger row=_tableView.selectedRow;
+    if (row<0 || row>=(NSInteger)_rows.count || [_rows[row][@"equipped"] boolValue] ||
+        ![self.inventoryOwner drinkInventoryPotion:[_rows[row][@"instance"] unsignedLongLongValue]]) NSBeep();
     [self refresh];
 }
 @end

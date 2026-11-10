@@ -37,6 +37,7 @@ struct ItemDefinition {
     Damage weapon_damage{};
     ItemModifiers modifiers;
     std::optional<TrapDefinition> trap;
+    std::string cast_spell;
     XmlNode source; // Preserve unsupported effects; never silently discard them.
     bool can_equip(EquipmentSlot slot) const;
 };

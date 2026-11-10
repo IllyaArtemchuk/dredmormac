@@ -95,6 +95,11 @@ std::optional<InventoryItem> Inventory::remove(std::uint64_t instance) {
     }
     return std::nullopt;
 }
+bool Inventory::consume_one(std::uint64_t instance) {
+    for (auto& slot:bag_) if (slot && slot->instance==instance) {if (slot->quantity>1) --slot->quantity;else slot.reset();return true;}
+    for (auto& slot:belt_) if (slot && slot->instance==instance) {if (slot->quantity>1) --slot->quantity;else slot.reset();return true;}
+    return false;
+}
 std::optional<InventoryItem> Inventory::split_one(std::uint64_t instance,std::uint64_t new_instance) {
     if (!new_instance || find(new_instance)) throw std::invalid_argument("split requires a fresh instance ID");
     for (auto* slots:{&bag_[0],&belt_[0]}) {

@@ -32,6 +32,19 @@ std::vector<std::size_t> Session::learned_spells() const {
 std::int32_t Session::spell_cooldown(std::size_t index) const {
     const auto found=spell_cooldowns_.find(index);return found==spell_cooldowns_.end()?0:found->second;
 }
+bool Session::drink_potion(std::uint64_t instance) {
+    if (!player_.alive() || !definitions_) return false;
+    const auto item=inventory_.find(instance);
+    if (!item || item->kind!=ItemKind::potion) return false;
+    const auto& definition=definitions_->at(item->definition);
+    if (definition.kind!=ItemKind::potion) throw std::invalid_argument("potion definition mismatch");
+    auto next=*this;next.events_.clear();
+    if (spells_ && !definition.cast_spell.empty()) {
+        const auto child=std::find_if(spells_->begin(),spells_->end(),[&](const auto& entry){return entry.name==definition.cast_spell;});
+        if (child!=spells_->end()) next.cast_spell_impl(*child,next.player_.position,next.player_.position,next.player_.id,true);
+    }
+    next.inventory_.consume_one(instance);next.world_.step(Action::wait);next.enemy_turns();*this=std::move(next);return true;
+}
 SpellUse Session::use_spell(std::size_t index,Position target) {
     if (!player_.alive()) return SpellUse::dead;
     const auto known=learned_spells();if (std::find(known.begin(),known.end(),index)==known.end()) return SpellUse::unknown;
