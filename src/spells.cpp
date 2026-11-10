@@ -130,8 +130,8 @@ SpellDefinition read_spell(const XmlNode& node) {
     if (result.name.empty()) throw std::invalid_argument("spell name missing");
     for (const auto& child:node.children) {
         if (lower(child.tag)=="effect") result.effects.push_back(read_spell_effect(child));
-        else if (lower(child.tag)=="buff") result.buffs.push_back(read_buff(child));
-        else if (lower(child.tag)=="requirements") for (const auto& attribute:child.attributes) {
+        else if (lower(child.tag)=="buff") {auto buff=read_buff(child);buff.drunken=result.casting.booze>0;result.buffs.push_back(std::move(buff));}
+        else if (lower(child.tag)=="requirements") {for (const auto& attribute:child.attributes) {
             const auto key=lower(attribute.first);const auto integer=legacy_integer(attribute.second);
             if (key=="mp") result.casting.mana=integer;
             else if (key=="hp") result.casting.health=integer;
@@ -144,6 +144,8 @@ SpellDefinition read_spell(const XmlNode& node) {
             else if (key=="magpowbonus") result.casting.magic_bonus=static_cast<float>(std::strtod(attribute.second.c_str(),nullptr));
             else if (key=="savvybonus") result.casting.savvy_bonus=static_cast<float>(std::strtod(attribute.second.c_str(),nullptr));
             else if (key=="zorkmidscalef") result.casting.gold_scale=static_cast<float>(std::strtod(attribute.second.c_str(),nullptr));
+        }
+            if (result.casting.booze>0) for (auto& buff:result.buffs) buff.drunken=true;
         }
     }
     result.casting.cooldown=result.casting.downtime>0;

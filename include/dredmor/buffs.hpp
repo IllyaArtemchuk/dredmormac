@@ -12,6 +12,7 @@ struct BuffDefinition {
     bool use_timer=true,allow_stacking=true,self=true,bad=false,removable=false,diggle_god=false;
     bool invisible=false,mute=false;
     XmlNode source;
+    bool drunken=false;
 };
 // Typed fields from the original Buff constructor/XML callback. Unmodeled
 // children remain in source; parsing does not imply execution support.

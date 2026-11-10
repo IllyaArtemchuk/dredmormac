@@ -1063,3 +1063,46 @@ Food/native source awaits MacCI. Full floors/transitions, remaining spell/status
 and reactive combat effects, AI/death/object scheduling, original UI/audio/FOV and
 full end-to-end reference validation remain unfinished; this is still a room-based
 integration, not the complete game.
+
+
+Food commit73a23d1 passed actual arm64 run42735545209/job129563753840: all61
+checks and relocated package smoke. Native mixed-meal inventory use, final stack
+removal, recovery counters/HUD and save/reload passed.
+Automatic alcohol statuses now follow Player::ApplyDrunkennessBuffs11aab8 after
+Hittable's buff timer/cleanup pass. Select the greatest positive booze requirement
+not exceeding the remaining booze counter; equal thresholds retain the first
+registered entry. A matching first drunken buff is kept, while a mismatched first
+one is deapplied and the caller's original vector slot is erased after the deapply
+sort (preserving the original slot/identity quirk). Selected internal spells cast
+with allowHaywire0 and the original target-y=player-x argument; self dispatch
+normalizes that target for the supplied six alcohol spells. The first resulting
+marked buff's countdown resets0 after every alcohol update. Display duration280
+is presentation and is not stored separately in the port.
+Spell requirements/buff XML order determines the drunken marker184. A positive
+booze requirement retroactively marks existing templates; later nonpositive
+requirements leave old markers intact, while new templates use the current value.
+The flag is typed and protected by a separate optional drunken content identity,
+preserving earlier buff signatures. Save16 already carries booze and active buffs;
+no additional active-state payload is needed. Shared player deapplication now
+serves timer expiry and alcohol replacement while preserving flat ghosts and
+damage/resistance residue until the subsequent rebuild.
+verify_drunkenness.py matches1024 sequences of1..16 actual alcohol updates, using
+actual Hittable timers, Player apply/deapply/rebuild and Buff copy. Compare full
+primary/secondary/damage/resistance/resources, booze and owned identity/countdown;
+port saves/reloads between updates. A harness-generated cdecl thunk invokes the
+actual Buff copy and Player apply routines at the DoActualSpellLoop boundary;
+that boundary checks every cast argument. Template pool/ranks are controlled,
+arbitrary child effects and full GameTick/food processing excluded.512 original
+spell XML start/end callback sequences match marker propagation. The existing
+1024 full player-buff comparisons (including256 large-stack cases) also pass after
+sharing removal code. All37 local groups pass. Native food smoke now checks tier1
+then tier2 on successive meals, tier downgrade and complete final removal across
+saves/recovery. New alcohol source awaits MacCI.
+Display-only Well Fed/Fuelled by Booze vector entries and their original icon/
+duration presentation are still absent (the native HUD shows food/booze counts).
+Their contribution to the original vector's sorting in mixed large buff groups
+is outside the alcohol comparison. Full original Player::UpdateBuffs/GameTick
+parity, reactive food/combat hooks, full floor generation/population/transitions,
+AI/death scheduling, remaining effects/statuses, original UI/audio/FOV and a
+complete reference playthrough are still unfinished. This remains a room-session
+integration; those named comparisons do not establish a complete game.

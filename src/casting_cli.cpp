@@ -70,6 +70,23 @@ int main(int argc,char** argv) {
                 }
                 std::cout<<'\n';
             }
+        } else if (argc==2 && std::string(argv[1])=="--drunk-metadata") {
+            std::string xml;while (std::getline(std::cin,xml)) if (!xml.empty()) {const auto spell=read_spell(parse_xml(xml));std::cout<<spell.casting.booze<<' '<<spell.buffs.size();for (const auto& buff:spell.buffs) std::cout<<' '<<buff.drunken;std::cout<<'\n';}
+        } else if (argc==2 && std::string(argv[1])=="--drunkenness") {
+            std::int32_t booze,turns;std::array<std::int32_t,3> thresholds,mods;
+            while (std::cin>>booze>>turns>>thresholds[0]>>thresholds[1]>>thresholds[2]>>mods[0]>>mods[1]>>mods[2]) {
+                auto items=std::make_shared<std::vector<ItemDefinition>>();auto food=read_item(parse_xml("<item name='Drink'><food/></item>"));food.food_mp=booze;items->push_back(food);
+                auto spells=std::make_shared<std::vector<SpellDefinition>>();for (std::size_t i=0;i<3;++i) spells->push_back(read_spell(parse_xml("<spell name='Drunk "+std::to_string(i)+"' type='self'><requirements booze='"+std::to_string(thresholds[i])+"'/><buff useTimer='0' allowstacking='0' stacksize='1' icon='icon"+std::to_string(i)+"'><primarybuff id='0' amount='"+std::to_string(mods[i])+"'/><damagebuff slashing='"+std::to_string(mods[i])+"'/></buff></spell>")));
+                std::istringstream map("#####\n#@..#\n#...#\n#####\n");Session session(World::read(map),make_player({20,20,20}),1);session.equipment_profile({20,20,20},items);session.spell_profile(spells);session.regeneration_profile(1000,1000);const auto item=session.create_ground_item(0,{1,1});session.pickup();
+                for (int turn=0;turn<turns;++turn) {
+                    if (!turn) session.eat_food(item);else session.step(Action::wait);
+                    for (auto value:session.player().primary) std::cout<<value<<' ';for (auto value:session.player().secondary) std::cout<<value<<' ';for (auto value:session.player().damage) std::cout<<value<<' ';for (auto value:session.player().resistance) std::cout<<value<<' ';
+                    std::cout<<session.player().health<<' '<<session.player().mana<<' '<<session.regeneration()->booze<<' '<<session.player_buffs().size()<<' ';
+                    for (const auto& buff:session.player_buffs()) std::cout<<buff.spell<<' '<<buff.remaining<<' ';
+                    std::ostringstream saved;session.save(saved);std::istringstream restore(saved.str());session=Session::load(restore,items,{},spells);
+                }
+                std::cout<<'\n';
+            }
         } else if (argc==2 && std::string(argv[1])=="--metadata") {
             std::string xml;while (std::getline(std::cin,xml)) if (!xml.empty()) {
                 const auto casting=read_spell(parse_xml(xml)).casting;
@@ -81,6 +98,6 @@ int main(int argc,char** argv) {
             std::string xml;while (std::getline(std::cin,xml)) if (!xml.empty()) {
                 const auto ability=read_ability(parse_xml(xml));std::cout<<ability.cast_trigger_percent<<' '<<std::quoted(ability.cast_trigger)<<'\n';
             }
-        } else throw std::invalid_argument("Usage: dredmor-casting --costs | --metadata | --ability | --actions | --potions | --potion-metadata | --regeneration | --foods | --food-metadata");
+        } else throw std::invalid_argument("Usage: dredmor-casting --costs | --metadata | --ability | --actions | --potions | --potion-metadata | --regeneration | --foods | --food-metadata | --drunk-metadata | --drunkenness");
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

@@ -702,16 +702,16 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
 }
 - (BOOL)smokeFood {
     if (!_session->regeneration()) return NO;
-    const auto hp=_session->player().health,mp=_session->player().mana;const auto turn=_session->world().turn();
+    const auto hp=_session->player().health,mp=_session->player().mana;const auto turn=_session->world().turn();const auto primary=_session->player().primary[0];
     const auto* drain=_content->find_spell("Fixture drain");if (!drain || !_session->cast_spell(*drain,_session->player().position,_session->player().position)) return NO;
     for (std::size_t i=0;i<_content->items().size();++i) if (_content->items()[i].name=="Fixture meal") {
         _session->create_ground_item(std::uint32_t(i),_session->player().position,2);_session->pickup();[self showInventory:nil];
         [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];[_inventoryController useSelection:nil];
-        if (_session->player().health!=hp-4 || _session->player().mana!=mp-5 || _session->regeneration()->food!=2 || _session->regeneration()->booze!=1 || ![self smokeSaveLoad]) return NO;
+        if (_session->player().health!=hp-4 || _session->player().mana!=mp-5 || _session->regeneration()->food!=2 || _session->regeneration()->booze!=1 || _session->player().primary[0]!=primary+1 || _session->player_buffs().size()!=1 || ![self smokeSaveLoad]) return NO;
         [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];[_inventoryController useSelection:nil];[_inventoryController close];
-        if ([self inventoryRows].count || _session->regeneration()->food!=4 || _session->regeneration()->booze!=2 || ![self smokeSaveLoad]) return NO;
-        for (int n=0;n<4;++n) _session->step(dredmor::Action::wait);
-        [self display];return _session->player().health==hp && _session->player().mana==mp-3 && !_session->regeneration()->food && !_session->regeneration()->booze && _session->world().turn()==turn+6 && [self smokeSaveLoad];
+        if ([self inventoryRows].count || _session->regeneration()->food!=4 || _session->regeneration()->booze!=2 || _session->player().primary[0]!=primary+2 || _session->player_buffs().size()!=1 || ![self smokeSaveLoad]) return NO;
+        for (int n=0;n<4;++n) {_session->step(dredmor::Action::wait);if (_session->player().primary[0]!=primary+(n==0?1:0)) return NO;}
+        [self display];return _session->player().health==hp && _session->player().mana==mp-3 && !_session->regeneration()->food && !_session->regeneration()->booze && _session->player_buffs().empty() && _session->world().turn()==turn+6 && [self smokeSaveLoad];
     }
     return NO;
 }

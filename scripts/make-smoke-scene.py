@@ -71,6 +71,10 @@ if __name__=='__main__':
             tweaks.write(root/'game/tweakDB.xml',encoding='unicode')
             items=ET.parse(root/'game/itemDB.xml');items.getroot().append(ET.fromstring('<item name="Fixture meal"><food hp="3" mp="2" effect="Fixture gift"/></item>'));items.write(root/'game/itemDB.xml',encoding='unicode')
             (root/'game/spellDB.xml').write_text('<spellDB><spell name="Fixture drain" type="self"><effect type="spellpoints" amount="-5"/><effect type="heal" amount="-5"/></spell><spell name="Fixture gift" type="self"><effect type="spellpoints" amount="-1"/></spell></spellDB>')
+            spells=ET.parse(root/'game/spellDB.xml')
+            for tier,icon in [(1,'dungeon/fixture.spr'),(2,'tilesets/basic.png')]:
+                spells.getroot().append(ET.fromstring(f'<spell name="Fixture alcohol {tier}" type="self"><requirements booze="{tier}"/><buff useTimer="0" allowstacking="0" stacksize="1" icon="{icon}"><primarybuff id="0" amount="{tier}"/></buff></spell>'))
+            spells.write(root/'game/spellDB.xml',encoding='unicode')
             scene.update(data_root=str(root),smoke_food=True)
         if args.regeneration:
             tweaks=ET.parse(root/'game/tweakDB.xml')

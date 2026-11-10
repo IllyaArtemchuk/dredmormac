@@ -154,6 +154,11 @@ std::uint64_t consumable_signature(const std::shared_ptr<const std::vector<ItemD
     }
     return any?(hash?hash:1):0;
 }
+std::uint64_t drunken_signature(const std::shared_ptr<const std::vector<SpellDefinition>>& definitions) {
+    std::uint64_t hash=14695981039346656037ull;bool any=false;
+    if (definitions) for (const auto& spell:*definitions) for (const auto& buff:spell.buffs) {any=any || buff.drunken;hash^=buff.drunken?1:0;hash*=1099511628211ull;}
+    return any?(hash?hash:1):0;
+}
 std::uint64_t nutrition_signature(const std::shared_ptr<const std::vector<ItemDefinition>>& definitions) {
     std::uint64_t hash=14695981039346656037ull;bool any=false;
     auto add=[&](std::int32_t value){for (unsigned char c:std::to_string(value)) {hash^=c;hash*=1099511628211ull;}hash^=0;hash*=1099511628211ull;};
@@ -428,6 +433,7 @@ void Session::save(std::ostream& out) const {
         out<<"<spell-rules content=\""<<spell_signature(spells_)<<"\" casting=\""<<casting_signature(spells_,abilities_)<<"\"";const auto maneuvers=maneuver_signature(spells_);
         if (maneuvers) out<<" maneuvers=\""<<maneuvers<<"\"";
         const auto buffs=buffs_signature(spells_);if (buffs) out<<" buffs=\""<<buffs<<"\"";
+        const auto drunken=drunken_signature(spells_);if (drunken) out<<" drunken=\""<<drunken<<"\"";
         out<<"/>\n";
     }
     if (!breakables_.empty()) {
@@ -476,6 +482,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
         if (rules.attributes.count("maneuvers") && attribute_number<std::uint64_t>(rules,"maneuvers")!=maneuver_signature(spells))
             throw std::runtime_error("save maneuver content does not match loaded definitions");
         if (rules.attributes.count("buffs") && attribute_number<std::uint64_t>(rules,"buffs")!=buffs_signature(spells)) throw std::runtime_error("save buff content does not match loaded definitions");
+        if (rules.attributes.count("drunken") && attribute_number<std::uint64_t>(rules,"drunken")!=drunken_signature(spells)) throw std::runtime_error("save drunken buff content does not match loaded definitions");
     }
     if (root.first("consumable-rules") && (!modern || attribute_number<std::uint64_t>(child(root,"consumable-rules"),"content")!=consumable_signature(definitions))) throw std::runtime_error("save consumable content does not match loaded definitions");
     if (root.first("nutrition-rules") && (!modern || attribute_number<std::uint64_t>(child(root,"nutrition-rules"),"content")!=nutrition_signature(definitions))) throw std::runtime_error("save food content does not match loaded definitions");

@@ -53,7 +53,7 @@ void Session::apply_spell_buffs(const SpellDefinition& spell,Position target,std
     if (index==spells_->size() || spells_->at(index).buffs.size()!=spell.buffs.size()) throw std::invalid_argument("buff spell is not registered");
     for (std::size_t i=0;i<spell.buffs.size();++i) {
         const auto& buff=spell.buffs[i];
-        if (buff_signature(buff)!=buff_signature(spells_->at(index).buffs[i])) throw std::invalid_argument("cast buff differs from registered rules");
+        if (buff_signature(buff)!=buff_signature(spells_->at(index).buffs[i]) || buff.drunken!=spells_->at(index).buffs[i].drunken) throw std::invalid_argument("cast buff differs from registered rules");
         if (self) {
             apply_owned_buff(actor_by_id(caster),index,i);continue;
         }
@@ -150,6 +150,44 @@ void Session::update_buffs(std::uint64_t actor) {
     if (owner.id==next.player_.id) next.update_player_buffs_impl();else next.update_monster_buffs_impl(owner);
     *this=std::move(next);
 }
+void Session::deapply_player_buff(std::size_t index) {
+    const auto& buff=player_buffs_.at(index);const auto& definition=buff_definition(buff);
+    const bool was_dead=!player_.alive();
+    for (std::size_t i=0;i<6;++i) buff_primary_flat_[i]=add(buff_primary_flat_[i],add(~definition.modifiers.primary[i],1));
+    for (std::size_t i=0;i<24;++i) buff_secondary_flat_[i]=add(buff_secondary_flat_[i],add(~definition.modifiers.secondary[i],1));
+    player_.health=add(player_.health,add(~definition.modifiers.secondary[0],1));
+    player_.mana=add(player_.mana,add(~definition.modifiers.secondary[1],1));
+    const auto& name=spells_->at(buff.spell).name;
+    player_.triggers.erase(std::remove_if(player_.triggers.begin(),player_.triggers.end(),[&](const auto& trigger){return trigger.parent==name;}),player_.triggers.end());
+    // Original rebuilding happens before the buff vector erases the
+    // expired entry. Damage/resistance therefore survive until a later
+    // rebuild; flat primary/secondary modifiers are already removed.
+    rebuild_equipment();player_.health=std::max(1,player_.health);player_.mana=std::max(0,player_.mana);
+    if (was_dead) player_.corpse=true;
+    if (player_.health>player_.secondary[0] || player_.mana>player_.secondary[1]) throw std::runtime_error("buff removal exceeds current stat invariants");
+    // Player::DeapplyBuff sorts before Hittable resumes traversal.
+    // A moved entry can be visited again or skipped in this same pass.
+    sort_player_buffs();
+}
+void Session::update_drunkenness_impl() {
+    if (!regeneration_ || !spells_) return;
+    const SpellDefinition* selected=nullptr;std::int32_t threshold=0;
+    for (const auto& spell:*spells_) if (spell.casting.booze>threshold && spell.casting.booze<=regeneration_->booze) {selected=&spell;threshold=spell.casting.booze;}
+    auto first=[&]() {std::size_t i=0;while (i<player_buffs_.size() && !buff_definition(player_buffs_[i]).drunken) ++i;return i;};
+    auto index=first();
+    if (index<player_buffs_.size() && (!selected || spells_->at(player_buffs_[index].spell).name!=selected->name)) {
+        deapply_player_buff(index);
+        // Deapply sorts, but the original caller erases its original vector
+        // slot. Retain that identity/order quirk rather than tracking the buff.
+        player_buffs_.erase(player_buffs_.begin()+index);index=player_buffs_.size();
+    }
+    if (index==player_buffs_.size() && selected) {
+        // The original target y is player x; self dispatch normalizes it.
+        cast_spell_impl(*selected,player_.position,{player_.position.x,player_.position.x},player_.id,false);
+        index=first();
+    }
+    if (index<player_buffs_.size()) player_buffs_[index].remaining=0;
+}
 void Session::update_player_buffs_impl() {
     // Player::UpdateBuffs handles every upkeep payment before the shared
     // Hittable timer pass. A nonstacking refresh leaves this clock unchanged.
@@ -178,25 +216,10 @@ void Session::update_player_buffs_impl() {
         auto& buff=player_buffs_[index];const auto& definition=buff_definition(buff);
         const auto tick=tick_buff({buff.remaining,false,definition.use_timer,buff.pending});buff.remaining=tick.clock.remaining;
         if (tick.deapply) {
-            const bool was_dead=!player_.alive();
-            buff.deapplied=true;
-            for (std::size_t i=0;i<6;++i) buff_primary_flat_[i]=add(buff_primary_flat_[i],add(~definition.modifiers.primary[i],1));
-            for (std::size_t i=0;i<24;++i) buff_secondary_flat_[i]=add(buff_secondary_flat_[i],add(~definition.modifiers.secondary[i],1));
-            player_.health=add(player_.health,add(~definition.modifiers.secondary[0],1));
-            player_.mana=add(player_.mana,add(~definition.modifiers.secondary[1],1));
-            const auto& name=spells_->at(buff.spell).name;
-            player_.triggers.erase(std::remove_if(player_.triggers.begin(),player_.triggers.end(),[&](const auto& trigger){return trigger.parent==name;}),player_.triggers.end());
-            // Original rebuilding happens before the buff vector erases the
-            // expired entry. Damage/resistance therefore survive until a later
-            // rebuild; flat primary/secondary modifiers are already removed.
-            rebuild_equipment();player_.health=std::max(1,player_.health);player_.mana=std::max(0,player_.mana);
-            if (was_dead) player_.corpse=true;
-            if (player_.health>player_.secondary[0] || player_.mana>player_.secondary[1]) throw std::runtime_error("buff removal exceeds current stat invariants");
-            // Player::DeapplyBuff sorts before Hittable resumes traversal.
-            // A moved entry can be visited again or skipped in this same pass.
-            sort_player_buffs();
+            buff.deapplied=true;deapply_player_buff(index);
         }
     }
     player_buffs_.erase(std::remove_if(player_buffs_.begin(),player_buffs_.end(),[&](const auto& buff){return buff.pending || (buff.remaining<0 && buff_definition(buff).use_timer);}),player_buffs_.end());
+    update_drunkenness_impl();
 }
 }

@@ -194,6 +194,8 @@ private:
     void apply_spell_buffs(const SpellDefinition& spell,Position target,std::uint64_t caster,bool self);
     void apply_player_buff(std::size_t spell,std::size_t buff);
     void update_player_buffs_impl();
+    void deapply_player_buff(std::size_t index);
+    void update_drunkenness_impl();
     const BuffDefinition& buff_definition(const ActiveBuff& buff) const;
     std::string buff_icon(const ActiveBuff& buff) const;
     bool actor_has_buff(const Actor& actor,const std::string& name) const;
