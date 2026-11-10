@@ -1258,3 +1258,17 @@ regeneration fixture enables real tweak lookup, drains both resources, advances
 keyboard turns and checks full recovery across save/load; current source awaits
 MacCI. Food/booze counter arithmetic is measured, but inventory food consumption,
 its WalkBuffs hooks, dietary traits and their UI are still unfinished.
+
+
+Configured player update also now performs the existing measured equipment/ability/
+buff stat rebuild after regeneration and before buff upkeep/expiry, matching the
+healthy Player::Update path (polymorph/rebuild-suppression states remain unsupported).
+This clears a prior expiry pass's damage/resistance residue on the following turn;
+the expiry turn itself still retains that residue. A session regression checks
+both turns. All35 local groups pass after this integration adjustment.
+Private next-system analysis: Food::UsedOn calls WalkBuffsc9550 for booze, food,
+then consumable hooks. WalkBuffs gathers selected buff/ability/equipment spell
+pointers before executing the gathered list; percentage100 bypasses RNG, other
+percentages use strict '<'. Equipment traversal and melee-family gates need to
+be completed/compared before food/attack trigger integration. No food consumer
+or WalkBuffs execution was added by the regeneration change.

@@ -506,7 +506,12 @@ void Session::enemy_turns() {
             else if (auto next=next_step(enemy)) { enemy.position=*next;events_.push_back({EventKind::moved,enemy.id});activate_traps_impl(enemy); }
         }
     }
-    if (regeneration_ && player_.alive()) regenerate(*regeneration_,player_.health,player_.secondary[0],player_.mana,player_.secondary[1],player_.secondary[13],player_.secondary[14]);
+    if (regeneration_ && player_.alive()) {
+        regenerate(*regeneration_,player_.health,player_.secondary[0],player_.mana,player_.secondary[1],player_.secondary[13],player_.secondary[14]);
+        // Player::Update rebuilds after resource recovery and before the later
+        // GameTick buff pass. This also clears the prior pass's damage residue.
+        rebuild_equipment();
+    }
     update_player_buffs_impl();update_triggers_impl(player_,remaining);
     for (auto it=spell_cooldowns_.begin();it!=spell_cooldowns_.end();) {
         if (it->second>0) --it->second;
