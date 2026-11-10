@@ -153,6 +153,7 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
 - (void)showSpells:(id)sender;
 - (NSMenu*)spellMenu;
 - (BOOL)smokeCasting;
+- (BOOL)smokeRegeneration;
 - (void)selectSpell:(id)sender;
 - (void)castSelectedSpellAt:(dredmor::Position)target;
 - (void)pickUpItems:(id)sender;
@@ -202,6 +203,10 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
             std::vector<dredmor::SkillRank> skillRanks;for (auto id:selected) skillRanks.push_back({id,1});
             _session->character_profile(ranks,std::make_shared<const std::vector<dredmor::ItemDefinition>>(_content->items()),
                 std::move(skillRanks),std::make_shared<const std::vector<dredmor::AbilityDefinition>>(_content->abilities()));
+        }
+        if (_content && !_session->regeneration() && _content->tweaks().contains(dredmor::Difficulty::medium,"hpregenturns") && _content->tweaks().contains(dredmor::Difficulty::medium,"spregenturns")) {
+            bool vampire=false;for (const auto& skill:_content->skills()) if (skill.name=="Vampirism" && std::find(selected.begin(),selected.end(),skill.id)!=selected.end()) vampire=true;
+            _session->regeneration_profile(_content->tweaks().integer(dredmor::Difficulty::medium,"hpregenturns"),_content->tweaks().integer(dredmor::Difficulty::medium,"spregenturns"),vampire);
         }
         if (_content) _session->spell_profile(std::make_shared<const std::vector<dredmor::SpellDefinition>>(_content->spells()));
         if (scene[@"dungeon_depth"]) {
@@ -694,6 +699,17 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
     NSArray<NSDictionary*> *rows=[self inventoryRows];
     return rows.count==1 && [rows[0][@"name"] isEqualToString:[NSString stringWithUTF8String:item->artifact->name.c_str()]];
 }
+- (BOOL)smokeRegeneration {
+    if (!_session->regeneration()) return NO;
+    const auto hp=_session->player().health,mp=_session->player().mana;
+    const auto* spell=_content->find_spell("Fixture drain");if (!spell || !_session->cast_spell(*spell,_session->player().position,_session->player().position)) return NO;
+    if (_session->player().health!=hp-5 || _session->player().mana!=mp-5) return NO;
+    NSEvent *wait=[NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:0 timestamp:0
+        windowNumber:self.window.windowNumber context:nil characters:@"." charactersIgnoringModifiers:@"." isARepeat:NO keyCode:47];
+    [self keyDown:wait];if (![self smokeSaveLoad]) return NO;
+    for (int i=0;i<30 && (_session->player().health<hp || _session->player().mana<mp);++i) [self keyDown:wait];
+    return _session->player().health==hp && _session->player().mana==mp && [self smokeSaveLoad];
+}
 - (BOOL)smokeCasting {
     NSMenu *menu=[self spellMenu];if (menu.numberOfItems!=3) return NO;
     const auto mana=_session->player().mana;const auto turn=_session->world().turn();
@@ -1015,6 +1031,7 @@ int main(int argc,const char**argv) {
                     ([scene[@"smoke_inventory"] boolValue] && ![view smokeInventory]) ||
                     ([scene[@"smoke_artifact"] boolValue] && ![view smokeArtifact]) ||
                     ([scene[@"smoke_room_monsters"] boolValue] && ![view smokeRoomMonsters]) ||
+                    ([scene[@"smoke_regeneration"] boolValue] && ![view smokeRegeneration]) ||
                     ([scene[@"smoke_casting"] boolValue] && ![view smokeCasting]) ||
                     ([scene[@"smoke_traps"] boolValue] && ![view smokeTraps]) ||
                     ([scene[@"smoke_objects"] boolValue] && ![view smokeCustomObjects]) ||

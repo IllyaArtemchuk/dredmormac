@@ -46,6 +46,12 @@ int main(int argc,char** argv) {
             }
         } else if (argc==2 && std::string(argv[1])=="--potion-metadata") {
             std::string xml;while (std::getline(std::cin,xml)) if (!xml.empty()) {const auto item=read_item(parse_xml(xml));std::cout<<int(item.kind)<<' '<<std::quoted(item.cast_spell)<<'\n';}
+        } else if (argc==2 && std::string(argv[1])=="--regeneration") {
+            RegenerationState state;std::int32_t hp,max_hp,mp,max_mp,hp_bonus,mp_bonus;bool allowed;
+            while (std::cin>>state.health_turns>>state.mana_turns>>state.health_clock>>state.mana_clock>>state.food>>state.booze>>state.vampire>>hp>>max_hp>>mp>>max_mp>>hp_bonus>>mp_bonus>>allowed) {
+                regenerate(state,hp,max_hp,mp,max_mp,hp_bonus,mp_bonus,allowed);
+                std::cout<<hp<<' '<<mp<<' '<<state.health_clock<<' '<<state.mana_clock<<' '<<state.food<<' '<<state.booze<<'\n';
+            }
         } else if (argc==2 && std::string(argv[1])=="--metadata") {
             std::string xml;while (std::getline(std::cin,xml)) if (!xml.empty()) {
                 const auto casting=read_spell(parse_xml(xml)).casting;

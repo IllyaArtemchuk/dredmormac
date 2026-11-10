@@ -16,6 +16,10 @@ public:
             skills.push_back({skill.id,1});
         session_.character_profile(ranks_,std::make_shared<const std::vector<ItemDefinition>>(content.items()),
             std::move(skills),std::make_shared<const std::vector<AbilityDefinition>>(content.abilities()));
+        if (content.tweaks().contains(difficulty,"hpregenturns") && content.tweaks().contains(difficulty,"spregenturns")) {
+            bool vampire=false;for (const auto& skill:content.skills()) if (skill.name=="Vampirism" && std::find(selected.begin(),selected.end(),skill.id)!=selected.end()) vampire=true;
+            session_.regeneration_profile(content.tweaks().integer(difficulty,"hpregenturns"),content.tweaks().integer(difficulty,"spregenturns"),vampire);
+        }
         for (const auto& grant:content.starting_loadout(selected)) give(grant.item);
         if (ranks_[0]>=ranks_[1] && ranks_[0]>=ranks_[2]) give_armour("Leather Cuirass");
         else if (ranks_[1]>=ranks_[0] && ranks_[1]>=ranks_[2]) {if (!head_given_) give_armour("Robe");}

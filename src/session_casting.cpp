@@ -4,6 +4,10 @@
 #include <stdexcept>
 
 namespace dredmor {
+void Session::regeneration_profile(std::int32_t health_turns,std::int32_t mana_turns,bool vampire) {
+    if (regeneration_ || world_.turn()!=0) throw std::invalid_argument("regeneration profile requires a fresh session");
+    regeneration_=RegenerationState{health_turns,mana_turns,0,0,0,0,vampire};
+}
 namespace {
 std::int32_t wrapping_add(std::int32_t a,std::int32_t b) {
     const auto bits=std::uint32_t(a)+std::uint32_t(b);std::int32_t result;std::memcpy(&result,&bits,4);return result;
@@ -89,7 +93,10 @@ SpellUse Session::use_spell(std::size_t index,Position target) {
     const auto count=cost.multi_attack?cost.multi_attack:1;
     if (count>4096) throw std::runtime_error("spell multi-attack execution budget exhausted");
     bool accepted=false;std::size_t remaining=4096;
-    for (std::int32_t i=0;i<count;++i) accepted=next.cast_spell_recursive(spell,next.player_.position,target,next.player_.id,true,0,remaining);
+    for (std::int32_t i=0;i<count;++i) {
+        if (next.regeneration_) next.regeneration_->mana_clock=0;
+        accepted=next.cast_spell_recursive(spell,next.player_.position,target,next.player_.id,true,0,remaining);
+    }
     if (accepted && cost.cooldown) next.spell_cooldowns_[index]=wrapping_add(spell_cooldown(index),wrapping_add(1,cost.downtime));
     if (abilities_) for (const auto& ability:*abilities_) if (learned(ability,skills_) && !ability.cast_trigger.empty()) {
         const auto child=std::find_if(spells_->begin(),spells_->end(),[&](const auto& entry){return entry.name==ability.cast_trigger;});

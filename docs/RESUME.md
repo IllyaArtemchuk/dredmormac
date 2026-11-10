@@ -1228,3 +1228,33 @@ natural HP gain. These food/natural regeneration paths are NOT implemented yet.
 The full reimplementation is still unfinished: complete floors/transitions, remaining
 spell/status/equipment triggers, AI/combat delivery, food/drink regeneration, original
 UI/audio/FOV and end-to-end original reference validation remain substantial work.
+
+
+Potion commite24f8a3 passed actual arm64 run42732876605/job129554980424: all55
+checks plus relocated package smoke, including inventory-controller stack drinking.
+Natural player regeneration is now integrated for new content-based characters
+whose tweak tables contain hpregenturns and spregenturns. Manual/legacy sessions
+without a configured profile retain their prior behavior. Regeneration rates and
+independent clocks persist in save16; it also supports prior cooldown/depth/buff/
+monster payloads. Player casts reset the mana clock for every main multi-cast;
+triggered children and potions do not. Blocked actions do not tick. Native character
+and room setup resolve Vampirism by the selected skill name, matching Player's
+natural-regeneration skill-name scan. Full object-queue ordering remains provisional;
+the session deliberately skips resource recovery for a dead player to prevent its
+incomplete death scheduler from resurrecting one. This guard is port integration
+policy, not a claim about full original death processing.
+verify_regeneration.py compares4096 actual Player::Update12158c calls, including its
+actual Hittable::Update4493a, with HP/MP, food/booze counters and natural clocks.
+Signed subtraction/increment wrap is preserved; intervals below2 become1. Food/
+booze consume positive counters even at full resources; natural clocks reset at
+threshold even without a gain; Vampirism blocks only natural HP gain. Time-disabled
+updates retain counters/clocks but can still perform a previously-due natural
+regeneration check, as in the original. GameObj update, mines, virtual rebuild,
+tweaks, sprites/eye candy/string boundaries are supplied; invisibility/polymorph/
+water-walking/Steam branches are absent. This is not a full GameTick comparison.
+All35 local groups pass, including combined save16 regeneration+cooldown+depth,
+blocked actions, resource thresholds, Vampirism and cast-clock reset. Native
+regeneration fixture enables real tweak lookup, drains both resources, advances
+keyboard turns and checks full recovery across save/load; current source awaits
+MacCI. Food/booze counter arithmetic is measured, but inventory food consumption,
+its WalkBuffs hooks, dietary traits and their UI are still unfinished.

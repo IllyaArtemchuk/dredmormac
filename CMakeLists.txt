@@ -6,7 +6,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(EXPAT REQUIRED)
 add_library(dredmor_core src/world.cpp src/random.cpp src/xml.cpp src/catalog.cpp src/stats.cpp src/combat.cpp src/items.cpp src/inventory.cpp src/monsters.cpp src/equipment.cpp src/progression.cpp src/session.cpp src/session_save.cpp src/content.cpp src/sprite.cpp src/generation.cpp src/selection.cpp src/abilities.cpp src/character.cpp src/names.cpp src/dungeon.cpp src/room_records.cpp src/currency.cpp src/factory.cpp src/artifact.cpp src/resources.cpp src/traps.cpp)
 target_link_libraries(dredmor_core PUBLIC EXPAT::EXPAT)
-target_sources(dredmor_core PRIVATE src/spells.cpp src/buffs.cpp src/session_buffs.cpp src/session_casting.cpp)
+target_sources(dredmor_core PRIVATE src/spells.cpp src/buffs.cpp src/session_buffs.cpp src/session_casting.cpp src/regeneration.cpp)
 target_include_directories(dredmor_core PUBLIC include)
 target_compile_options(dredmor_core PRIVATE -Wall -Wextra -Wpedantic -ffp-contract=off)
 add_executable(dredmor-replay src/replay.cpp)
@@ -98,6 +98,9 @@ add_test(NAME player-spell-actions COMMAND player-casting-tests)
 add_executable(potion-tests tests/potions.cpp)
 target_link_libraries(potion-tests PRIVATE dredmor_core)
 add_test(NAME potion-consumption COMMAND potion-tests)
+add_executable(regeneration-tests tests/regeneration.cpp)
+target_link_libraries(regeneration-tests PRIVATE dredmor_core)
+add_test(NAME resource-regeneration COMMAND regeneration-tests)
 add_executable(trap-runtime-tests tests/traps.cpp)
 target_link_libraries(trap-runtime-tests PRIVATE dredmor_core)
 add_test(NAME trap-runtime COMMAND trap-runtime-tests)
@@ -297,6 +300,13 @@ if(APPLE)
     add_test(NAME native-monsters-window COMMAND $<TARGET_FILE:DredmorMac>
       ${CMAKE_BINARY_DIR}/native-monsters/scene.json --smoke-test)
     set_tests_properties(native-monsters-window PROPERTIES FIXTURES_REQUIRED native-monsters TIMEOUT 15)
+    add_test(NAME native-regeneration-fixture COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-regeneration
+      --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --regeneration)
+    set_tests_properties(native-regeneration-fixture PROPERTIES FIXTURES_SETUP native-regeneration)
+    add_test(NAME native-regeneration-window COMMAND $<TARGET_FILE:DredmorMac>
+      ${CMAKE_BINARY_DIR}/native-regeneration/scene.json --smoke-test)
+    set_tests_properties(native-regeneration-window PROPERTIES FIXTURES_REQUIRED native-regeneration TIMEOUT 15)
     add_test(NAME native-casting-fixture COMMAND ${Python3_EXECUTABLE}
       ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-casting
       --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --casting)

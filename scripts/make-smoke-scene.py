@@ -36,6 +36,7 @@ if __name__=='__main__':
     p.add_argument('--monsters',action='store_true',help='Named room monster with constructor difficulty adjustment')
     p.add_argument('--traps',action='store_true',help='Automatic trap casting, charges, origins and persisted spell rules')
     p.add_argument('--casting',action='store_true',help='Learned player spells, targeted input, costs and saved cooldowns')
+    p.add_argument('--regeneration',action='store_true',help='Configured natural resource clocks and native save/reload')
     args=p.parse_args();out=args.output.resolve();out.mkdir(parents=True,exist_ok=True)
     (out/'atlas.png').write_bytes(png(384,640,(70,80,95,255)))
     (out/'hero.png').write_bytes(png(64,64,(40,180,150,255)))
@@ -55,12 +56,19 @@ if __name__=='__main__':
     if args.monsters and (not args.content_source or args.inventory or args.combat or args.objects or args.breakables):p.error('--monsters requires --content-source and excludes other fixture types')
     if args.traps and (not args.content_source or args.inventory or args.combat or args.objects or args.breakables or args.monsters):p.error('--traps requires --content-source and excludes other fixture types')
     if args.casting and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps])):p.error('--casting requires --content-source and excludes other fixture types')
+    if args.regeneration and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting])):p.error('--regeneration requires --content-source and excludes other fixture types')
     if args.content_source:
         root=out/'installation';shutil.copytree(args.content_source,root,dirs_exist_ok=True)
         (root/'tilesets').mkdir(exist_ok=True);(root/'sprites/hero').mkdir(parents=True,exist_ok=True)
         (root/'tilesets/basic.png').write_bytes(png(384,640,(70,80,95,255)))
         (root/'sprites/hero/hero_idle_d.spr').write_bytes(sprite())
         (root/'dungeon').mkdir(exist_ok=True);(root/'dungeon/fixture.spr').write_bytes(sprite())
+        if args.regeneration:
+            tweaks=ET.parse(root/'game/tweakDB.xml')
+            ET.SubElement(tweaks.getroot(),'tweak',{'name':'hpregenturns','ival':'2'});ET.SubElement(tweaks.getroot(),'tweak',{'name':'spregenturns','ival':'3'})
+            tweaks.write(root/'game/tweakDB.xml',encoding='unicode')
+            (root/'game/spellDB.xml').write_text('<spellDB><spell name="Fixture drain" type="self"><effect type="spellpoints" amount="-5"/><effect type="heal" amount="-5"/></spell></spellDB>')
+            scene.update(data_root=str(root),smoke_regeneration=True)
         if args.casting:
             skills=ET.parse(root/'game/skillDB.xml')
             skills.getroot().append(ET.fromstring('<ability name="Fixture caster" skill="0" level="0"><spell name="Fixture paid"/><spell name="Fixture cooldown"/><spell name="Fixture target"/><triggeroncast name="Fixture child" percent="101"/></ability>'))

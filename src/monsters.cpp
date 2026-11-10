@@ -151,6 +151,9 @@ Tweaks Tweaks::read(const XmlNode& root) {
     };
     visit(root,-1);return tweaks;
 }
+bool Tweaks::contains(Difficulty difficulty,std::string_view name) const {
+    return values_.at(static_cast<std::size_t>(difficulty)).count(std::string(name))!=0;
+}
 int Tweaks::integer(Difficulty difficulty,std::string_view name) const {
     const auto& table=values_.at(static_cast<std::size_t>(difficulty));
     const auto found=table.find(name);return found==table.end()?0:found->second.integer;

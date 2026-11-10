@@ -39,6 +39,7 @@ class Tweaks {
 public:
     static Tweaks read(const XmlNode& root);
     int integer(Difficulty difficulty,std::string_view name) const;
+    bool contains(Difficulty difficulty,std::string_view name) const;
     float real(Difficulty difficulty,std::string_view name) const;
     MonsterStatInput monster_input(const MonsterDefinition& definition,Difficulty difficulty,int dungeon_level) const;
 private:

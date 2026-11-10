@@ -10,6 +10,7 @@
 #include "dredmor/monsters.hpp"
 #include "dredmor/traps.hpp"
 #include "dredmor/spells.hpp"
+#include "dredmor/regeneration.hpp"
 #include <memory>
 #include <map>
 
@@ -83,6 +84,8 @@ public:
     const std::vector<TurnEvent>& events() const { return events_; }
     const Progression& progression() const { return progression_; }
     SpawnDepthContext depth_context() const {return depth_context_;}
+    const std::optional<RegenerationState>& regeneration() const {return regeneration_;}
+    void regeneration_profile(std::int32_t health_turns,std::int32_t mana_turns,bool vampire=false);
     void depth_context(SpawnDepthContext value) {depth_context_=value;}
     const Equipment& equipment() const { return equipment_; }
     Inventory& inventory() { return inventory_; }
@@ -138,6 +141,7 @@ public:
                         std::shared_ptr<const std::vector<SpellDefinition>> spells={});
 private:
     int player_facing_=2;
+    std::optional<RegenerationState> regeneration_;
     std::map<std::size_t,std::int32_t> spell_cooldowns_;
     SpawnDepthContext depth_context_{};
     std::vector<ActiveBuff> player_buffs_;
