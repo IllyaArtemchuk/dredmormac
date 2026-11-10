@@ -145,6 +145,22 @@ std::uint64_t buffs_signature(const std::shared_ptr<const std::vector<SpellDefin
     }
     return any?(hash?hash:1):0;
 }
+std::uint64_t casting_signature(const std::shared_ptr<const std::vector<SpellDefinition>>& spells,
+                                const std::shared_ptr<const std::vector<AbilityDefinition>>& abilities) {
+    std::uint64_t hash=14695981039346656037ull;
+    auto add=[&](const std::string& value){for (unsigned char c:value) {hash^=c;hash*=1099511628211ull;}hash^=0;hash*=1099511628211ull;};
+    auto real=[&](float value){std::uint32_t bits;std::memcpy(&bits,&value,4);add(std::to_string(bits));};
+    if (spells) for (const auto& spell:*spells) {
+        add(spell.name);const auto& c=spell.casting;
+        for (std::int32_t n:{c.mana,c.minimum_mana,c.health,c.level,c.booze,c.gold,c.weapon,c.shield,c.multi_attack,c.downtime,int(c.cooldown),int(c.no_animation),int(c.attack)}) add(std::to_string(n));
+        real(c.magic_bonus);real(c.savvy_bonus);real(c.gold_scale);
+    }
+    if (abilities) for (const auto& ability:*abilities) {
+        add(ability.name);add(std::to_string(ability.spells.size()));for (const auto& name:ability.spells) add(name);
+        add(ability.cast_trigger);add(std::to_string(ability.cast_trigger_percent));
+    }
+    return hash?hash:1;
+}
 void write_actor(std::ostream& out,std::string_view tag,const Actor& actor) {
     out<<'<'<<tag<<" id=\""<<actor.id<<"\" name=\""<<escape(actor.name)<<"\" sprite=\""<<escape(actor.sprite)
        <<"\" x=\""<<actor.position.x<<"\" y=\""<<actor.position.y<<"\" hp=\""<<actor.health
@@ -307,7 +323,7 @@ void Session::save(std::ostream& out) const {
     }
     bool corpse_state=player_.corpse && player_.health>0;for (const auto& enemy:enemies_) corpse_state=corpse_state || (enemy.corpse && enemy.health>0);
     const bool depth_state=depth_context_.depth!=0 || depth_context_.alternate || depth_context_.alternate_depth!=-1;
-    out<<"<dredmor-session version=\""<<(depth_state?14:corpse_state?13:monster_state?12:buff_state?11:gated?10:scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
+    out<<"<dredmor-session version=\""<<(!spell_cooldowns_.empty()?15:depth_state?14:corpse_state?13:monster_state?12:buff_state?11:gated?10:scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
        <<"\" content=\""<<signature(definitions_)<<"\"";
     if (player_facing_!=2) out<<" facing=\""<<player_facing_<<"\"";
     out<<">\n<room>"<<escape(world_.room_text())<<"</room>\n";
@@ -380,7 +396,12 @@ void Session::save(std::ostream& out) const {
         write_array(out,"buff-primary-flat",buff_primary_flat_);write_array(out,"buff-secondary-flat",buff_secondary_flat_);
     }
     if (spells_) {
-        out<<"<spell-rules content=\""<<spell_signature(spells_)<<"\"";const auto maneuvers=maneuver_signature(spells_);
+        if (!spell_cooldowns_.empty()) {
+            out<<"<spell-cooldowns>\n";
+            for (const auto& entry:spell_cooldowns_) out<<"<cooldown spell=\""<<entry.first<<"\" remaining=\""<<entry.second<<"\"/>\n";
+            out<<"</spell-cooldowns>\n";
+        }
+        out<<"<spell-rules casting=\""<<casting_signature(spells_,abilities_)<<"\" content=\""<<spell_signature(spells_)<<"\"";const auto maneuvers=maneuver_signature(spells_);
         if (maneuvers) out<<" maneuvers=\""<<maneuvers<<"\"";
         const auto buffs=buffs_signature(spells_);if (buffs) out<<" buffs=\""<<buffs<<"\"";
         out<<"/>\n";
@@ -408,11 +429,12 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     if (input.bad()) throw std::runtime_error("cannot read session save");
     const auto root=parse_xml(content,"session save");
     const auto version=attribute(root,"version");
-    const bool modern=version=="7" || version=="8" || version=="9" || version=="10" || version=="11" || version=="12" || version=="13" || version=="14";
-    const bool monster_fields=version=="12" || version=="13" || version=="14";
-    const bool corpse_fields=version=="13" || version=="14";
+    const bool modern=version=="7" || version=="8" || version=="9" || version=="10" || version=="11" || version=="12" || version=="13" || version=="14" || version=="15";
+    const bool monster_fields=version=="12" || version=="13" || version=="14" || version=="15";
+    const bool corpse_fields=version=="13" || version=="14" || version=="15";
     if (version=="14" && !root.first("depth-context")) throw std::runtime_error("version fourteen requires depth context");
-    if (version!="14" && root.first("depth-context")) throw std::runtime_error("depth context requires version fourteen");
+    if (version!="14" && version!="15" && root.first("depth-context")) throw std::runtime_error("depth context requires version fourteen");
+    if (version=="15" && !root.first("spell-cooldowns")) throw std::runtime_error("version fifteen requires cooldown state");
     if (version=="11" && !root.first("player-buffs")) throw std::runtime_error("version eleven requires buff state");
     if (version=="10" && !root.first("scheduled-spells")) throw std::runtime_error("version ten requires gated spell state");
     if (version=="8" && !root.first("scheduled-spells")) throw std::runtime_error("version eight requires scheduled spell state");
@@ -424,6 +446,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
         if (!modern || !spells || attribute_number<std::uint64_t>(child(root,"spell-rules"),"content")!=spell_signature(spells))
             throw std::runtime_error("save spell content does not match loaded definitions");
         const auto& rules=child(root,"spell-rules");
+        if (rules.attributes.count("casting") && attribute_number<std::uint64_t>(rules,"casting")!=casting_signature(spells,abilities)) throw std::runtime_error("save casting content does not match loaded definitions");
         if (rules.attributes.count("maneuvers") && attribute_number<std::uint64_t>(rules,"maneuvers")!=maneuver_signature(spells))
             throw std::runtime_error("save maneuver content does not match loaded definitions");
         if (rules.attributes.count("buffs") && attribute_number<std::uint64_t>(rules,"buffs")!=buffs_signature(spells)) throw std::runtime_error("save buff content does not match loaded definitions");
@@ -433,7 +456,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     std::istringstream rows(child(root,"room").text);auto world=World::restore(rows,turn);auto player=read_actor(child(root,"player"),version=="6" || modern,modern,monster_fields,corpse_fields);
     if (player.position.x!=world.player().x || player.position.y!=world.player().y) throw std::runtime_error("saved player/room position mismatch");
     Session session(std::move(world),player,0,attribute_number<int>(root,"experience-n"));
-    if (version=="14") {
+    if (root.first("depth-context")) {
         const auto& saved=child(root,"depth-context");session.depth_context_={attribute_number<int>(saved,"depth"),flag(saved,"alternate"),attribute_number<int>(saved,"alternate-depth")};
     }
     if (root.attributes.count("facing")) {
@@ -441,6 +464,16 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
         session.player_facing(attribute_number<int>(root,"facing"));
     }
     session.definitions_=std::move(definitions);session.spells_=std::move(spells);session.next_actor_=attribute_number<std::uint64_t>(root,"next-actor");
+    if (root.first("spell-cooldowns")) {
+        if (version!="15" || !session.spells_ || !root.first("spell-rules") || !child(root,"spell-rules").attributes.count("casting")) throw std::runtime_error("cooldowns require matching casting rules");
+        for (const auto& saved:child(root,"spell-cooldowns").children) {
+            if (saved.tag!="cooldown" || !saved.children.empty()) throw std::runtime_error("invalid cooldown record");
+            const auto index=attribute_number<std::size_t>(saved,"spell");const auto remaining=attribute_number<std::int32_t>(saved,"remaining");
+            if (index>=session.spells_->size() || !session.spells_->at(index).casting.cooldown || !remaining ||
+                !session.spell_cooldowns_.emplace(index,remaining).second) throw std::runtime_error("invalid cooldown state");
+        }
+        if (session.spell_cooldowns_.empty()) throw std::runtime_error("empty cooldown state");
+    }
     std::set<std::uint64_t> actors={player.id},items;
     for (const auto& node:child(root,"enemies").children) {
         if (node.tag!="enemy" || session.enemies_.size()>=512) throw std::runtime_error("invalid saved enemy list");

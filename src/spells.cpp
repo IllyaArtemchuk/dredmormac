@@ -1,5 +1,6 @@
 #include "dredmor/spells.hpp"
 #include "dredmor/legacy_number.hpp"
+#include "dredmor/selection.hpp"
 #include <cstdlib>
 #include <stdexcept>
 #include <cmath>
@@ -121,12 +122,50 @@ SpellDefinition read_spell(const XmlNode& node) {
     for (const auto& attribute:node.attributes) {
         const auto key=lower(attribute.first);
         if (key=="name") result.name=attribute.second;else if (key=="type") result.type=attribute.second;
+        else if (key=="downtime") result.casting.downtime=legacy_integer(attribute.second);
+        else if (key=="multiattack") result.casting.multi_attack=legacy_integer(attribute.second);
+        else if (key=="noanimation") result.casting.no_animation=legacy_integer(attribute.second)!=0;
+        else if (key=="attack") result.casting.attack=legacy_integer(attribute.second)!=0;
     }
     if (result.name.empty()) throw std::invalid_argument("spell name missing");
     for (const auto& child:node.children) {
         if (lower(child.tag)=="effect") result.effects.push_back(read_spell_effect(child));
         else if (lower(child.tag)=="buff") result.buffs.push_back(read_buff(child));
+        else if (lower(child.tag)=="requirements") for (const auto& attribute:child.attributes) {
+            const auto key=lower(attribute.first);const auto integer=legacy_integer(attribute.second);
+            if (key=="mp") result.casting.mana=integer;
+            else if (key=="hp") result.casting.health=integer;
+            else if (key=="mincost") result.casting.minimum_mana=integer;
+            else if (key=="level") result.casting.level=integer;
+            else if (key=="booze") result.casting.booze=integer;
+            else if (key=="weapon") result.casting.weapon=integer;
+            else if (key=="shield") result.casting.shield=integer;
+            else if (key=="zorkmids") result.casting.gold=integer;
+            else if (key=="magpowbonus") result.casting.magic_bonus=static_cast<float>(std::strtod(attribute.second.c_str(),nullptr));
+            else if (key=="savvybonus") result.casting.savvy_bonus=static_cast<float>(std::strtod(attribute.second.c_str(),nullptr));
+            else if (key=="zorkmidscalef") result.casting.gold_scale=static_cast<float>(std::strtod(attribute.second.c_str(),nullptr));
+        }
     }
+    result.casting.cooldown=result.casting.downtime>0;
     return result;
+}
+namespace {
+std::int32_t cost_integer(double value) {
+    if (!std::isfinite(value) || value>=2147483648.0 || value< -2147483648.0) return std::numeric_limits<std::int32_t>::min();
+    return static_cast<std::int32_t>(value);
+}
+}
+std::int32_t spell_mana_cost(const SpellDefinition::Casting& casting,std::int32_t magic_power,std::int32_t savvy) {
+    const float magic=std::floor(static_cast<float>(magic_power)*casting.magic_bonus);
+    const float wisdom=std::floor(static_cast<float>(savvy)*casting.savvy_bonus);
+    const double cost=(static_cast<double>(casting.mana)-static_cast<double>(magic))-static_cast<double>(wisdom);
+    return static_cast<double>(casting.minimum_mana)<cost?cost_integer(cost):casting.minimum_mana;
+}
+std::int32_t spell_gold_cost(const SpellDefinition::Casting& casting,std::int32_t savvy,SpawnDepthContext depth) {
+    const auto level=depth.alternate?depth.alternate_depth:depth.depth;float factor=1;
+    if (level>=0) {const auto bits=std::uint32_t(level)+1;std::int32_t next;std::memcpy(&next,&bits,4);factor=static_cast<float>(next);}
+    const float scaled=static_cast<float>(casting.gold)*casting.gold_scale;const float fee=scaled*factor;
+    const float discount=static_cast<float>(savvy)*casting.savvy_bonus;
+    return cost_integer(std::floor(fee-discount));
 }
 }

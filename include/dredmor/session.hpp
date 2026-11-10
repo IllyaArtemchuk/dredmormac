@@ -11,6 +11,7 @@
 #include "dredmor/traps.hpp"
 #include "dredmor/spells.hpp"
 #include <memory>
+#include <map>
 
 namespace dredmor {
 struct ScheduledSpell {
@@ -51,6 +52,7 @@ struct Actor {
 struct GroundItem { InventoryItem item;Position position; };
 struct RoomLootCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
 struct RoomTrapCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
+enum class SpellUse { cast,unknown,cooling_down,equipment_required,invalid_target,insufficient_gold,insufficient_mana,muted,dead };
 enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken,spell_damage,trap_click,trap_triggered,trap_spell_missing,spell_heal,spell_mana };
 struct TurnEvent {
     EventKind kind;
@@ -102,6 +104,12 @@ public:
     // Low-level cast: no mana/cooldown/turn scheduling. Unsupported dispatch or
     // effects fail atomically while the remaining spell engine is implemented.
     bool cast_spell(const SpellDefinition& spell,Position origin,Position target,std::uint64_t caster=0,bool allow_haywire=true);
+    std::vector<std::size_t> learned_spells() const;
+    const SpellDefinition& spell_definition(std::size_t index) const;
+    std::int32_t spell_cooldown(std::size_t index) const;
+    // Player action, distinct from internal triggered casts. The room scheduler
+    // and visibility remain provisional; unsupported effects throw atomically.
+    SpellUse use_spell(std::size_t index,Position target);
     // One measured Hittable::UpdateTriggers pass; does not advance the world.
     void update_triggers(std::uint64_t actor);
     const std::vector<ActiveBuff>& player_buffs() const {return player_buffs_;}
@@ -129,6 +137,7 @@ public:
                         std::shared_ptr<const std::vector<SpellDefinition>> spells={});
 private:
     int player_facing_=2;
+    std::map<std::size_t,std::int32_t> spell_cooldowns_;
     SpawnDepthContext depth_context_{};
     std::vector<ActiveBuff> player_buffs_;
     PrimaryStats buff_primary_flat_{};

@@ -27,11 +27,18 @@ struct SpellEffectDefinition {
     XmlNode source;
 };
 struct SpellDefinition {
+    struct Casting {
+        std::int32_t mana=0,minimum_mana=0,health=0,level=0,booze=0,gold=0;
+        std::int32_t weapon=-1,shield=0,multi_attack=0,downtime=0;
+        float magic_bonus=0,savvy_bonus=0,gold_scale=1;
+        bool cooldown=false,no_animation=false,attack=false;
+    };
     std::string name,type,layer;
     std::vector<SpellEffectDefinition> effects;
     std::vector<BuffDefinition> buffs;
     XmlNode source;
     std::shared_ptr<const std::vector<ManeuverTemplate>> maneuvers;
+    Casting casting;
 };
 // Generic effect fields and damage scaling. Unknown properties and child
 // effects remain in source; parsing does not assert execution support.
@@ -41,4 +48,6 @@ SpellDefinition read_spell(const XmlNode& node);
 // produce negative HP for pathological inputs, without a lower clamp.
 std::int32_t resolve_healing(std::int32_t current,std::int32_t maximum,std::int32_t amount,float scale,std::int32_t attribute);
 std::int32_t resolve_spellpoints(std::int32_t current,std::int32_t maximum,std::int32_t amount,float scale,std::int32_t attribute);
+std::int32_t spell_mana_cost(const SpellDefinition::Casting& casting,std::int32_t magic_power,std::int32_t savvy);
+std::int32_t spell_gold_cost(const SpellDefinition::Casting& casting,std::int32_t savvy,SpawnDepthContext depth);
 }

@@ -906,3 +906,39 @@ depth and cyclic callback rollback. Current gold/context source awaits MacCI.
 Next: player-initiated spell selection, measured mana/cooldown/action behavior,
 remaining spell dispatch/effects, and complete floor population/transitions/UI.
 The overall game remains incomplete despite the validated named subsystems.
+
+
+Player casting integration now parses typed costs/requirements, downtime/multiAttack/
+noAnimation/attack and ability spell refs/triggeroncast (default chance5 when present).
+Actual original MPCost82402/GetZorkmidCost82386 match4096 cases; constructor/full
+spell-start/requirements callbacks match512 synthetic+947 supplied spell roots
+across base/expansion layers; AbilityC2/triggeroncast callback matches512 fixtures.
+Floating-point floors/conversions and the spell gold negative-depth factor1.0
+are preserved (buff upkeep uses16.0 instead). verify_casting.py supplies library,
+filename normalization and sprite-loading boundaries, excluding effect execution.
+PlayerSpellCast9ba10 comparison adds1024 action sequences: mana/wallet, multi-cast
+arguments, cooldown arming, silence bypass, oncast strict '<' probability and libc
+state. No-animation self fixtures supply UI/audio/analytics and -1MP effect delivery;
+GameTick boundary counts one tick and decrements positive cooldowns. Port runs its
+actual resource effect engine and room scheduler. This is not a comparison of full
+GameTick/click visibility, original presentation, arbitrary effects or learning.
+Both insufficient gold AND mana consume their own failure-voice random draws.
+New Session::use_spell enforces learned refs, equipment and supported target gates,
+pays normal spell costs, runs casts then registration-ordered learned oncast hooks,
+and advances one turn. Positive cooldowns decrement on ordinary session turns;
+cooldown abilities bypass MP/gold/mute checks. Buff mute now blocks ordinary player
+casting; other unsupported statuses still reject. Unknown child spell refs skip.
+Shared4096-call/64-frame guards and atomic session copies prevent partial failure.
+Save15 stores nonzero cooldown state, retaining negative overflow values (original
+only decrements positive values). Old formats migrate with empty cooldown state;
+typed casting/ability refs get a separate content hash, preserving legacy hashes.
+Native A/Character > Spells lists learned costs/cooldowns, self casts immediately,
+and other spells await map click; Esc cancels. Synthetic casting smoke checks menu,
+selection/click, costs, cooldown disablement and save/reload. Full FOV/obstruction
+validation, polymorph/equipment-generated spell lists, remaining dispatch and HP/
+booze/level requirement consumers remain unfinished; unsupported casts roll back.
+All33 local groups pass. New native casting source awaits actual arm64 MacCI.
+Prior gold-upkeep commitb1cb76b passed run42726567130/job129533591405: all50 checks
+and relocated package smoke. Full game/floors/AI/remaining effects/UI/audio are
+still incomplete. Next work must integrate more original behavior, not infer a
+completion percentage from line counts or isolated comparison results.

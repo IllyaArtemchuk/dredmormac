@@ -35,6 +35,7 @@ if __name__=='__main__':
     p.add_argument('--breakables',action='store_true',help='Synthetic breakable and pedestal interaction fixture')
     p.add_argument('--monsters',action='store_true',help='Named room monster with constructor difficulty adjustment')
     p.add_argument('--traps',action='store_true',help='Automatic trap casting, charges, origins and persisted spell rules')
+    p.add_argument('--casting',action='store_true',help='Learned player spells, targeted input, costs and saved cooldowns')
     args=p.parse_args();out=args.output.resolve();out.mkdir(parents=True,exist_ok=True)
     (out/'atlas.png').write_bytes(png(384,640,(70,80,95,255)))
     (out/'hero.png').write_bytes(png(64,64,(40,180,150,255)))
@@ -53,12 +54,24 @@ if __name__=='__main__':
     if args.breakables and (not args.content_source or args.inventory or args.combat or args.objects):p.error('--breakables requires --content-source and excludes inventory/combat/objects')
     if args.monsters and (not args.content_source or args.inventory or args.combat or args.objects or args.breakables):p.error('--monsters requires --content-source and excludes other fixture types')
     if args.traps and (not args.content_source or args.inventory or args.combat or args.objects or args.breakables or args.monsters):p.error('--traps requires --content-source and excludes other fixture types')
+    if args.casting and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps])):p.error('--casting requires --content-source and excludes other fixture types')
     if args.content_source:
         root=out/'installation';shutil.copytree(args.content_source,root,dirs_exist_ok=True)
         (root/'tilesets').mkdir(exist_ok=True);(root/'sprites/hero').mkdir(parents=True,exist_ok=True)
         (root/'tilesets/basic.png').write_bytes(png(384,640,(70,80,95,255)))
         (root/'sprites/hero/hero_idle_d.spr').write_bytes(sprite())
         (root/'dungeon').mkdir(exist_ok=True);(root/'dungeon/fixture.spr').write_bytes(sprite())
+        if args.casting:
+            skills=ET.parse(root/'game/skillDB.xml')
+            skills.getroot().append(ET.fromstring('<ability name="Fixture caster" skill="0" level="0"><spell name="Fixture paid"/><spell name="Fixture cooldown"/><spell name="Fixture target"/><triggeroncast name="Fixture child" percent="101"/></ability>'))
+            skills.write(root/'game/skillDB.xml',encoding='unicode')
+            (root/'game/spellDB.xml').write_text('''<spellDB>
+<spell name="Fixture paid" type="self"><requirements mp="1"/><effect type="spellpoints" amount="-1"/></spell>
+<spell name="Fixture cooldown" type="self" downtime="3"><requirements mp="9999" zorkmids="9999"/><effect type="spellpoints" amount="-1"/></spell>
+<spell name="Fixture target" type="targetfloor"><effect type="spellpoints" amount="-1"/></spell>
+<spell name="Fixture child" type="self"><effect type="spellpoints" amount="-1"/></spell>
+</spellDB>''')
+            scene.update(data_root=str(root),smoke_casting=True)
         if args.traps:
             (root/'game/rooms.xml').write_text('''<roomdb><room name="Starting Room" width="5" height="4">
 <row text="#####"/><row text="#.1.#"/><row text="#..2#"/><row text="#####"/>

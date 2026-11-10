@@ -68,10 +68,10 @@ void Session::apply_spell_buffs(const SpellDefinition& spell,Position target,std
 void Session::validate_player_buff(const BuffDefinition& definition) const {
     if (!definitions_) throw std::invalid_argument("player buffs require a character stat profile");
     if (definition.destroy_on_move || definition.brittle || definition.attacks || definition.requires_weapon!=-1 || definition.requires_shield ||
-        definition.invisible || definition.mute || definition.diggle_god) throw std::invalid_argument("buff status/upkeep execution is not implemented");
+        definition.invisible || definition.diggle_god) throw std::invalid_argument("buff status/upkeep execution is not implemented");
     for (const auto& node:definition.source.children) {
         const auto tag=lower(node.tag);
-        if (tag!="primarybuff" && tag!="highbuff" && tag!="secondarybuff" && tag!="damagebuff" && tag!="resistbuff" && tag!="sightbuff" && tag!="halo" && tag!="description")
+        if (tag!="primarybuff" && tag!="highbuff" && tag!="secondarybuff" && tag!="damagebuff" && tag!="resistbuff" && tag!="sightbuff" && tag!="halo" && tag!="description" && tag!="mute")
             throw std::invalid_argument("buff child execution is not implemented: "+node.tag);
     }
 }

@@ -1,4 +1,5 @@
 #include "dredmor/abilities.hpp"
+#include "dredmor/legacy_number.hpp"
 #include <algorithm>
 #include <charconv>
 #include <cstring>
@@ -47,6 +48,11 @@ AbilityDefinition read_ability(const XmlNode& node) {
         } else if (tag=="zorkmidbuff") {
             for (const auto& field:child.attributes) if (lower(field.first)=="percent" || lower(field.first)=="percentage")
                 ability.currency_bonus=float(std::strtod(field.second.c_str(),nullptr));
+        } else if (tag=="spell") {
+            const auto name=attr(child,"name");if (!name.empty()) ability.spells.push_back(name);
+        } else if (tag=="triggeroncast") {
+            ability.cast_trigger=attr(child,"name");ability.cast_trigger_percent=5;
+            for (const auto& a:child.attributes) if (lower(a.first)=="percent" || lower(a.first)=="percentage") ability.cast_trigger_percent=legacy_integer(a.second);
         }
     }
     return ability;

@@ -237,6 +237,7 @@ bool Session::cast_spell_impl(const SpellDefinition& spell,Position origin,Posit
 }
 void Session::spell_profile(std::shared_ptr<const std::vector<SpellDefinition>> definitions) {
     if (definitions!=spells_) {
+        if (!spell_cooldowns_.empty()) throw std::invalid_argument("cannot replace rules with pending cooldowns");
         if (has_player_buff_state()) throw std::invalid_argument("cannot replace rules with active buff state");
         if (!player_.triggers.empty()) throw std::invalid_argument("cannot replace rules with pending spells");
         for (const auto& actor:enemies_) if (!actor.triggers.empty()) throw std::invalid_argument("cannot replace rules with pending spells");
@@ -506,6 +507,10 @@ void Session::enemy_turns() {
         }
     }
     update_player_buffs_impl();update_triggers_impl(player_,remaining);
+    for (auto it=spell_cooldowns_.begin();it!=spell_cooldowns_.end();) {
+        if (it->second>0) --it->second;
+        if (!it->second) it=spell_cooldowns_.erase(it);else ++it;
+    }
 }
 void Session::step_impl(Action action) {
     events_.clear();if (!player_.alive()) return;

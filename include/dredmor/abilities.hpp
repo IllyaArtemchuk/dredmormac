@@ -11,6 +11,9 @@ struct AbilityDefinition {
     ItemModifiers modifiers;
     XmlNode source;
     float currency_bonus=0;
+    std::vector<std::string> spells;
+    std::string cast_trigger;
+    std::int32_t cast_trigger_percent=0;
 };
 struct AbilityContext {
     bool weapon_left=false,weapon_right=false,armour_left=false,armour_right=false;

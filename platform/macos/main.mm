@@ -137,6 +137,7 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
     NSTimer *_animationTimer;
     NSTimeInterval _animationStart;
     DredmorInventoryController *_inventoryController;
+    std::optional<std::size_t> _targetSpell;
     NSRect _floorCrop,_wallCrop;
 }
 - (instancetype)initWithScene:(NSDictionary*)scene;
@@ -149,6 +150,11 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
 - (void)saveDocument:(id)sender;
 - (void)openDocument:(id)sender;
 - (void)showInventory:(id)sender;
+- (void)showSpells:(id)sender;
+- (NSMenu*)spellMenu;
+- (BOOL)smokeCasting;
+- (void)selectSpell:(id)sender;
+- (void)castSelectedSpellAt:(dredmor::Position)target;
 - (void)pickUpItems:(id)sender;
 - (BOOL)smokeInventory;
 - (BOOL)smokeRoomMonsters;
@@ -451,7 +457,7 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
     }
     NSMutableArray<NSArray<SpriteImage*>*> *traps=[NSMutableArray array];
     for (const auto& trap:loaded->traps()) [traps addObject:trapSprites(trap,_content->items().at(trap.definition),_dataRoot)];
-    _session=std::move(loaded);_enemyImages=images;_objectImages=objects;_breakableImages=breakables;_trapImages=traps;[_breakAnimations removeAllObjects];
+    _session=std::move(loaded);_targetSpell.reset();_enemyImages=images;_objectImages=objects;_breakableImages=breakables;_trapImages=traps;[_breakAnimations removeAllObjects];
     [_inventoryController refresh];self.needsDisplay=YES;
 }
 - (void)showFailure:(const std::exception&)error {
@@ -684,7 +690,24 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
     NSArray<NSDictionary*> *rows=[self inventoryRows];
     return rows.count==1 && [rows[0][@"name"] isEqualToString:[NSString stringWithUTF8String:item->artifact->name.c_str()]];
 }
+- (BOOL)smokeCasting {
+    NSMenu *menu=[self spellMenu];if (menu.numberOfItems!=3) return NO;
+    const auto mana=_session->player().mana;const auto turn=_session->world().turn();
+    [self selectSpell:[menu itemAtIndex:0]];
+    if (_targetSpell || _session->world().turn()!=turn+1 || _session->player().mana!=mana-3) return NO;
+    [self selectSpell:[menu itemAtIndex:1]];
+    const auto cooldown=[[menu itemAtIndex:1].representedObject unsignedLongLongValue];
+    if (_targetSpell || _session->spell_cooldown(cooldown)!=3 || _session->player().mana!=mana-5 || ![self smokeSaveLoad]) return NO;
+    if ([[self spellMenu] itemAtIndex:1].enabled) return NO;
+    [self selectSpell:[menu itemAtIndex:2]];if (!_targetSpell) return NO;
+    const auto& world=_session->world();const CGFloat cell=MIN((self.bounds.size.width-40)/world.width(),(self.bounds.size.height-110)/world.height());
+    const auto point=[self convertPoint:NSMakePoint(20+1.5*cell,20+1.5*cell) toView:nil];
+    NSEvent *click=[NSEvent mouseEventWithType:NSEventTypeLeftMouseDown location:point modifierFlags:0 timestamp:0
+        windowNumber:self.window.windowNumber context:nil eventNumber:0 clickCount:1 pressure:1];[self mouseDown:click];
+    return !_targetSpell && _session->world().turn()==turn+3 && _session->player().mana==mana-7 && _session->spell_cooldown(cooldown)==2 && [self smokeSaveLoad];
+}
 - (void)keyDown:(NSEvent*)event {
+    if (event.keyCode==53 && _targetSpell) { _targetSpell.reset();self.needsDisplay=YES;return; }
     using dredmor::Action;
     Action action;
     switch (event.keyCode) {
@@ -695,6 +718,7 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
         default:
             if ([event.charactersIgnoringModifiers.lowercaseString isEqualToString:@"g"]) { [self pickUpItems:nil];return; }
             else if ([event.charactersIgnoringModifiers.lowercaseString isEqualToString:@"i"]) { [self showInventory:nil];return; }
+            else if ([event.charactersIgnoringModifiers.lowercaseString isEqualToString:@"a"]) { [self showSpells:nil];return; }
             else if ([event.charactersIgnoringModifiers isEqualToString:@"."]) action=Action::wait;
             else { [super keyDown:event]; return; }
     }
@@ -702,6 +726,60 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
     catch (const std::exception& e) { fprintf(stderr,"turn failed: %s\n",e.what()); }
     [_inventoryController refresh];
     self.needsDisplay=YES;
+}
+- (NSMenu*)spellMenu {
+    NSMenu *menu=[[NSMenu alloc] initWithTitle:@"Spells"];menu.autoenablesItems=NO;
+    for (const auto index:_session->learned_spells()) {
+        const auto& spell=_session->spell_definition(index);const auto& cost=spell.casting;
+        const auto cooldown=_session->spell_cooldown(index);
+        NSString *name=[NSString stringWithUTF8String:spell.name.c_str()];
+        NSString *detail=cost.cooldown?[NSString stringWithFormat:@"%d turns",cost.downtime]:
+            [NSString stringWithFormat:@"%d mana · %d zorkmids",dredmor::spell_mana_cost(cost,_session->player().secondary[3],_session->player().primary[5]),
+                dredmor::spell_gold_cost(cost,_session->player().primary[5],_session->depth_context())];
+        NSMenuItem *item=[menu addItemWithTitle:[NSString stringWithFormat:@"%@ — %@%@",name,detail,
+            cooldown>0?[NSString stringWithFormat:@" · ready in %d",cooldown]:@""] action:@selector(selectSpell:) keyEquivalent:@""];
+        item.target=self;item.representedObject=@(index);item.enabled=cooldown<=0 && _session->player().alive();
+    }
+    if (!menu.numberOfItems) {NSMenuItem *empty=[menu addItemWithTitle:@"No learned spells" action:nil keyEquivalent:@""];empty.enabled=NO;}
+    return menu;
+}
+- (void)showSpells:(id)sender {
+    NSMenu *menu=[self spellMenu];
+    [menu popUpMenuPositioningItem:nil atLocation:NSMakePoint(20,self.bounds.size.height-80) inView:self];
+}
+- (void)selectSpell:(id)sender {
+    _targetSpell=[[sender representedObject] unsignedLongLongValue];
+    if (_session->spell_definition(*_targetSpell).type=="self") [self castSelectedSpellAt:_session->player().position];
+    self.needsDisplay=YES;
+}
+- (void)castSelectedSpellAt:(dredmor::Position)target {
+    if (!_targetSpell) return;
+    try {
+        const auto result=_session->use_spell(*_targetSpell,target);
+        if (result==dredmor::SpellUse::cast) {_targetSpell.reset();[self recordBreakableAnimations];}
+        else {
+            NSString *message=@"That spell cannot be used here.";
+            switch (result) {
+                case dredmor::SpellUse::insufficient_gold:message=@"You need more zorkmids.";break;
+                case dredmor::SpellUse::insufficient_mana:message=@"You need more mana.";break;
+                case dredmor::SpellUse::muted:message=@"You are prevented from casting spells.";break;
+                case dredmor::SpellUse::equipment_required:message=@"Equip the required weapon or shield.";break;
+                default:break;
+            }
+            NSAlert *alert=[NSAlert new];alert.messageText=message;[alert runModal];
+        }
+    } catch (const std::exception& error) {
+        NSAlert *alert=[NSAlert new];alert.messageText=@"This spell is not available yet.";
+        fprintf(stderr,"player spell failed: %s\n",error.what());[alert runModal];_targetSpell.reset();
+    }
+    [_inventoryController refresh];self.needsDisplay=YES;
+}
+- (void)mouseDown:(NSEvent*)event {
+    if (!_targetSpell) {[super mouseDown:event];return;}
+    const auto point=[self convertPoint:event.locationInWindow fromView:nil];const auto& world=_session->world();
+    const CGFloat cell=MIN((self.bounds.size.width-40)/world.width(),(self.bounds.size.height-110)/world.height());
+    if (cell<=0 || point.x<20 || point.y<20 || point.x>=20+cell*world.width() || point.y>=20+cell*world.height()) return;
+    [self castSelectedSpellAt:dredmor::Position{int((point.x-20)/cell),int((point.y-20)/cell)}];
 }
 - (void)recordBreakableAnimations {
     for (const auto& event:_session->events()) if (event.kind==dredmor::EventKind::object_broken) {
@@ -772,7 +850,7 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
     [hero drawInRect:NSMakeRect(20+(p.x-.5)*cell,20+(p.y-1)*cell,cell*2,cell*2)
              fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1
        respectFlipped:YES hints:nil];
-    NSString *status=[NSString stringWithFormat:@"Turn %llu · HP %d/%d · Mana %d/%d · Zorkmids %d\nArrows move/attack · . waits · G picks up · I inventory · ⌘S/⌘O%@",
+    NSString *status=[NSString stringWithFormat:@"Turn %llu · HP %d/%d · Mana %d/%d · Zorkmids %d\nArrows move/attack · . waits · G picks up · I inventory · A spells · ⌘S/⌘O%@",
                        (unsigned long long)world.turn(),_session->player().health,_session->player().secondary[0],
                        _session->player().mana,_session->player().secondary[1],_session->player().zorkmids,
                        _session->player().alive()?@"":@" · You have died"];
@@ -788,7 +866,7 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
         else [buffLabels addObject:name];
     }
     if (_session->player_buffs().size()>buffLabels.count) [buffLabels addObject:[NSString stringWithFormat:@"+%zu more",_session->player_buffs().size()-buffLabels.count]];
-    NSString *buffStatus=buffLabels.count?[NSString stringWithFormat:@"Buffs: %@",[buffLabels componentsJoinedByString:@" · "]]:@"Buffs: none";
+    NSString *buffStatus=_targetSpell?[NSString stringWithFormat:@"Click a target for %@ · Esc cancels",[NSString stringWithUTF8String:_session->spell_definition(*_targetSpell).name.c_str()]]:buffLabels.count?[NSString stringWithFormat:@"Buffs: %@",[buffLabels componentsJoinedByString:@" · "]]:@"Buffs: none";
     NSMutableParagraphStyle *buffStyle=[[NSMutableParagraphStyle alloc] init];buffStyle.lineBreakMode=NSLineBreakByTruncatingTail;
     [buffStatus drawInRect:NSMakeRect(20,self.bounds.size.height-28,MAX(0,self.bounds.size.width-40),18)
         withAttributes:@{NSForegroundColorAttributeName:NSColor.lightGrayColor,NSFontAttributeName:[NSFont systemFontOfSize:12],NSParagraphStyleAttributeName:buffStyle}];
@@ -896,6 +974,7 @@ int main(int argc,const char**argv) {
         NSMenu *gameMenu=[[NSMenu alloc] initWithTitle:@"Character"];
         NSMenuItem *inventory=[gameMenu addItemWithTitle:@"Inventory…" action:@selector(showInventory:) keyEquivalent:@"i"];
         inventory.target=view;gameMenuItem.submenu=gameMenu;
+        NSMenuItem *spells=[gameMenu addItemWithTitle:@"Spells…" action:@selector(showSpells:) keyEquivalent:@"a"];spells.target=view;
         static AppDelegate *delegate;
         delegate=[AppDelegate new]; app.delegate=delegate;
         delegate.window=[[NSWindow alloc] initWithContentRect:view.frame
@@ -923,6 +1002,7 @@ int main(int argc,const char**argv) {
                     ([scene[@"smoke_inventory"] boolValue] && ![view smokeInventory]) ||
                     ([scene[@"smoke_artifact"] boolValue] && ![view smokeArtifact]) ||
                     ([scene[@"smoke_room_monsters"] boolValue] && ![view smokeRoomMonsters]) ||
+                    ([scene[@"smoke_casting"] boolValue] && ![view smokeCasting]) ||
                     ([scene[@"smoke_traps"] boolValue] && ![view smokeTraps]) ||
                     ([scene[@"smoke_objects"] boolValue] && ![view smokeCustomObjects]) ||
                     ([scene[@"smoke_breakables"] boolValue] && ![view smokeBreakables]) ||
