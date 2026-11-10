@@ -1933,3 +1933,12 @@ parity, reactive food/combat hooks, full floor generation/population/transitions
 AI/death scheduling, remaining effects/statuses, original UI/audio/FOV and a
 complete reference playthrough are still unfinished. This remains a room-session
 integration; those named comparisons do not establish a complete game.
+
+
+Alcohol status sourcedac9ae7 passed actual arm64 macos-15 run42737308111,
+job129569575492: all62 checks and relocated packaged-app smoke. Native meal use,
+alcohol tier upgrades/downgrade/removal, recovery and save/reload all passed.
+All37 local groups pass; the implementation branch is verified at this source
+commit. This final entry records validation only; it does not establish complete
+original-game parity. Next major integration work remains full-floor population/
+transitions, reactive effect/AI/combat/death scheduling and original UI/audio/FOV.
