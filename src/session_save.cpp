@@ -306,10 +306,12 @@ void Session::save(std::ostream& out) const {
         for (const auto& buff:enemy.buffs) validate_monster_buff(enemy,buff_definition(buff));
     }
     bool corpse_state=player_.corpse && player_.health>0;for (const auto& enemy:enemies_) corpse_state=corpse_state || (enemy.corpse && enemy.health>0);
-    out<<"<dredmor-session version=\""<<(corpse_state?13:monster_state?12:buff_state?11:gated?10:scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
+    const bool depth_state=depth_context_.depth!=0 || depth_context_.alternate || depth_context_.alternate_depth!=-1;
+    out<<"<dredmor-session version=\""<<(depth_state?14:corpse_state?13:monster_state?12:buff_state?11:gated?10:scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
        <<"\" content=\""<<signature(definitions_)<<"\"";
     if (player_facing_!=2) out<<" facing=\""<<player_facing_<<"\"";
     out<<">\n<room>"<<escape(world_.room_text())<<"</room>\n";
+    if (depth_state) out<<"<depth-context depth=\""<<depth_context_.depth<<"\" alternate=\""<<depth_context_.alternate<<"\" alternate-depth=\""<<depth_context_.alternate_depth<<"\"/>\n";
     write_actor(out,"player",player_);out<<"<enemies>\n";for (const auto& enemy:enemies_) write_actor(out,"enemy",enemy);out<<"</enemies>\n";
     out<<"<progress level=\""<<progression_.level<<"\" xp=\""<<progression_.experience<<"\" lifetime=\""<<progression_.lifetime_experience
        <<"\" score=\""<<progression_.score_experience<<"\" points=\""<<progression_.unspent_points<<"\"/>\n";
@@ -406,8 +408,11 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     if (input.bad()) throw std::runtime_error("cannot read session save");
     const auto root=parse_xml(content,"session save");
     const auto version=attribute(root,"version");
-    const bool modern=version=="7" || version=="8" || version=="9" || version=="10" || version=="11" || version=="12" || version=="13";
-    const bool monster_fields=version=="12" || version=="13";
+    const bool modern=version=="7" || version=="8" || version=="9" || version=="10" || version=="11" || version=="12" || version=="13" || version=="14";
+    const bool monster_fields=version=="12" || version=="13" || version=="14";
+    const bool corpse_fields=version=="13" || version=="14";
+    if (version=="14" && !root.first("depth-context")) throw std::runtime_error("version fourteen requires depth context");
+    if (version!="14" && root.first("depth-context")) throw std::runtime_error("depth context requires version fourteen");
     if (version=="11" && !root.first("player-buffs")) throw std::runtime_error("version eleven requires buff state");
     if (version=="10" && !root.first("scheduled-spells")) throw std::runtime_error("version ten requires gated spell state");
     if (version=="8" && !root.first("scheduled-spells")) throw std::runtime_error("version eight requires scheduled spell state");
@@ -425,9 +430,12 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     }
     const auto turn=attribute_number<std::uint64_t>(root,"turn");
     if (turn==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("saved turn counter exhausted");
-    std::istringstream rows(child(root,"room").text);auto world=World::restore(rows,turn);auto player=read_actor(child(root,"player"),version=="6" || modern,modern,monster_fields,version=="13");
+    std::istringstream rows(child(root,"room").text);auto world=World::restore(rows,turn);auto player=read_actor(child(root,"player"),version=="6" || modern,modern,monster_fields,corpse_fields);
     if (player.position.x!=world.player().x || player.position.y!=world.player().y) throw std::runtime_error("saved player/room position mismatch");
     Session session(std::move(world),player,0,attribute_number<int>(root,"experience-n"));
+    if (version=="14") {
+        const auto& saved=child(root,"depth-context");session.depth_context_={attribute_number<int>(saved,"depth"),flag(saved,"alternate"),attribute_number<int>(saved,"alternate-depth")};
+    }
     if (root.attributes.count("facing")) {
         if (!modern) throw std::runtime_error("saved facing requires version seven");
         session.player_facing(attribute_number<int>(root,"facing"));
@@ -436,7 +444,7 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     std::set<std::uint64_t> actors={player.id},items;
     for (const auto& node:child(root,"enemies").children) {
         if (node.tag!="enemy" || session.enemies_.size()>=512) throw std::runtime_error("invalid saved enemy list");
-        auto actor=read_actor(node,version=="6" || modern,modern,monster_fields,version=="13");
+        auto actor=read_actor(node,version=="6" || modern,modern,monster_fields,corpse_fields);
         if (!actor.buffs.empty()) {
             if (!session.spells_ || !root.first("spell-rules") || !child(root,"spell-rules").attributes.count("buffs")) throw std::runtime_error("monster buffs require matching spell rules");
             for (const auto& buff:actor.buffs) session.validate_monster_buff(actor,session.buff_definition(buff));

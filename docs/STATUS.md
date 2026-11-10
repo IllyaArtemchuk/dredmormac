@@ -30,8 +30,8 @@ Verified:
 - Room-placement collision: 69,632 original executions match.
 - Room-writing cell loop: 1,024 original executions / 20,825 cells match.
 - Numeric templates: all 346 supplied rooms match independent ingestion.
-- Thirty local CTest groups pass, including buff metadata, scheduled spells, deterministic session and save/load tests.
-- Actual macos-15 arm64 CI run 42722079171 passed all forty-eight checks, including
+- Thirty-one local CTest groups pass, including buff metadata, scheduled spells, deterministic session and save/load tests.
+- Actual macos-15 arm64 CI run 42724448513 passed all forty-nine checks, including
   native combat-window input, real libc RNG agreement, and relocated, ad-hoc
   signed app packaging/smoke. Original files remain private and outside GitHub.
 - Native SPR decoder: all 698 files / 3,633 frames agree with independent palette
@@ -865,3 +865,44 @@ buff, checks nonstacking, executes a gated child, saves/reloads the owned state,
 and verifies full stat/resource removal while preserving actor images/profiles.
 Current monster-buff source awaits MacCI. Complete floor transitions/population,
 remaining spells/status/upkeep, AI and original UI/audio are still unfinished.
+
+
+Monster-buff source1c1706b passed actual arm64 macos-15 run42724448513,
+job129526348564: all49 checks and relocated packaged-app smoke. Native owned
+monster buffs, gated child, profile/resource save/reload and complete healthy
+removal passed in the room-monster fixture.
+
+Player gold upkeep now follows Buff::GetZorkmidUpkeepada70 and Player::UpdateBuffs.
+The fee is floorf(float(base)*scale*factor), with two SSE single-precision
+multiplications. The selected depth is alternate_depth when alternate is true,
+otherwise depth; nonnegative depth uses wrapping depth+1 converted to float,
+and negative depth uses the original constant16.0. Out-of-range/nonfinite float
+conversion yields INT_MIN; a transfer that would recurse indefinitely still
+rejects atomically through the existing currency safeguard. Only positive base
+upkeep activates charging, so a negative scale can grant money as in the original.
+Each buff's mana then gold processing completes in list order. Insufficient
+money marks removal and queues its optional spell name. All queued names resolve
+and cast after payment processing but before timer/deapplication passes. A new
+callback buff participates in that timer pass; its upkeep starts on the following
+pass. A mana-depleted pending buff can still pay gold, and later callback mana
+does not rescue it. Missing callback spells are skipped; cyclic/unsupported
+callbacks roll back the complete session action.
+verify_gold_buffs.py matches4096 actual fee calculations (including alternate/
+negative/extreme depths, signed amounts and nonfinite scales) and1024 original
+Player::UpdateBuffs/Hittable/rebuild sequences with ordered mana/gold processing,
+callbacks, flats/resources/wallet/buff clocks and port save/resume. Floorf/string/
+icon/allocation/destructor boundaries are supplied. The sequence oracle supplies
+wallet subtraction and records insufficient-funds cast arguments while delivering
++5MP; the port executes the corresponding actual spellpoints child. Full wallet
+UI and arbitrary child execution are not covered by this sequence comparison;
+separate currency/resource/trigger comparisons remain applicable.
+Session depth context persists in save14 for nondefault contexts; older saves
+retain depth0 defaults. Native scene dungeon_depth configures it and room loot/
+monster/trap construction receives that context. This is not full-floor play or
+floor transitions. Native trap smoke tests two payments, midpoint reload/depth
+preservation and an insufficient-funds child. All31 local groups pass, including
+callback-created buffs, income from negative scales, mana/gold ordering, malformed
+depth and cyclic callback rollback. Current gold/context source awaits MacCI.
+Next: player-initiated spell selection, measured mana/cooldown/action behavior,
+remaining spell dispatch/effects, and complete floor population/transitions/UI.
+The overall game remains incomplete despite the validated named subsystems.

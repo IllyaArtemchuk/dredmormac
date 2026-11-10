@@ -3,27 +3,35 @@
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
+#include <cstring>
 using namespace dredmor;
-int main() {
+int main(int argc,char** argv) {
     try {
+        if (argc>2 || (argc==2 && std::string(argv[1])!="--gold")) throw std::invalid_argument("Usage: dredmor-buff-session [--gold]");
+        const bool gold=argc==2;
         std::size_t count;
         while (std::cin>>count) {
             if (count>10) throw std::invalid_argument("too many buff definitions");std::vector<SpellDefinition> profile;
+            SpawnDepthContext depth;std::int32_t wallet=0;
+            if (gold) std::cin>>depth.depth>>depth.alternate>>depth.alternate_depth>>wallet;
             for (std::size_t i=0;i<count;++i) {
                 SpellDefinition spell;spell.name="Buff "+std::to_string(i);spell.type="self";BuffDefinition buff;
                 if (!(std::cin>>buff.time>>buff.use_timer>>buff.allow_stacking>>buff.stack_size>>std::quoted(buff.icon)>>buff.mana_upkeep)) throw std::invalid_argument("incomplete buff definition");
+                if (gold) {std::uint32_t bits=0;std::cin>>buff.zorkmid_upkeep>>bits>>std::quoted(buff.insufficient_funds);std::memcpy(&buff.zorkmid_scale,&bits,4);}
                 for (auto& n:buff.modifiers.primary) std::cin>>n;for (auto& n:buff.modifiers.secondary) std::cin>>n;
                 for (auto& n:buff.modifiers.damage) std::cin>>n;for (auto& n:buff.modifiers.resistance) std::cin>>n;
                 if (!std::cin) throw std::invalid_argument("incomplete buff modifiers");spell.buffs.push_back(buff);profile.push_back(spell);
             }
             std::string operations;if (!(std::cin>>std::quoted(operations))) throw std::invalid_argument("missing buff operations");
+            if (gold) {SpellDefinition fallback;fallback.name="Fallback";fallback.type="self";SpellEffectDefinition effect;effect.type="spellpoints";effect.amount=5;fallback.effects.push_back(effect);profile.push_back(fallback);}
             auto spells=std::make_shared<const std::vector<SpellDefinition>>(std::move(profile));auto items=std::make_shared<const std::vector<ItemDefinition>>();
-            auto player=make_player({20,20,20});player.health-=20;player.mana-=10;
+            auto player=make_player({20,20,20});player.health-=20;player.mana-=10;player.zorkmids=wallet;
             std::istringstream map("#####\n#.@.#\n#####\n");Session session(World::read(map),player,1);session.equipment_profile({20,20,20},items);session.spell_profile(spells);
+            if (gold) session.depth_context(depth);
             auto output=[&]() {
                 const auto& actor=session.player();for (auto n:actor.primary) std::cout<<n<<' ';for (auto n:actor.secondary) std::cout<<n<<' ';
                 for (auto n:actor.damage) std::cout<<n<<' ';for (auto n:actor.resistance) std::cout<<n<<' ';
-                std::cout<<actor.health<<' '<<actor.mana<<' '<<session.player_buffs().size()<<' ';
+                std::cout<<actor.health<<' '<<actor.mana<<' ';if (gold) std::cout<<actor.zorkmids<<' ';std::cout<<session.player_buffs().size()<<' ';
                 for (const auto& buff:session.player_buffs()) std::cout<<buff.spell<<' '<<buff.remaining<<' '<<buff.upkeep_remaining<<' ';
             };
             output();for (char op:operations) {

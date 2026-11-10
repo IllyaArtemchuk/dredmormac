@@ -11,6 +11,8 @@ from verify_buffs import Buffs
 
 
 class PlayerBuffs(Buffs):
+    def extra_fields(self,actor):return []
+
     def run_sequence(self,definitions,operations):
         self.heap=0x73000000;self.state=1;self.counter=self.allocate(4);parent=self.allocate(0x200)
         self.write(self.original.address('_curSpell'),parent);self.deapplied=self.destroyed=0
@@ -37,7 +39,7 @@ class PlayerBuffs(Buffs):
         result=[]
         def output():
             for offset,count in [(0x28c,6),(0x1f0,24),(0x74,16),(0xb4,16)]:result.extend(self.read(actor+offset,count))
-            result.extend(self.read(actor+0x108,2));start,end=self.read(actor+0xf4,2);result.append((end-start)//4)
+            result.extend(self.read(actor+0x108,2));result.extend(self.extra_fields(actor));start,end=self.read(actor+0xf4,2);result.append((end-start)//4)
             for pointer in self.read(start,(end-start)//4):result.extend([int(self.value(pointer+0x1a8).split()[-1]),self.read(pointer+0x27c)[0],self.read(pointer+0x1a4)[0]])
         output()
         for operation in operations:

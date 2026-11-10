@@ -80,6 +80,8 @@ public:
     TrapSelection select_trap_candidate(const std::vector<TrapCandidate>& pool,SpawnDepthContext depth,float deviation);
     const std::vector<TurnEvent>& events() const { return events_; }
     const Progression& progression() const { return progression_; }
+    SpawnDepthContext depth_context() const {return depth_context_;}
+    void depth_context(SpawnDepthContext value) {depth_context_=value;}
     const Equipment& equipment() const { return equipment_; }
     Inventory& inventory() { return inventory_; }
     const Inventory& inventory() const { return inventory_; }
@@ -127,6 +129,7 @@ public:
                         std::shared_ptr<const std::vector<SpellDefinition>> spells={});
 private:
     int player_facing_=2;
+    SpawnDepthContext depth_context_{};
     std::vector<ActiveBuff> player_buffs_;
     PrimaryStats buff_primary_flat_{};
     SecondaryStats buff_secondary_flat_{};

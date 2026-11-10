@@ -198,6 +198,10 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
                 std::move(skillRanks),std::make_shared<const std::vector<dredmor::AbilityDefinition>>(_content->abilities()));
         }
         if (_content) _session->spell_profile(std::make_shared<const std::vector<dredmor::SpellDefinition>>(_content->spells()));
+        if (scene[@"dungeon_depth"]) {
+            if (![scene[@"dungeon_depth"] isKindOfClass:NSNumber.class]) throw std::runtime_error("invalid dungeon depth");
+            _session->depth_context({[scene[@"dungeon_depth"] intValue],false,-1});
+        }
         NSMutableArray<NSArray<SpriteImage*>*> *breakables=[NSMutableArray array];
         if (scene[@"room_objects"]) {
             if (!_content || ![scene[@"room_objects"] isKindOfClass:NSString.class]) throw std::runtime_error("room objects need a content room name");
@@ -211,14 +215,14 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
                 if constexpr (std::is_same_v<T,dredmor::CustomRoomDefinition>) _session->create_custom_object(definition);
                 else if constexpr (std::is_same_v<T,dredmor::RoomPedestalRecord>) _session->create_pedestal(definition);
                 else if constexpr (std::is_same_v<T,dredmor::RoomLootRecord>)
-                    _session->create_room_loot(definition,_content->item_factory_tables(),_content->loot_context());
+                    _session->create_room_loot(definition,_content->item_factory_tables(),_content->loot_context(_session->depth_context()));
                 else if constexpr (std::is_same_v<T,dredmor::RoomMonsterRecord>) {
                     _session->create_room_monster(definition,[&](const auto& plan,auto& random,auto& state) {
-                        return _content->create_room_monster(plan,{},dredmor::Difficulty::medium,random,state);
+                        return _content->create_room_monster(plan,{_session->depth_context()},dredmor::Difficulty::medium,random,state);
                     });
                 }
                 else if constexpr (std::is_same_v<T,dredmor::RoomTrapRecord>)
-                    _session->create_room_trap(definition,_content->item_factory_tables(),_content->loot_context(),trapMap);
+                    _session->create_room_trap(definition,_content->item_factory_tables(),_content->loot_context(_session->depth_context()),trapMap);
                 else if constexpr (std::is_same_v<T,dredmor::BreakableRoomDefinition>) {
                     NSArray<SpriteImage*> *prepared=nil;
                     const auto created=_session->create_breakable(definition,{0,0},[&](const auto& value) {
@@ -656,6 +660,14 @@ static NSArray<SpriteImage*> *trapSprites(const dredmor::TrapInstance& trap,cons
         const auto gateMana=_session->player().mana;
         if (!schedule("Fixture effect gate") || _session->player().mana!=gateMana-1 || ![self smokeSaveLoad]) return fail("effect gate application");
         if (!schedule("Fixture effect gate") || _session->player().mana!=gateMana-1 || _session->player_buffs().size()!=1) return fail("effect gate suppression");
+        _session->step(dredmor::Action::wait);_session->depth_context({2,false,-1});
+        if (_session->player().zorkmids!=0) return fail("gold baseline");
+        _session->give_currency(8);const auto goldMana=_session->player().mana;
+        if (!schedule("Fixture gold buff")) return fail("gold buff application");
+        _session->step(dredmor::Action::wait);
+        if (_session->player().zorkmids!=5 || ![self smokeSaveLoad] || _session->depth_context().depth!=2) return fail("gold buff save");
+        _session->step(dredmor::Action::wait);_session->step(dredmor::Action::wait);
+        if (_session->player().zorkmids!=2 || _session->player().mana!=goldMana+2 || !_session->player_buffs().empty()) return fail("gold buff insufficiency");
         return YES;
     } catch(const std::exception& error) {
         [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];fprintf(stderr,"native traps: %s\n",error.what());return NO;

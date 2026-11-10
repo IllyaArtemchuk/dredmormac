@@ -109,3 +109,9 @@
   save12; positive-HP corpse flags persist in save13. Full original death
   delivery/AI/status/visual behavior remains outside these comparisons. Older
   monster saves lacking constructor profiles cannot infer randomized inputs.
+
+- Gold upkeep and ordered player-buff payment/removal now have4096 arithmetic and
+  1024 lifecycle comparisons. Wallet subtraction and the insufficient-funds child
+  delivery are supplied boundaries in the sequence oracle, with separate core
+  currency/spell comparisons. Saved depth context14 is not a floor-transition
+  implementation; complete dungeon flow and original presentation remain missing.

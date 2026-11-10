@@ -2,6 +2,7 @@
 #include "dredmor/items.hpp"
 
 namespace dredmor {
+struct SpawnDepthContext;
 struct BuffDefinition {
     std::string tag,description,gameplay_text,icon,small_icon,insufficient_funds;
     ItemModifiers modifiers;
@@ -19,6 +20,7 @@ std::uint64_t buff_signature(const BuffDefinition& buff);
 // Original name sorting, including the order of equal names. A nonnegative
 // depth is exposed for controlled comparison of the heap fallback.
 std::vector<std::size_t> buff_order(const std::vector<std::string>& names,int depth=-1);
+std::int32_t buff_gold_upkeep(std::int32_t base,float scale,SpawnDepthContext depth);
 struct BuffClock {std::int32_t remaining=0;bool permanent=false,use_timer=true,pending=false;};
 struct BuffTick {BuffClock clock;bool deapply=false,remove=false;};
 // One Hittable::UpdateBuffs counter/eligibility decision, before virtual

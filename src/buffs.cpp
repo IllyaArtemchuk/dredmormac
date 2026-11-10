@@ -1,10 +1,13 @@
 #include "dredmor/buffs.hpp"
 #include "dredmor/legacy_number.hpp"
+#include "dredmor/selection.hpp"
 #include <cstring>
 #include <cstdlib>
 #include <stdexcept>
 #include <functional>
 #include <algorithm>
+#include <cmath>
+#include <limits>
 
 namespace dredmor {
 namespace {
@@ -115,6 +118,13 @@ std::vector<std::size_t> buff_order(const std::vector<std::string>& names,int de
         order[at]=value;
     }
     return order;
+}
+std::int32_t buff_gold_upkeep(std::int32_t base,float scale,SpawnDepthContext depth) {
+    const auto level=depth.alternate?depth.alternate_depth:depth.depth;float factor=16;
+    if (level>=0) {const auto bits=std::uint32_t(level)+1;std::int32_t next;std::memcpy(&next,&bits,4);factor=static_cast<float>(next);}
+    const float scaled=static_cast<float>(base)*scale;const float result=std::floor(scaled*factor);
+    if (!std::isfinite(result) || result>=2147483648.0f || result< -2147483648.0f) return std::numeric_limits<std::int32_t>::min();
+    return static_cast<std::int32_t>(result);
 }
 BuffTick tick_buff(BuffClock clock) {
     bool deapply=false;

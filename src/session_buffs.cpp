@@ -67,7 +67,7 @@ void Session::apply_spell_buffs(const SpellDefinition& spell,Position target,std
 }
 void Session::validate_player_buff(const BuffDefinition& definition) const {
     if (!definitions_) throw std::invalid_argument("player buffs require a character stat profile");
-    if (definition.destroy_on_move || definition.brittle || definition.attacks || definition.zorkmid_upkeep || definition.requires_weapon!=-1 || definition.requires_shield ||
+    if (definition.destroy_on_move || definition.brittle || definition.attacks || definition.requires_weapon!=-1 || definition.requires_shield ||
         definition.invisible || definition.mute || definition.diggle_god) throw std::invalid_argument("buff status/upkeep execution is not implemented");
     for (const auto& node:definition.source.children) {
         const auto tag=lower(node.tag);
@@ -153,14 +153,26 @@ void Session::update_buffs(std::uint64_t actor) {
 void Session::update_player_buffs_impl() {
     // Player::UpdateBuffs handles every upkeep payment before the shared
     // Hittable timer pass. A nonstacking refresh leaves this clock unchanged.
+    std::vector<std::string> insufficient;
     for (std::size_t i=0;i<player_buffs_.size();++i) {
-        auto& buff=player_buffs_[i];const auto interval=buff_definition(buff).mana_upkeep;
-        if (!interval) continue;
-        buff.upkeep_remaining=add(buff.upkeep_remaining,-1);
-        if (!buff.upkeep_remaining) {
-            if (player_.mana<1) buff.pending=true;
-            else {--player_.mana;buff.upkeep_remaining=interval;}
+        auto& buff=player_buffs_[i];const auto& definition=buff_definition(buff);const auto interval=definition.mana_upkeep;
+        if (interval) {
+            buff.upkeep_remaining=add(buff.upkeep_remaining,-1);
+            if (!buff.upkeep_remaining) {
+                if (player_.mana<1) buff.pending=true;
+                else {--player_.mana;buff.upkeep_remaining=interval;}
+            }
         }
+        if (definition.zorkmid_upkeep>0) {
+            const auto cost=buff_gold_upkeep(definition.zorkmid_upkeep,definition.zorkmid_scale,depth_context_);
+            if (player_.zorkmids<cost) {
+                if (!definition.insufficient_funds.empty()) insufficient.push_back(definition.insufficient_funds);
+                buff.pending=true;
+            } else currency_transfer_impl(cost,CurrencyOperation::take);
+        }
+    }
+    for (const auto& name:insufficient) if (spells_) for (const auto& spell:*spells_) if (spell.name==name) {
+        cast_spell_impl(spell,player_.position,player_.position,player_.id,true);break;
     }
     for (std::size_t index=0;index<player_buffs_.size();++index) {
         auto& buff=player_buffs_[index];const auto& definition=buff_definition(buff);

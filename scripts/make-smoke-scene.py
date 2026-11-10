@@ -80,6 +80,8 @@ if __name__=='__main__':
 <spell name="Fixture gate resource" type="target"><effect type="spellpoints" amount="-1"/></spell>
 <spell name="Fixture large buff" type="self"><buff time="0" allowstacking="1" icon="dungeon/trap_hidden.png"><primarybuff id="0" amount="1"/></buff></spell>
 <spell name="Fixture effect gate" type="self"><effect type="spellpoints" amount="-1" requireBuff="1"/><buff time="0" allowstacking="0" icon="dungeon/trap_hidden.png"/></spell>
+<spell name="Fixture gold buff" type="self"><buff useTimer="0" time="10" allowstacking="0" icon="dungeon/trap_hidden.png" zorkmidUpkeep="2" zorkmidScaleF="0.5" insufficientFunds="Fixture gold fallback"/></spell>
+<spell name="Fixture gold fallback" type="self"><effect type="spellpoints" amount="2"/></spell>
 </spellDB>''')
             (root/'game/manTemplateDB.xml').write_text('''<templatedb><template width="1" height="1" name="7" affectsPlayer="1"><row text="#"/></template></templatedb>''')
             (root/'dungeon/trap.spr').write_bytes(sprite());(root/'dungeon/origin.spr').write_bytes(sprite())

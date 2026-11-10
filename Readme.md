@@ -183,7 +183,8 @@ validation during save loading.
 Spell execution now supports basic damage, healing, player mana effects,
 immediate and delayed trigger chains, damage over time and template area effects.
 Stat buffs affect players and monsters. Player buffs support refresh, stack caps,
-expiry and mana upkeep; monster buffs preserve their distinct Hittable behavior.
+expiry, mana/gold upkeep and insufficient-funds spells; monster buffs preserve
+their distinct Hittable behavior.
 Trigger chains support required and forbidden buff-name conditions.
 Generic effect conditions check missing buff icons with the original loop-return behavior.
 Pending spells, buffs, template rules and facing persist through saves. Other status families,
@@ -200,6 +201,7 @@ and the analysis Python environment. Keep the JSON reports outside the repositor
 | Generic effect buff condition | `verify_effect_gate.py ORIGINAL_BINARY build/dredmor-effect-gate --out PRIVATE_REPORT.json` |
 | Trigger buff conditions | `verify_trigger_gates.py ORIGINAL_BINARY build/dredmor-trigger-gates --out PRIVATE_REPORT.json` |
 | Buff ordering and tie behavior | `verify_buff_order.py ORIGINAL_BINARY build/dredmor-buffs --out PRIVATE_REPORT.json` |
+| Gold upkeep and player lifecycle | `verify_gold_buffs.py ORIGINAL_BINARY build/dredmor-buffs build/dredmor-buff-session --out PRIVATE_REPORT.json` |
 | Owned monster stat buffs | `verify_monster_buffs.py ORIGINAL_BINARY build/dredmor-monster-buffs --out PRIVATE_REPORT.json` |
 | Player stat buffs and mana upkeep | `verify_buff_session.py ORIGINAL_BINARY build/dredmor-buff-session --out PRIVATE_REPORT.json` |
 | Buff metadata and timer decisions | `verify_buffs.py ORIGINAL_BINARY build/dredmor-buffs --content DATA_ROOT --out PRIVATE_REPORT.json` |

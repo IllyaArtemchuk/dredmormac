@@ -1,5 +1,6 @@
 #include "dredmor/buffs.hpp"
 #include "dredmor/catalog.hpp"
+#include "dredmor/selection.hpp"
 #include <cstring>
 #include <iomanip>
 #include <iostream>
@@ -17,7 +18,12 @@ void output(const BuffDefinition& buff) {
 }
 int main(int argc,char** argv) {
     try {
-        if (argc==2 && std::string(argv[1])=="--order") {
+        if (argc==2 && std::string(argv[1])=="--gold-upkeep") {
+            std::int32_t base;std::uint32_t bits;SpawnDepthContext depth;
+            while (std::cin>>base>>bits>>depth.depth>>depth.alternate>>depth.alternate_depth) {
+                float scale;std::memcpy(&scale,&bits,4);std::cout<<buff_gold_upkeep(base,scale,depth)<<'\n';
+            }
+        } else if (argc==2 && std::string(argv[1])=="--order") {
             std::size_t count;int depth;while (std::cin>>count>>depth) {
                 if (count>4096) throw std::invalid_argument("buff order capacity exceeded");std::vector<std::string> names(count);
                 for (auto& name:names) if (!(std::cin>>std::quoted(name))) throw std::invalid_argument("missing buff sort name");
@@ -36,6 +42,6 @@ int main(int argc,char** argv) {
             }
         } else if (argc==1) {
             std::string xml;while (std::getline(std::cin,xml)) if (!xml.empty()) output(read_buff(parse_xml(xml)));
-        } else throw std::invalid_argument("Usage: dredmor-buffs [--tick | --content DATA_ROOT]");
+        } else throw std::invalid_argument("Usage: dredmor-buffs [--tick | --order | --gold-upkeep | --content DATA_ROOT]");
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }
