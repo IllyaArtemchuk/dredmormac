@@ -1411,3 +1411,26 @@ playthrough are still unfinished. GenLevelContent1's confirmed phase order is
 BuildDoors -> WriteDungeonContentFromRoomRecords (starts PunchOut) -> safe teleports
 -> secret doors -> random stair sites -> BuildStairs -> later random population.
 Do not reorder those phases or claim the isolated comparison covers the whole run.
+
+
+Prepared-floor sourcef6b9746 passed actual arm64 macos-15 run42953577281,
+job130303307282: all65 checks plus relocated packaged-app smoke. Native stair
+rendering, dimension/image swaps, round-trip currency/NPC state, whole-run saves
+and invalid inactive-asset rollback all passed. All38 local test groups pass.
+Correction to the preceding off-floor-regeneration note: actual OnDemandLoadLevel
+864c0 returns immediately when the requested level is already resident. Its
+OnDemandLoadLevelWithRegen86b00/86a10 wrapper calls DungeonRearrangeCleanup only
+when disk loading fails (after an optional alternate-save-file retry). "Regen"
+there means rebuilding an unreadable/missing level, not recovering inactive
+monsters' HP. No inactive-level ticking/healing was found in that loader path.
+The return-to-level loop's monster virtual114 is RebuildSpritesec494, rather than
+a stat update. Full disk serialization/unload/recovery remains unimplemented.
+The stairs oracle now executes the actual load wrapper and resident fast path
+instead of stubbing them; all3072 comparisons still pass. This strengthens the
+resident-cache comparison but does not establish full original floor loading or
+GameTick parity. The earlier implication that a missing off-floor HP-regeneration
+mechanic had been established was an incorrect interpretation of a function name.
+The implementation remains incomplete: generated-floor content/decorations/shops/
+scripts and secret doors, random stair-site placement, remaining population/AI/
+spell interactions, original UI/audio/FOV and end-to-end original validation are
+still outstanding. Prepared-floor travel is now verified, not a complete game.

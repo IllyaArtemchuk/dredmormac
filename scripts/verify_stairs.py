@@ -14,7 +14,7 @@ class Stairs(GeometryOracle):
     def __init__(self,binary):
         from unicorn import UC_HOOK_CODE
         super().__init__(binary);self.placement=self.original.sentinel+0x500
-        self.quiet=[0x115872,0x5f4b0,0xa2670,0x29a50,0x29bc0,0x427e0,0x47cc0,0x4d95a,0x5ff50,0x86b00,0x86a10,0x885a0,0xaca50,0xb4f40,0x130d80]
+        self.quiet=[0x115872,0x5f4b0,0xa2670,0x29a50,0x29bc0,0x427e0,0x47cc0,0x4d95a,0x5ff50,0x885a0,0xaca50,0xb4f40,0x130d80]
         self.special=[0xb9d20,0xb9d6e,self.placement,0x2ac50,0x2b210,0x6717c,0x66b3e]
         for address in self.quiet+self.special:self.machine.hook_add(UC_HOOK_CODE,self.boundary,begin=address,end=address)
 
@@ -88,7 +88,7 @@ def verify(binary,port):
     if actual!=expected:
         i=next(i for i,(a,b) in enumerate(zip(actual,expected)) if a!=b);raise AssertionError(f'cached arrival {i}: {lines[i]}, port {actual[i]}, original {expected[i]}')
     return dict(binary_sha256=hashlib.sha256(oracle.original.data).hexdigest(),build_cases=1024,destination_cases=1024,cached_arrival_cases=1024,mismatches=0,
-                scope='actual BuildStairs192bd6 numeric grid/traversal with allocation/constructor/placement supplied; actual Stairs::SteppedOnb92fc dispatch args with UI/audio/analytics/Ascend/Descend supplied; actual Ascend2b210/Descend2ac50 cached searches and placement with save/load/regeneration/render/pathfinding boundaries supplied, stopping before new-level construction on missing descending arrival. Exact link, x-major/y-ascending order, upward fallback, depth-only cached lookup despite branch mismatch and int32 depth wrap compared. New-level generation/fallback and full floor loading/regeneration/object-tick scheduling excluded.')
+                scope='actual BuildStairs192bd6 numeric grid/traversal with allocation/constructor/placement supplied; actual Stairs::SteppedOnb92fc dispatch args with UI/audio/analytics/Ascend/Descend supplied; actual Ascend2b210/Descend2ac50 cached searches and placement with actual OnDemandLoadLevelWithRegen86b00/86a10 and resident OnDemandLoadLevel864c0 fast path; save/unload/render/pathfinding boundaries supplied, stopping before new-level construction on missing descending arrival. Exact link, x-major/y-ascending order, upward fallback, depth-only cached lookup despite branch mismatch and int32 depth wrap compared. New-level generation/fallback, disk level loading/recovery and full object-tick scheduling excluded.')
 
 
 if __name__=='__main__':

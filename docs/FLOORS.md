@@ -14,8 +14,9 @@ breakables and traps. Global inventory, stats, skills, buffs, player-owned sched
 spells, cooldowns, progression, RNG and identity reservations stay in Session.
 Travel preserves the global turn; inactive floor visit clocks are retained. The
 current provisional scheduler updates the departure floor before travel. Inactive
-floors freeze. This differs from the original on-demand regeneration path, which
-is not implemented. Pending enemy-cast player spells cannot travel yet.
+floors do not tick while inactive. The original resident OnDemandLoadLevel fast
+path likewise returns without updating the level. Disk loading and recovery of
+unreadable level files remain outside this integration. Pending enemy-cast player spells cannot travel yet.
 
 `registry.save` / `FloorRegistry::load` handle complete prepared runs (format1).
 Session format17 adds floor metadata and the global minimum fresh item identity.
@@ -49,6 +50,7 @@ build a full original dungeon, place random stairs or populate all room records.
 1024 BuildStairs grids/construction plans,1024 SteppedOn dispatch argument sets,
 and1024 cached Ascend/Descend arrival searches. The binary SHA and exact supplied
 boundaries are recorded in the private report. Original binaries/assets and
-reports stay outside git. Full level generation/load, off-floor regeneration,
-new-floor arrival fallback and complete GameTick behavior remain outside these
-comparisons.
+reports stay outside git. The cached-arrival comparison also executes the actual
+OnDemandLoadLevelWithRegen wrapper and resident OnDemandLoadLevel fast path. Disk
+loading/unreadable-file recovery, new-floor arrival fallback and complete GameTick
+behavior remain outside these comparisons.
