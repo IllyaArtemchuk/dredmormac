@@ -140,7 +140,7 @@ void Session::drop(InventoryItem item,Position position) {
     ground_.push_back({item,position});
 }
 std::uint64_t Session::next_item_instance() const {
-    std::uint64_t identifier=1;
+    std::uint64_t identifier=item_floor_;
     auto observe=[&](const InventoryItem& item) {
         if (item.instance==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("item IDs exhausted");
         identifier=std::max(identifier,item.instance+1);

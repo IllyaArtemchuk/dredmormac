@@ -343,7 +343,7 @@ void Session::save(std::ostream& out) const {
     }
     bool corpse_state=player_.corpse && player_.health>0;for (const auto& enemy:enemies_) corpse_state=corpse_state || (enemy.corpse && enemy.health>0);
     const bool depth_state=depth_context_.depth!=0 || depth_context_.alternate || depth_context_.alternate_depth!=-1;
-    out<<"<dredmor-session version=\""<<(regeneration_?16:!spell_cooldowns_.empty()?15:depth_state?14:corpse_state?13:monster_state?12:buff_state?11:gated?10:scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
+    out<<"<dredmor-session version=\""<<(!stairs_.empty() || floor_branch_ || item_floor_!=1?17:regeneration_?16:!spell_cooldowns_.empty()?15:depth_state?14:corpse_state?13:monster_state?12:buff_state?11:gated?10:scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
        <<"\" content=\""<<signature(definitions_)<<"\"";
     if (player_facing_!=2) out<<" facing=\""<<player_facing_<<"\"";
     out<<">\n<room>"<<escape(world_.room_text())<<"</room>\n";
@@ -356,6 +356,11 @@ void Session::save(std::ostream& out) const {
         const auto& r=*regeneration_;
         out<<"<regeneration hp-turns=\""<<r.health_turns<<"\" mp-turns=\""<<r.mana_turns<<"\" hp-clock=\""<<r.health_clock<<"\" mp-clock=\""<<r.mana_clock
            <<"\" food=\""<<r.food<<"\" booze=\""<<r.booze<<"\" vampire=\""<<r.vampire<<"\"/>\n";
+    }
+    if (!stairs_.empty() || floor_branch_ || item_floor_!=1) {
+        out<<"<floor-state branch=\""<<floor_branch_<<"\" item-base=\""<<item_floor_<<"\">\n";
+        for (const auto& stair:stairs_) out<<"<stair x=\""<<stair.position.x<<"\" y=\""<<stair.position.y<<"\" up=\""<<stair.up<<"\" link=\""<<unsigned(stair.link)<<"\"/>\n";
+        out<<"</floor-state>\n";
     }
     write_actor(out,"player",player_);out<<"<enemies>\n";for (const auto& enemy:enemies_) write_actor(out,"enemy",enemy);out<<"</enemies>\n";
     out<<"<progress level=\""<<progression_.level<<"\" xp=\""<<progression_.experience<<"\" lifetime=\""<<progression_.lifetime_experience
@@ -458,14 +463,20 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
     while (input) {input.read(buffer.data(),buffer.size());content.append(buffer.data(),static_cast<std::size_t>(input.gcount()));if (content.size()>64*1024*1024) throw std::runtime_error("save exceeds size limit");}
     if (input.bad()) throw std::runtime_error("cannot read session save");
     const auto root=parse_xml(content,"session save");
+    return load_node(root,std::move(definitions),std::move(abilities),std::move(spells));
+}
+Session Session::load_node(const XmlNode& root,std::shared_ptr<const std::vector<ItemDefinition>> definitions,
+                          std::shared_ptr<const std::vector<AbilityDefinition>> abilities,std::shared_ptr<const std::vector<SpellDefinition>> spells) {
     const auto version=attribute(root,"version");
-    const bool modern=version=="7" || version=="8" || version=="9" || version=="10" || version=="11" || version=="12" || version=="13" || version=="14" || version=="15" || version=="16";
-    const bool monster_fields=version=="12" || version=="13" || version=="14" || version=="15" || version=="16";
-    const bool corpse_fields=version=="13" || version=="14" || version=="15" || version=="16";
+    const bool modern=version=="7" || version=="8" || version=="9" || version=="10" || version=="11" || version=="12" || version=="13" || version=="14" || version=="15" || version=="16" || version=="17";
+    const bool monster_fields=version=="12" || version=="13" || version=="14" || version=="15" || version=="16" || version=="17";
+    const bool corpse_fields=version=="13" || version=="14" || version=="15" || version=="16" || version=="17";
     if (version=="14" && !root.first("depth-context")) throw std::runtime_error("version fourteen requires depth context");
-    if (version!="14" && version!="15" && version!="16" && root.first("depth-context")) throw std::runtime_error("depth context requires version fourteen");
+    if (version!="14" && version!="15" && version!="16" && version!="17" && root.first("depth-context")) throw std::runtime_error("depth context requires version fourteen");
+    if (version=="17" && !root.first("floor-state")) throw std::runtime_error("version seventeen requires floor state");
+    if (version!="17" && root.first("floor-state")) throw std::runtime_error("floor state requires version seventeen");
     if (version=="16" && !root.first("regeneration")) throw std::runtime_error("version sixteen requires regeneration state");
-    if (version!="16" && root.first("regeneration")) throw std::runtime_error("regeneration requires version sixteen");
+    if (version!="16" && version!="17" && root.first("regeneration")) throw std::runtime_error("regeneration requires version sixteen");
     if (version=="15" && !root.first("spell-cooldowns")) throw std::runtime_error("version fifteen requires cooldown state");
     if (version=="11" && !root.first("player-buffs")) throw std::runtime_error("version eleven requires buff state");
     if (version=="10" && !root.first("scheduled-spells")) throw std::runtime_error("version ten requires gated spell state");
@@ -502,9 +513,20 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
         if (!modern) throw std::runtime_error("saved facing requires version seven");
         session.player_facing(attribute_number<int>(root,"facing"));
     }
+    if (root.first("floor-state")) {
+        const auto& saved=child(root,"floor-state");std::vector<StairPlacement> stairs;
+        for (const auto& node:saved.children) {
+            if (node.tag!="stair" || !node.children.empty() || stairs.size()>=4096) throw std::runtime_error("invalid floor stair record");
+            const auto link=attribute_number<unsigned>(node,"link");if (link>255) throw std::runtime_error("invalid stair link");
+            stairs.push_back({{attribute_number<int>(node,"x"),attribute_number<int>(node,"y")},flag(node,"up"),std::uint8_t(link)});
+        }
+        session.floor_stairs(std::move(stairs),attribute_number<std::int32_t>(saved,"branch"));
+        session.item_floor_=attribute_number<std::uint64_t>(saved,"item-base");
+        if (!session.item_floor_ || session.item_floor_==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("invalid floor item identity base");
+    }
     session.definitions_=std::move(definitions);session.spells_=std::move(spells);session.next_actor_=attribute_number<std::uint64_t>(root,"next-actor");
     if (root.first("spell-cooldowns")) {
-        if ((version!="15" && version!="16") || !session.spells_ || !root.first("spell-rules") || !child(root,"spell-rules").attributes.count("casting")) throw std::runtime_error("cooldowns require matching casting rules");
+        if ((version!="15" && version!="16" && version!="17") || !session.spells_ || !root.first("spell-rules") || !child(root,"spell-rules").attributes.count("casting")) throw std::runtime_error("cooldowns require matching casting rules");
         for (const auto& saved:child(root,"spell-cooldowns").children) {
             if (saved.tag!="cooldown" || !saved.children.empty()) throw std::runtime_error("invalid cooldown record");
             const auto index=attribute_number<std::size_t>(saved,"spell");const auto remaining=attribute_number<std::int32_t>(saved,"remaining");

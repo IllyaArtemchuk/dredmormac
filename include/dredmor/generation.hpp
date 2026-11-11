@@ -35,6 +35,7 @@ struct RoomStamp {
 struct DungeonCell {
     std::uint8_t kind=0,room_id=0,door_flags=0;
     std::uint32_t flags=0;
+    std::uint8_t stair_link=0;
 };
 class DungeonLayout {
 public:

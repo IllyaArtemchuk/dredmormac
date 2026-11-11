@@ -34,6 +34,10 @@ bool World::passable(Position p) const {
 World World::restore(std::istream& input,std::uint64_t turn) {
     auto world=read(input);world.turn_=turn;return world;
 }
+void World::place_player(Position p,std::uint64_t turn) {
+    if (!passable(p)) throw std::invalid_argument("player placement must be on passable ground");
+    player_=p;turn_=turn;
+}
 std::string World::room_text() const {
     auto rows=rows_;rows.at(player_.y).at(player_.x)='@';
     std::string output;

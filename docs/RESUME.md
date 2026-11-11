@@ -1369,3 +1369,45 @@ All37 local groups pass; the implementation branch is verified at this source
 commit. This final entry records validation only; it does not establish complete
 original-game parity. Next major integration work remains full-floor population/
 transitions, reactive effect/AI/combat/death scheduling and original UI/audio/FOV.
+
+
+Prepared-floor travel is now integrated through FloorRegistry/SessionFloor (see
+FLOORS.md). Stair plans preserve numeric tile link byte2, x-major/descending-y
+BuildStairs order, first-floor up removal, final-floor down suppression (depth9
+or14 with the campaign flag), and live wall writes above stairs. Cached arrival
+searches preserve x-major/ascending-y exact-link preference, upward fallback and
+depth-only level lookup despite branch mismatch. Stairs::SteppedOn depth arithmetic
+wraps32bits. verify_stairs.py matches1024 actual BuildStairs192bd6,1024 actual
+SteppedOnb92fc dispatches and1024 actual Ascend2b210/Descend2ac50 cached searches.
+Constructor/placement, autosave/load/regeneration, render/pathfinding/UI boundaries
+are supplied; missing downward links stop before original new-level construction.
+Full generation, new-level fallback and on-demand/off-floor regeneration excluded.
+Prepared floors now preserve enemies, loot, custom objects, breakables, traps,
+stairs and visit clocks across round trips. Character/inventory/equipment/buffs/
+triggers/cooldowns/progression and both RNG streams remain global. Item identity
+reservations and actor sequences prevent collisions with inactive floors; cross-
+floor duplicate identities reject. Enemy-cast player triggers cannot yet cross a
+floor boundary and reject atomically; player-owned pending spells can travel.
+Cache updates/travel/load are transactional. Save17 stores floor stairs/branch and
+item reservation while retaining prior save capabilities. Run format1 stores the
+active session plus cached floor payloads, with the active session authoritative
+for character state. Readers validate all nested floor payloads and identity
+reservations; inactive visit clocks survive serialization. Old session formats
+remain supported. Native prepared-floor scenes load/render actual stair SPRs,
+travel on movement without bouncing on arrival, switch dimensions/images/HUD,
+and save/load whole runs. Assets for inactive floors validate before committing
+a run load, so a bad cached sprite cannot partially replace live state.
+All38 local groups pass, including paired travel, merged inventory/ID reservations,
+active buffs, pending player spells, cooldowns, cached NPC/loot state, whole-run
+reloads and invalid/pending-caster rollback. The new native floor fixture descends,
+returns for currency, descends again, checks cached NPC state and rejects a bad
+inactive-floor asset atomically. Source awaits actual arm64 MacCI.
+This is prepared-floor cache integration, not complete generated-floor play.
+Inactive floors currently freeze; original OnDemandLoadLevelWithRegen still needs
+recovery. Session AI/tick/arrival-obstruction handling remain provisional. Full
+ordered room content/decorations/shops/scripts, secret doors, random stair-site
+placement, remaining population/AI/effects, original UI/audio/FOV and a reference
+playthrough are still unfinished. GenLevelContent1's confirmed phase order is
+BuildDoors -> WriteDungeonContentFromRoomRecords (starts PunchOut) -> safe teleports
+-> secret doors -> random stair sites -> BuildStairs -> later random population.
+Do not reorder those phases or claim the isolated comparison covers the whole run.

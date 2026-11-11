@@ -59,4 +59,22 @@ DoorTransition activate_remote_door(DungeonLayout& layout,DoorAssembly& door,std
 // door marker, then add a wall above ordinary floor where that cell is void.
 // Traversal observes earlier writes; recorded floor count is not recomputed.
 void punch_out_dungeon_content(DungeonLayout& layout);
+struct StairPlacement {
+    Position position{};
+    bool up=false;
+    std::uint8_t link=0;
+};
+// Original BuildStairs, after stair markers have been placed. Visits x-major,
+// descending y, observing walls written above earlier stairs. No RNG draws.
+std::vector<StairPlacement> build_stair_plan(DungeonLayout& layout,std::int32_t depth,bool expanded_campaign);
+struct StairDestination {
+    std::uint8_t link=0;
+    std::int32_t branch=0,depth=0;
+};
+// Stairs::SteppedOn dispatch arguments; caller reads link from the player tile.
+// Loading/caching a destination level is a separate operation.
+StairDestination stair_destination(bool up,std::uint8_t player_tile_link,std::int32_t branch,std::int32_t depth);
+// Ascend searches matching downward stairs, then any downward stair. Descend
+// falls back to any upward stair only for a newly generated destination.
+std::optional<Position> stair_arrival(const std::vector<StairPlacement>& stairs,bool ascending,std::uint8_t link,bool newly_generated=false);
 }

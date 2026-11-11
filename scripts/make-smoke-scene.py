@@ -38,6 +38,7 @@ if __name__=='__main__':
     p.add_argument('--casting',action='store_true',help='Learned player spells, targeted input, costs and saved cooldowns')
     p.add_argument('--regeneration',action='store_true',help='Configured natural resource clocks and native save/reload')
     p.add_argument('--food',action='store_true',help='Inventory meals, recovery counters and persisted nutrition')
+    p.add_argument('--floors',action='store_true',help='Paired stairs, cached floor state, native run save/reload')
     args=p.parse_args();out=args.output.resolve();out.mkdir(parents=True,exist_ok=True)
     (out/'atlas.png').write_bytes(png(384,640,(70,80,95,255)))
     (out/'hero.png').write_bytes(png(64,64,(40,180,150,255)))
@@ -59,12 +60,19 @@ if __name__=='__main__':
     if args.casting and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps])):p.error('--casting requires --content-source and excludes other fixture types')
     if args.regeneration and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting])):p.error('--regeneration requires --content-source and excludes other fixture types')
     if args.food and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration])):p.error('--food requires --content-source and excludes other fixture types')
+    if args.floors and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food])):p.error('--floors requires --content-source and excludes other fixture types')
     if args.content_source:
         root=out/'installation';shutil.copytree(args.content_source,root,dirs_exist_ok=True)
         (root/'tilesets').mkdir(exist_ok=True);(root/'sprites/hero').mkdir(parents=True,exist_ok=True)
         (root/'tilesets/basic.png').write_bytes(png(384,640,(70,80,95,255)))
         (root/'sprites/hero/hero_idle_d.spr').write_bytes(sprite())
         (root/'dungeon').mkdir(exist_ok=True);(root/'dungeon/fixture.spr').write_bytes(sprite())
+        if args.floors:
+            for name in ['stairs_up','stairs_down']:(root/f'dungeon/{name}.spr').write_bytes(sprite())
+            monsters=ET.parse(root/'game/monDB.xml');monsters.getroot()[0].insert(0,ET.Element('idleSprite',{'down':'dungeon/fixture.spr'}));monsters.write(root/'game/monDB.xml',encoding='unicode')
+            scene.update(data_root=str(root),room_objects='Starting Room',stairs=[dict(x=2,y=1,up=False,link=7)],
+                floors=[dict(collision='########\n#@.....#\n#......#\n#......#\n########\n',depth=1,stairs=[dict(x=1,y=1,up=True,link=7),dict(x=5,y=3,up=False,link=9)],monsters=[dict(name='Fixture variant',x=6,y=3)])],
+                ground_currency=[dict(amount=17,x=3,y=1)],smoke_floors=True,smoke_expected='{"turn":2,"x":1,"y":1}')
         if args.food:
             tweaks=ET.parse(root/'game/tweakDB.xml')
             ET.SubElement(tweaks.getroot(),'tweak',{'name':'hpregenturns','ival':'1000'});ET.SubElement(tweaks.getroot(),'tweak',{'name':'spregenturns','ival':'1000'})

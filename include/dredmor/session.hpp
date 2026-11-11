@@ -11,6 +11,7 @@
 #include "dredmor/traps.hpp"
 #include "dredmor/spells.hpp"
 #include "dredmor/regeneration.hpp"
+#include "dredmor/dungeon.hpp"
 #include <memory>
 #include <map>
 
@@ -54,6 +55,18 @@ struct GroundItem { InventoryItem item;Position position; };
 struct RoomLootCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
 struct RoomTrapCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
 enum class SpellUse { cast,unknown,cooling_down,equipment_required,invalid_target,insufficient_gold,insufficient_mana,muted,dead };
+struct SessionFloor {
+    explicit SessionFloor(World map):world(std::move(map)) {}
+    World world;
+    SpawnDepthContext depth{};
+    std::int32_t branch=0;
+    std::vector<StairPlacement> stairs;
+    std::vector<Actor> enemies;
+    std::vector<GroundItem> ground;
+    std::vector<CustomRoomObject> objects;
+    std::vector<BreakableRoomObject> breakables;
+    std::vector<TrapInstance> traps;
+};
 enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken,spell_damage,trap_click,trap_triggered,trap_spell_missing,spell_heal,spell_mana };
 struct TurnEvent {
     EventKind kind;
@@ -67,6 +80,11 @@ class Session {
 public:
     Session(World world,Actor player,std::uint32_t seed,int experience_n=190);
     const World& world() const { return world_; }
+    SessionFloor floor_state() const;
+    SessionFloor swap_floor(SessionFloor floor,Position arrival);
+    void floor_stairs(std::vector<StairPlacement> stairs,std::int32_t branch=0);
+    const std::vector<StairPlacement>& floor_stairs() const {return stairs_;}
+    std::int32_t floor_branch() const {return floor_branch_;}
     const Actor& player() const { return player_; }
     const std::vector<Actor>& enemies() const { return enemies_; }
     const std::vector<GroundItem>& ground_items() const { return ground_; }
@@ -141,6 +159,13 @@ public:
                         std::shared_ptr<const std::vector<AbilityDefinition>> abilities={},
                         std::shared_ptr<const std::vector<SpellDefinition>> spells={});
 private:
+    friend class FloorRegistry;
+    static Session load_node(const XmlNode& root,std::shared_ptr<const std::vector<ItemDefinition>> definitions,
+                             std::shared_ptr<const std::vector<AbilityDefinition>> abilities,
+                             std::shared_ptr<const std::vector<SpellDefinition>> spells);
+    std::vector<StairPlacement> stairs_;
+    std::int32_t floor_branch_=0;
+    std::uint64_t item_floor_=1;
     int player_facing_=2;
     std::optional<RegenerationState> regeneration_;
     std::map<std::size_t,std::int32_t> spell_cooldowns_;

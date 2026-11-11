@@ -1,8 +1,39 @@
 #include "dredmor/dungeon.hpp"
 #include <deque>
 #include <stdexcept>
+#include <cstring>
+#include <algorithm>
 
 namespace dredmor {
+std::vector<StairPlacement> build_stair_plan(DungeonLayout& layout,std::int32_t depth,bool expanded_campaign) {
+    auto candidate=layout;std::vector<StairPlacement> result;
+    for (int x=0;x<candidate.width();++x) for (int y=candidate.height()-2;y>0;--y) {
+        auto& cell=candidate.at(x,y);
+        if (cell.kind==3) {
+            if (depth<1) cell.kind=1;
+            else {result.push_back({{x,y},true,cell.stair_link});candidate.at(x,y-1).kind=2;}
+        } else if (cell.kind==4) {
+            if (depth<(expanded_campaign?14:9)) result.push_back({{x,y},false,cell.stair_link});
+            candidate.at(x,y-1).kind=2;
+        }
+    }
+    layout=std::move(candidate);return result;
+}
+StairDestination stair_destination(bool up,std::uint8_t player_tile_link,std::int32_t branch,std::int32_t depth) {
+    const auto bits=std::uint32_t(depth)+(up?0xffffffffU:1U);std::int32_t target;std::memcpy(&target,&bits,4);
+    return {player_tile_link,branch,target};
+}
+std::optional<Position> stair_arrival(const std::vector<StairPlacement>& stairs,bool ascending,std::uint8_t link,bool newly_generated) {
+    auto first=[&](bool matching)->std::optional<Position> {
+        std::optional<Position> result;
+        for (const auto& stair:stairs) if (stair.up!=ascending && (!matching || stair.link==link)) {
+            const auto p=stair.position;
+            if (!result || p.x<result->x || (p.x==result->x && p.y<result->y)) result=p;
+        }
+        return result;
+    };
+    auto result=first(true);return result || (!ascending && !newly_generated)?result:first(false);
+}
 namespace {
 GeometryAttempt attempt(const std::vector<RoomStamp>& pool,const RoomNameWords& words,GameRandom& random,const GeometryOptions& options,
                         const std::vector<DungeonCell>* previous=nullptr) {
