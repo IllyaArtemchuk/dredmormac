@@ -120,6 +120,10 @@ exercise supplied base templates and word pools. It stops before door objects
 and population and does not create a playable level. Original reference files
 and reports must remain outside tracked source.
 
+Random stair-marker placement is implemented separately in the core library; see
+[stair-site generation](docs/STAIR_SITES.md). Native gameplay still uses prepared
+floors while the preceding content and secret-door passes remain unfinished.
+
 Use one separate checkout of https://github.com/tanepiper/game-frame. Read its
 setup instructions, inspect scripts before running them, and keep its home and
 analysis project outside this repository. `scripts/gameframe.sh` uses the

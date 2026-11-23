@@ -1180,3 +1180,29 @@ The implementation remains incomplete: generated-floor content/decorations/shops
 scripts and secret doors, random stair-site placement, remaining population/AI/
 spell interactions, original UI/audio/FOV and end-to-end original validation are
 still outstanding. Prepared-floor travel is now verified, not a complete game.
+
+
+## 2026-11-23: random stair-site generation
+
+The replacement workspace has been restored from implementation/native-foundation
+and the supplied archive recovered and hash-verified in private storage. Added
+`place_stair_sites` for the original GenLevelContent1 phase196b47..BuildStairs192bd6.
+It preserves MT division/rejection draws, geometry/object-list/obstruction order,
+per-stair 4,001-close-site relaxation, direction/depth/campaign policy, byte links
+and unrelated tile fields. Resource guards are port policies and roll back layout
+and RNG on failure. See docs/STAIR_SITES.md for API, boundaries and oracle command.
+All39 local CTest groups pass, including forced spacing relaxation and failure
+rollback. The new oracle compares marker order, full cell payloads, all624 MT words
+and index, next8 outputs and the ordered obstruction queries. Original execution
+starts with controlled post-content layouts; prior content/secret-door passes and
+later stair construction/population are outside that comparison.
+Native gameplay still uses prepared floors. This does not implement a complete
+floor builder: ordered room content/decorations/shops/scripts and secret doors,
+remaining population/AI/effects, original UI/audio/FOV and a reference playthrough
+remain unfinished. The next generation work must fill preceding content and secret
+door phases without reordering the confirmed phase sequence.
+
+Original comparison passed1,024 controlled stair-site cases with zero mismatches,
+including125x125 layouts using the supplied six-stair tweak, both campaign flags,
+first/intermediate/final depths and forced spacing relaxation. The private report
+is /workspace/work/stair-sites-1024.json. Actual arm64 validation is pending.

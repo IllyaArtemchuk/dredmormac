@@ -5,6 +5,40 @@
 #include <algorithm>
 
 namespace dredmor {
+std::vector<StairPlacement> place_stair_sites(DungeonLayout& layout,Random& random,
+    const StairSiteOptions& options,const std::function<bool(Position)>& obstructed,
+    const std::function<bool(Position)>& occupied) {
+    if (options.count<0 || options.count>4096 || layout.width()<3 || layout.height()<3 ||
+        !options.max_candidate_draws || !obstructed || !occupied)
+        throw std::invalid_argument("invalid stair-site inputs");
+    auto candidate=layout;auto stream=random;std::vector<StairPlacement> sites;
+    const int end=options.count*(options.depth==(options.expanded_campaign?14:9)?1:2);
+    std::size_t draws=0;
+    for (int i=options.depth==0?options.count:0;i<end;++i) {
+        unsigned near_rejections=0;
+        for (;;) {
+            if (draws++>=options.max_candidate_draws) throw std::runtime_error("stair-site candidate budget exceeded");
+            const int x=int(stream.bounded(std::uint32_t(candidate.width()-2)))+1;
+            const int y=int(stream.bounded(std::uint32_t(candidate.height()-2)))+1;
+            if (candidate.at(x,y).kind!=2 || candidate.at(x-1,y).kind!=2 || candidate.at(x+1,y).kind!=2) continue;
+            const auto wall_or_void=[&](int column) {const auto kind=candidate.at(column,y-1).kind;return kind==0 || kind==2;};
+            if (!wall_or_void(x) || !wall_or_void(x-1) || !wall_or_void(x+1) || candidate.at(x,y+1).kind!=1) continue;
+            if (obstructed({x,y+1}) || occupied({x,y}) || occupied({x,y-1}) || occupied({x,y+1})) continue;
+            bool retry=false;
+            for (const auto& previous:sites) {
+                const auto dx=std::uint32_t(x)-std::uint32_t(previous.position.x),dy=std::uint32_t(y)-std::uint32_t(previous.position.y);
+                const auto squared=dx*dx+dy*dy;
+                // Original imul/add wrap to 32 bits before a signed comparison.
+                if (squared<400U || squared>=0x80000000U) {retry=++near_rejections<4001;break;}
+            }
+            if (retry) continue;
+            const bool up=i/options.count==0;const auto link=std::uint8_t(i%options.count);
+            auto& cell=candidate.at(x,y);cell.kind=up?3:4;cell.stair_link=link;
+            sites.push_back({{x,y},up,link});break;
+        }
+    }
+    layout=std::move(candidate);random=std::move(stream);return sites;
+}
 std::vector<StairPlacement> build_stair_plan(DungeonLayout& layout,std::int32_t depth,bool expanded_campaign) {
     auto candidate=layout;std::vector<StairPlacement> result;
     for (int x=0;x<candidate.width();++x) for (int y=candidate.height()-2;y>0;--y) {

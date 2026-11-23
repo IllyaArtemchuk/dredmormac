@@ -64,6 +64,20 @@ struct StairPlacement {
     bool up=false;
     std::uint8_t link=0;
 };
+struct StairSiteOptions {
+    std::int32_t depth=0;
+    bool expanded_campaign=false;
+    int count=0; // Caller resolves the active numstairs tweak.
+    // Port resource limit, not an original generation rule.
+    std::size_t max_candidate_draws=1000000;
+};
+// Random marker placement after room content, safe teleports and secret doors,
+// before BuildStairs. Object-list occupancy and obstruction are separate inputs.
+// Returns selection order; failure leaves layout and RNG unchanged. Callbacks
+// must inspect stable occupancy and must not mutate layout or RNG.
+std::vector<StairPlacement> place_stair_sites(DungeonLayout& layout,Random& random,
+    const StairSiteOptions& options,const std::function<bool(Position)>& obstructed,
+    const std::function<bool(Position)>& occupied);
 // Original BuildStairs, after stair markers have been placed. Visits x-major,
 // descending y, observing walls written above earlier stairs. No RNG draws.
 std::vector<StairPlacement> build_stair_plan(DungeonLayout& layout,std::int32_t depth,bool expanded_campaign);

@@ -42,7 +42,9 @@ Generate a fully synthetic test installation/scene with:
 
 This exercises two prepared layouts, actual SPR rendering, cached monsters and
 currency, whole-run save/load and invalid cached-asset rejection. It does not
-build a full original dungeon, place random stairs or populate all room records.
+build a full original dungeon or populate all room records. Random stair-site
+placement is now available separately in the core library; see
+[STAIR_SITES.md](STAIR_SITES.md). It is not yet part of native floor creation.
 
 ## Original routine checks
 
