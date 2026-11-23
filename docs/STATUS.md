@@ -1206,3 +1206,9 @@ Original comparison passed1,024 controlled stair-site cases with zero mismatches
 including125x125 layouts using the supplied six-stair tweak, both campaign flags,
 first/intermediate/final depths and forced spacing relaxation. The private report
 is /workspace/work/stair-sites-1024.json. Actual arm64 validation is pending.
+
+Actual AppleClang/arm64 macos-15 validation passed for source2bec328:
+run45095227918, job137433458794, all66 tests plus relocated packaged-app smoke.
+https://github.com/IllyaArtemchuk/dredmormac/actions/runs/45095227918
+All39 local groups and1,024 original stair-site comparisons passed. No game assets
+were committed or included in the synthetic development app.

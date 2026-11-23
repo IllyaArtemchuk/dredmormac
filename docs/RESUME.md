@@ -1460,3 +1460,28 @@ Original comparison passed1,024 controlled stair-site cases with zero mismatches
 including125x125 layouts using the supplied six-stair tweak, both campaign flags,
 first/intermediate/final depths and forced spacing relaxation. The private report
 is /workspace/work/stair-sites-1024.json. Actual arm64 validation is pending.
+
+Actual AppleClang/arm64 macos-15 validation passed for source2bec328:
+run45095227918, job137433458794, all66 tests plus relocated packaged-app smoke.
+https://github.com/IllyaArtemchuk/dredmormac/actions/runs/45095227918
+All39 local groups and1,024 original stair-site comparisons passed. No game assets
+were committed or included in the synthetic development app.
+
+Next-phase inspection (not implemented): GenerateSecretDoors63436 performs three
+outer rounds. Candidate coordinates use libc bounded(width-6/height-6)+3. It checks
+three vertical walls and a placed-room template flag at+7c, then seeks a left or
+right two-cell pocket beside existing floor. The inner rejection budget reaches50;
+geometry with no usable pocket increments that counter twice, other failed checks
+once. Successful pockets change numeric cells, register a secret coordinate, call
+GenTreasure62578(false,true), and seek a lever location in x-major offsets-5..4.
+PassableOnAllSides5ffc4 requires ordinary floor throughout the in-bounds3x3 area,
+including center; the tile object list must also be empty. GenTreasure includes
+libc and MT draws and uses item-selection/construction routines: substituting a
+constant treasure without modeling RNG consumption would change later stair sites.
+LeverC1 is7c00e; its placement virtual98 resolves to GameObj::TeleportTo36e80,
+which inserts into the tile list at+18 (Item::TeleportTo5c0dc forwards there too).
+The flag+7c semantic mapping and full treasure/lever effects still need validation.
+Private Capstone notes are /workspace/work/analysis/{63436,62578,5ffc4,7c00e}.txt.
+The restored data root is /workspace/work/gameframe-home/games/dredmor/game/
+Dungeons of Dredmor.app/Contents/MacOS. CMake/Unicorn/Capstone are in .venv. This
+replacement machine has no previous Ghidra projects or GameFrame tool checkout.
