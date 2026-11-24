@@ -241,6 +241,7 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
 - (BOOL)smokeInventory;
 - (BOOL)smokeRoomMonsters;
 - (BOOL)smokeHordes;
+- (BOOL)hasScriptedHordes;
 - (BOOL)smokeArtifact;
 - (BOOL)smokeSkillSelection;
 - (BOOL)smokeCustomObjects;
@@ -743,6 +744,11 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
         if (!content) throw std::runtime_error("script record requires installation content");
         return content->create_script_record(candidate,record,trapMap,origin);
     };
+    const auto layout=_roomScripts->layout;
+    hooks.queue_horde=[content,layout](auto& candidate,const auto& record,auto origin) {
+        if (!content) throw std::runtime_error("script horde requires installation content");
+        content->queue_script_horde(candidate,record,layout,{{{0,0},{layout.width(),layout.height()}}},origin);
+    };
     hooks.breakable_frames=[root](const auto& definition) {
         return breakableFrames(breakableSprites(definition.intact,definition.breaking.value_or(definition.intact),definition.broken,root));
     };
@@ -1003,14 +1009,25 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
             }
         }
         if (leaders!=2 || followers!=2 || ![self smokeSaveLoad]) return NO;
-        std::ostringstream before;_session->save(before);auto bad=before.str();
+        std::ostringstream before;
+        if (_roomScripts) dredmor::SessionRoomScriptExecutor::save(before,*_session,*_roomScripts,*_roomScriptObjects,_roomScriptRuntime);else _session->save(before);
+        auto bad=before.str();
         const auto field=bad.find("leader=\"2\"");if (field==std::string::npos) return NO;bad.replace(field,10,"leader=\"999\"");
         NSURL *url=[NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID.UUID.UUIDString stringByAppendingString:@".dredmor-save"]]];
         NSData *data=[NSData dataWithBytes:bad.data() length:bad.size()];if (![data writeToURL:url options:NSDataWritingAtomic error:nullptr]) return NO;
         auto oldImages=_enemyImages;bool rejected=false;try {[self loadFromURL:url];} catch(const std::exception&) {rejected=true;}
-        [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];std::ostringstream after;_session->save(after);
+        [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];std::ostringstream after;
+        if (_roomScripts) dredmor::SessionRoomScriptExecutor::save(after,*_session,*_roomScripts,*_roomScriptObjects,_roomScriptRuntime);else _session->save(after);
         return rejected && oldImages==_enemyImages && after.str()==before.str();
     } catch(const std::exception& error) {fprintf(stderr,"native hordes: %s\n",error.what());return NO;}
+}
+- (BOOL)hasScriptedHordes {
+    if (!_roomScripts || !_roomScriptObjects || _roomScriptObjects->bindings().size()!=5) return NO;
+    const auto count=_roomScriptRuntime.triggers.success_counts.find({0,0});
+    if (count==_roomScriptRuntime.triggers.success_counts.end() || count->second!=1) return NO;
+    for (const auto& binding:_roomScriptObjects->bindings()) if (binding.reference.kind==dredmor::SessionRoomObjectKind::monster)
+        if (binding.object.assigned_room!=-1 || !binding.object.id.empty()) return NO;
+    return YES;
 }
 - (BOOL)smokeTraps {
     NSURL *url=[NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:
@@ -1739,6 +1756,7 @@ int main(int argc,const char**argv) {
                     ([scene[@"smoke_artifact"] boolValue] && ![view smokeArtifact]) ||
                     ([scene[@"smoke_room_monsters"] boolValue] && ![view smokeRoomMonsters]) ||
                     ([scene[@"smoke_hordes"] boolValue] && ![view smokeHordes]) ||
+                    ([scene[@"smoke_script_hordes"] boolValue] && ![view hasScriptedHordes]) ||
                     ([scene[@"smoke_floors"] boolValue] && ![view smokeFloors]) ||
                     ([scene[@"smoke_secret_levers"] boolValue] && ![view smokeSecretLevers]) ||
                     ([scene[@"smoke_script_levers"] boolValue] && ![view smokeScriptLevers]) ||

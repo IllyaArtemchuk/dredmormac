@@ -26,6 +26,9 @@ struct SessionRoomScriptHooks {
     // Mutations must stay in the supplied candidate Session; definitions and
     // resource callbacks are immutable. Returned objects are already placed.
     std::function<std::optional<SessionRoomObjectRef>(Session&,const RoomRecord&,Position)> create_record;
+    // Queue through Session::queue_room_horde; do not flush placements here.
+    // The executor merges each group's forced placements with script moves.
+    std::function<void(Session&,const RoomHordeRecord&,Position)> queue_horde;
     std::function<std::optional<ScriptItemType>(Session&,std::string_view,std::string_view)> create_prototype;
     std::function<std::vector<ScriptTileItem>(const Session&,Position)> tile_items;
     std::function<BreakableFrames(const BreakableRoomDefinition&)> breakable_frames;

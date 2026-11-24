@@ -1,5 +1,6 @@
 #include "dredmor/content.hpp"
 #include "dredmor/floors.hpp"
+#include "dredmor/session_room_scripts.hpp"
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -91,6 +92,48 @@ int main(int argc,char** argv) {
         spacious.place_queued_hordes();check(spacious.enemies().size()==4);
         for (const auto& actor:spacious.enemies()) check(actor.position.x!=2 || actor.position.y!=1);
         spacious.step(Action::east);spacious.step(Action::wait);check(spacious.player().position.x==2 && spacious.player().position.y==1);
+        // Script Create shares the same placement phase as Move actions. Newly
+        // constructed groups are absent from registration/occupancy until that
+        // phase; two Create calls can choose the same follower square.
+        Session scripted(make_world(),make_player({3,2,2}),1);
+        CustomRoomDefinition gate;gate.placement.relative={2,1};gate.placement.id="gate";gate.sprite.image="gate.spr";
+        scripted.create_custom_object(gate);
+        RoomDefinition script_room;script_room.rows={"#####","#..##","##1##","#####"};
+        script_room.source=parse_xml(R"(<room width="5" height="4"><script>
+            <action on="success" action_type="move" id="gate" x="1" y="2"/>
+            <action on="success" action_type="create" create_type="horde" name="Fixture variant" min="0" additional="0" at="1" id="ignored-script-horde"/>
+            <action on="success" action_type="move" id="player" at="1"/>
+            <action on="success" action_type="create" create_type="horde" name="Fixture variant" min="0" additional="0" at="1" id="ignored-script-horde"/>
+            <action on="success" action_type="remove" id="gate"/></script></room>)");
+        auto script_program=std::make_shared<const RoomScriptProgram>(script_room.script_program());
+        SessionRoomScriptProfile script_profile(layout);script_profile.programs={script_program};script_profile.sources={script_room.source};
+        script_profile.rooms={{{true,1,0,std::shared_ptr<const std::vector<RoomScriptDefinition>>(script_program,&script_program->scripts)},{0,0},1}};
+        SessionRoomObjects script_objects;script_objects.bind(scripted,{SessionRoomObjectKind::player,scripted.player().id},layout);
+        const auto gate_object=script_objects.bind(scripted,{SessionRoomObjectKind::custom,1},layout).object.identity;
+        check(gate_object==2); // same number as the next actor, different domain
+        RoomRuntimeState script_runtime;SessionRoomScriptHooks script_hooks;unsigned groups=0;
+        script_hooks.queue_horde=[&](auto& owner,const auto& definition,auto origin) {
+            if (groups) for (const auto& actor:owner.enemies()) check(actor.position.x==-1 && actor.position.y==-1);
+            ++groups;check(content.queue_script_horde(owner,definition,layout,rooms,origin));
+        };
+        const auto scripted_before=save(scripted);auto failed_objects=script_objects;auto failed_runtime=script_runtime;
+        auto failure=script_hooks;failure.queue_horde=[&](auto& owner,const auto& definition,auto origin) {
+            content.queue_script_horde(owner,definition,layout,rooms,origin);throw std::runtime_error("script horde resource failure");
+        };
+        rejected=false;try {SessionRoomScriptExecutor::run(scripted,script_profile,failed_objects,failed_runtime,failure);} catch(const std::runtime_error&) {rejected=true;}
+        check(rejected && save(scripted)==scripted_before && failed_objects.bindings().size()==2 && failed_runtime.triggers.success_counts.empty());
+        auto script_result=SessionRoomScriptExecutor::run(scripted,script_profile,script_objects,script_runtime,script_hooks);
+        check(groups==2 && script_result.player_teleported && scripted.enemies().size()==4 && scripted.custom_objects().empty() && !scripted.queued_horde_members());
+        check(scripted.player().position.x==2 && scripted.player().position.y==2 && script_objects.bindings().size()==5);
+        for (const auto& actor:scripted.enemies()) check(actor.position.x==2 && actor.position.y==2 && actor.horde && actor.room_local_id.empty());
+        check(!script_objects.object(scripted,gate_object));
+        for (std::size_t i=1;i<script_objects.bindings().size();++i) check(script_objects.bindings()[i].reference.subject==i+1 && script_objects.bindings()[i].object.assigned_room==-1 && script_objects.bindings()[i].object.id.empty());
+        Session direct(make_world(),make_player({3,2,2}),1);
+        for (const auto& created:script_program->created_records) check(content.queue_script_horde(direct,std::get<RoomHordeRecord>(created),layout,rooms));
+        direct.place_queued_hordes();direct.swap_floor(direct.floor_state(),{2,2});check(save(direct)==save(scripted));
+        std::ostringstream script_save;SessionRoomScriptExecutor::save(script_save,scripted,script_profile,script_objects,script_runtime);
+        std::istringstream script_input(script_save.str());auto script_restored=SessionRoomScriptExecutor::load(script_input,script_profile);
+        check(save(script_restored.session)==save(scripted) && script_restored.objects.bindings().size()==5);
         std::cout<<"horde placement batches preserve pending occupancy, duplicate sites, group links/colour/stats through save24/floor cache and rollback failed construction\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

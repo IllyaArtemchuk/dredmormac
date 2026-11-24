@@ -110,6 +110,15 @@ std::optional<SessionRoomObjectRef> GameContent::create_script_record(Session& s
         return std::nullopt;
     },record);
 }
+std::optional<HordeResult> GameContent::queue_script_horde(Session& session,const RoomHordeRecord& record,const DungeonLayout& layout,
+    const std::vector<HordeRoomBounds>& rooms,Position origin,Difficulty difficulty) const {
+    const auto depth=session.depth_context().depth;
+    return session.queue_room_horde(record,layout,rooms,[&](const auto& plan,const auto& world,const auto& counts,auto& random,auto first) {
+        HordeOptions options;options.position=plan.position;options.minimum=plan.minimum;options.additional=plan.additional;
+        options.depth=depth;if (!plan.name.empty()) options.named=plan.name;
+        return create_horde(options,world,difficulty,depth,counts,random,first);
+    },origin);
+}
 RoomStamp RoomDefinition::numeric_template() const {
     const auto width=legacy_attribute(source,"width"),height=legacy_attribute(source,"height");
     if (!width || !height || *width<1 || *height<1 || *width>512 || *height>512 || rows.size()>std::size_t(*height))

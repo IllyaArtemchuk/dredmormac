@@ -15,10 +15,12 @@ SessionRoomScriptPass SessionRoomScriptExecutor::run(Session& session,const Sess
             throw std::invalid_argument("room script profile has mismatched program");
     }
     if (!objects.player()) throw std::invalid_argument("room scripts require a registered player");
+    if (session.queued_horde_members()) throw std::invalid_argument("finish initial horde placement before a scripted turn");
     auto candidate=session;auto bindings=objects;auto state=runtime;
     SessionRoomScriptPass result;
     std::vector<std::uint64_t> destruction;
-    std::vector<std::pair<std::uint64_t,Position>> teleports;
+    struct PendingMove {std::uint64_t subject;Position point;bool horde=false;};
+    std::vector<PendingMove> teleports;
     auto reference=[&](std::uint64_t identity) {
         for (const auto& binding:bindings.bindings()) if (binding.object.identity==identity) return binding.reference;
         throw std::runtime_error("script action refers to an unregistered object");
@@ -53,7 +55,21 @@ SessionRoomScriptPass SessionRoomScriptExecutor::run(Session& session,const Sess
                 if (request.room<0 || std::size_t(request.room)>=profile.programs.size() || !request.subject)
                     throw std::runtime_error("invalid script Create handle");
                 const auto& record=profile.programs.at(request.room)->created_records.at(request.subject-1);
-                if (std::holds_alternative<RoomHordeRecord>(record)) throw std::runtime_error("script horde creation requires merged deferred placement queues");
+                if (const auto* horde=std::get_if<RoomHordeRecord>(&record)) {
+                    if (!hooks.queue_horde) throw std::runtime_error("script horde creation requires a constructor boundary");
+                    const auto registered=candidate.enemies_.size();
+                    hooks.queue_horde(candidate,*horde,request.origin);
+                    if (candidate.enemies_.size()!=registered) throw std::runtime_error("script horde constructor must leave placements queued");
+                    for (auto& group:candidate.pending_hordes_) for (std::size_t i=0;i<group.actors.size();++i) {
+                        // The source actors have been constructed but have no
+                        // level registration until their queued placements.
+                        // Negative port coordinates keep these actors out of
+                        // subsequent occupancy searches during this pass.
+                        auto& actor=group.actors[i];actor.position={-1,-1};
+                        teleports.push_back({actor.id,group.teleports[i].position,true});candidate.enemies_.push_back(std::move(actor));
+                    }
+                    candidate.pending_hordes_.clear();break;
+                }
                 auto created=std::visit([&](const auto& definition)->std::optional<SessionRoomObjectRef> {
                     using T=std::decay_t<decltype(definition)>;
                     if constexpr (std::is_same_v<T,CustomRoomDefinition>) {
@@ -86,7 +102,7 @@ SessionRoomScriptPass SessionRoomScriptExecutor::run(Session& session,const Sess
                 break;
             case RoomActionRequestKind::teleport:
                 if (!request.forced) throw std::runtime_error("room script teleport requires forced placement");
-                teleports.emplace_back(request.subject,request.target);break;
+                teleports.push_back({request.subject,request.target,false});break;
             case RoomActionRequestKind::set_blocking:custom(reference(request.subject)).blocks_movement=request.value!=0;break;
             case RoomActionRequestKind::cast_spell: {
                 if (!request.subject || reference(request.caster).kind!=SessionRoomObjectKind::player) throw std::runtime_error("invalid scripted spell caster or handle");
@@ -134,11 +150,16 @@ SessionRoomScriptPass SessionRoomScriptExecutor::run(Session& session,const Sess
         bindings.erase_subject(ref);
         // Source derived/base destruction removes queued teleports targeting
         // this object before the later forced-placement pass.
-        teleports.erase(std::remove_if(teleports.begin(),teleports.end(),[&](const auto& value){return value.first==identity;}),teleports.end());
+        teleports.erase(std::remove_if(teleports.begin(),teleports.end(),[&](const auto& value){return !value.horde && value.subject==identity;}),teleports.end());
     }
-    for (const auto& [identity,point]:teleports) {
+    for (const auto& move:teleports) {
+        const auto identity=move.subject;const auto point=move.point;
         if (point.x<0 || point.y<0 || point.x>=candidate.world_.width() || point.y>=candidate.world_.height())
             throw std::runtime_error("Session cannot yet persist out-of-grid script teleports");
+        if (move.horde) {
+            candidate.actor_by_id(identity).position=point;
+            bindings.bind(candidate,{SessionRoomObjectKind::monster,identity},profile.layout,false);continue;
+        }
         const auto ref=reference(identity);
         switch (ref.kind) {
             case SessionRoomObjectKind::player:
@@ -155,6 +176,7 @@ SessionRoomScriptPass SessionRoomScriptExecutor::run(Session& session,const Sess
             case SessionRoomObjectKind::keeper:throw std::runtime_error("script keeper teleport requires shop guard integration");
         }
     }
+    candidate.validate_hordes();
     session=std::move(candidate);objects=std::move(bindings);runtime=std::move(state);return result;
 }
 }

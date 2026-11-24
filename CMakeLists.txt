@@ -454,6 +454,13 @@ if(APPLE)
     add_test(NAME native-hordes-window COMMAND $<TARGET_FILE:DredmorMac>
       ${CMAKE_BINARY_DIR}/native-hordes/scene.json --smoke-test)
     set_tests_properties(native-hordes-window PROPERTIES FIXTURES_REQUIRED native-hordes TIMEOUT 20)
+    add_test(NAME native-script-hordes-fixture COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-script-hordes
+      --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --script-hordes)
+    set_tests_properties(native-script-hordes-fixture PROPERTIES FIXTURES_SETUP native-script-hordes)
+    add_test(NAME native-script-hordes-window COMMAND $<TARGET_FILE:DredmorMac>
+      ${CMAKE_BINARY_DIR}/native-script-hordes/scene.json --smoke-test)
+    set_tests_properties(native-script-hordes-window PROPERTIES FIXTURES_REQUIRED native-script-hordes TIMEOUT 25)
     add_test(NAME native-monsters-fixture COMMAND ${Python3_EXECUTABLE}
       ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-monsters
       --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --monsters)

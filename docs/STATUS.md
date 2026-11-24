@@ -1971,3 +1971,22 @@ null-level non-monster detach now shares this kernel;8,192 complete original
 lifecycle fixtures still match. All70 portable groups pass. Missing attachments
 and non-item identities remain input guards. Next continue script horde queue
 integration and remaining native/runtime lifetimes; the full game is unfinished.
+
+Item-detachmentb117346 passed Mac45401844497 and packaged-app smoke. Scripted
+Horde Create now uses GameContent::queue_script_horde and merges its queued
+placements with Move actions in source order. Constructors produce unregistered
+actors (port coordinates -1,-1); later horde searches do not reserve their sites.
+Groups join the live binding registry only when their forced placements run,
+without RoomRecord finalization. Destruction filters distinguish opaque script
+object IDs from actor IDs, so cancelling a removed object's move cannot cancel a
+new horde actor with the same numeric ID. Group links validate before commit.
+Portable integration creates two groups interleaved with player/object moves and
+removal, compares full Session/RNG bytes with direct batched construction,
+checks duplicate sites/unplaced searches/ignored finalizer and saves/restores
+all group bindings. Failed horde constructors roll back the complete candidate.
+All70 portable groups pass; focused session-hordes rerun passes after a queue-only
+callback guard. New native-script-hordes fixture creates both groups from a room
+entry script, checks render/group stats/counters/bindings/save+bad leader rollback.
+Synthetic fixture generates outside git; native validation pending. Full GameTick/
+Post/AI/quest/destructor/visibility and earlier clock/effect/generation/UI/audio/
+complete-game work remains unfinished.

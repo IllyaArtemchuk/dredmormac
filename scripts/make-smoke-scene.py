@@ -34,6 +34,7 @@ if __name__=='__main__':
     p.add_argument('--objects',action='store_true',help='Synthetic persisted SPR/PNG-series room objects')
     p.add_argument('--breakables',action='store_true',help='Synthetic breakable and pedestal interaction fixture')
     p.add_argument('--hordes',action='store_true',help='Deferred horde batches, leader colour/group metadata and saved groups')
+    p.add_argument('--script-hordes',action='store_true',help='Room-entry script creates and saves two deferred horde batches')
     p.add_argument('--monsters',action='store_true',help='Named room monster with constructor difficulty adjustment')
     p.add_argument('--traps',action='store_true',help='Automatic trap casting, charges, origins and persisted spell rules')
     p.add_argument('--casting',action='store_true',help='Learned player spells, targeted input, costs and saved cooldowns')
@@ -77,6 +78,7 @@ if __name__=='__main__':
     if args.doors and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers,args.decorations,args.shops,args.automatic_armour])):p.error('--doors requires --content-source and excludes other fixture types')
     if args.hordes and (not args.content_source or any([args.inventory,args.artifact,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers,args.decorations,args.shops,args.automatic_armour,args.doors,args.script_levers])):p.error('--hordes requires --content-source and excludes other fixture types')
     if args.room_scripts and (not args.content_source or any([args.inventory,args.artifact,args.combat,args.objects,args.breakables,args.hordes,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers,args.decorations,args.shops,args.automatic_armour,args.doors,args.script_levers])):p.error('--room-scripts requires --content-source and excludes other fixture types')
+    if args.script_hordes and (not args.content_source or any([args.inventory,args.artifact,args.combat,args.objects,args.breakables,args.hordes,args.room_scripts,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers,args.decorations,args.shops,args.automatic_armour,args.doors,args.script_levers])):p.error('--script-hordes requires --content-source and excludes other fixture types')
     if args.content_source:
         root=out/'installation';shutil.copytree(args.content_source,root,dirs_exist_ok=True)
         (root/'tilesets').mkdir(exist_ok=True);(root/'sprites/hero').mkdir(parents=True,exist_ok=True)
@@ -212,11 +214,16 @@ if __name__=='__main__':
             (root/'dungeon/trap.spr').write_bytes(sprite());(root/'dungeon/origin.spr').write_bytes(sprite())
             (root/'dungeon/trap_hidden.png').write_bytes(png(32,32,(90,90,90,255)))
             scene.update(data_root=str(root),room_objects='Starting Room',smoke_traps=True,seed=1)
-        if args.hordes:
+        if args.hordes or args.script_hordes:
             rows=['#############','#@..........#','#...........#','#...........#','#...........#','#..........1#','#############']
             database=ET.Element('roomdb');room=ET.SubElement(database,'room',{'name':'Starting Room','width':'13','height':'7'})
             for row in rows:ET.SubElement(room,'row',{'text':row.replace('@','.')})
-            for _ in range(2):ET.SubElement(room,'horde',{'at':'1','name':'Fixture variant','min':'0','additional':'0'})
+            if args.script_hordes:
+                script=ET.SubElement(room,'script');ET.SubElement(script,'condition',{'condition_type':'entered'})
+                for _ in range(2):ET.SubElement(script,'action',{'on':'success','action_type':'create','create_type':'horde','at':'1','name':'Fixture variant','min':'0','additional':'0'})
+                scene.update(room_scripts=True,smoke_script_hordes=True)
+            else:
+                for _ in range(2):ET.SubElement(room,'horde',{'at':'1','name':'Fixture variant','min':'0','additional':'0'})
             ET.ElementTree(database).write(root/'game/rooms.xml',encoding='unicode')
             (root/'game/monDB.xml').write_text('<monDB><monster name="Fixture monster"><stats numFig="2" numWiz="1" numRog="1"/><idleSprite down="dungeon/fixture.spr"/><monster name="Fixture variant" level="1"><palette tint="120"/></monster></monster></monDB>')
             (root/'game/text.xml').write_text('<text><startphoneme text="S"/><phoneme text="x"/><title text="Strong"/><noun text="Noun" plural="People"/><adjective text="Old"/></text>')

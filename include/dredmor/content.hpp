@@ -58,6 +58,8 @@ public:
     // records. Caller supplies the live trap grid and owns resource preflight.
     std::optional<SessionRoomObjectRef> create_script_record(Session& session,const RoomRecord& record,
         const TrapMap& map,Position origin={0,0},Difficulty difficulty=Difficulty::medium,std::size_t level_set=0) const;
+    std::optional<HordeResult> queue_script_horde(Session& session,const RoomHordeRecord& record,const DungeonLayout& layout,
+        const std::vector<HordeRoomBounds>& rooms,Position origin={0,0},Difficulty difficulty=Difficulty::medium) const;
     const MonsterDefinition& monster(std::string_view name) const;
     const Tweaks& tweaks() const { return tweaks_; }
     const RoomNameWords& room_name_words() const { return room_name_words_; }
