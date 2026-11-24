@@ -250,6 +250,7 @@ public:
                         std::shared_ptr<const std::vector<SpellDefinition>> spells={});
 private:
     friend class SessionRoomScriptExecutor;
+    friend class SessionGameTickExecutor;
     friend class FloorRegistry;
     static Session load_node(const XmlNode& root,std::shared_ptr<const std::vector<ItemDefinition>> definitions,
                              std::shared_ptr<const std::vector<AbilityDefinition>> abilities,
@@ -279,6 +280,7 @@ private:
     struct PendingHorde {std::vector<Actor> actors;std::vector<RoomTeleport> teleports;};
     std::vector<PendingHorde> pending_hordes_;
     bool script_phase_pending_=false;
+    bool game_tick_active_=false;
     std::vector<GroundItem> ground_;
     std::vector<CustomRoomObject> custom_objects_;
     std::vector<BreakableRoomObject> breakables_;

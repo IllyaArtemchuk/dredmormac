@@ -1,5 +1,6 @@
 #include "dredmor/content.hpp"
 #include "dredmor/game_tick.hpp"
+#include "dredmor/session_game_tick.hpp"
 #include "dredmor/session_room_scripts.hpp"
 #include <iostream>
 #include <sstream>
@@ -8,6 +9,10 @@
 using namespace dredmor;
 template<class F> bool rejects(F body) {try {body();} catch(const std::exception&) {return true;}return false;}
 std::string saved(const Session& value) {std::ostringstream out;value.save(out);return out.str();}
+std::string without_random(const Session& value) {
+    auto bytes=saved(value);const auto begin=bytes.find("<random "),end=bytes.find("</random>",begin);
+    check(begin!=std::string::npos && end!=std::string::npos);bytes.erase(begin,end+9-begin);return bytes;
+}
 int main() {
     try {
         RoomDefinition room;room.rows={"#####","#123#","#####"};
@@ -47,44 +52,52 @@ int main() {
         check(pass.player_teleported && direct_pass.player_teleported && saved(session)==saved(direct));
         check(pending.stage==SessionRoomScriptStage::finished && rejects([&]{SessionRoomScriptExecutor::place_next(session,objects,pending);}));
         check(saved(committed)==before); // only candidate snapshots were mutated
-        // Compose these phases with the recovered outer GameTick. Virtual
-        // object/player/director bodies are controlled boundaries here; this
-        // is not adoption of the provisional Session enemy turn scheduler.
+        // Compose these phases with the recovered outer GameTick and its
+        // candidate-owned RNG. Virtual object/player/director bodies remain
+        // controlled boundaries, rather than the provisional enemy scheduler.
         session=committed;objects=committed_objects;runtime=committed_runtime;
         GameTickState tick;tick.level=TickLevelState{5,3,true,{gate_id,player_id},std::vector<std::vector<std::uint64_t>>(15)};
         tick.player.position=session.player().position;tick.player.action_delay=1;tick.spell_cooldowns={3,0,-1};
-        GameRandom random;random.seed(7);std::optional<SessionRoomScriptQueue> queue;
+        std::optional<SessionRoomScriptQueue> queue;
         std::vector<std::uint64_t> updates,posts;unsigned moves=0,saves=0;bool finished=false;
-        auto refresh=[&] {tick.level->objects.clear();for (const auto& binding:objects.bindings()) tick.level->objects.push_back(binding.object.identity);};
-        GameTickHooks hooks;
-        hooks.perform=[&](const TickRequest& request) {
+        SessionGameTickHooks hooks;
+        hooks.perform=[&](Session& candidate,GameTickState& pending,const TickRequest& request) {
             switch (request.kind) {
                 case TickRequestKind::object_update:updates.push_back(request.object);break;
                 case TickRequestKind::room_triggers:
-                    queue=SessionRoomScriptExecutor::evaluate(session,profile,objects,runtime);refresh();break;
+                    queue=SessionRoomScriptExecutor::evaluate(candidate,profile,objects,runtime);break;
                 case TickRequestKind::clear_destruction:
-                    SessionRoomScriptExecutor::clear_destruction(session,objects,*queue);refresh();
-                    for (const auto& move:queue->moves) tick.teleports.push_back({move.subject,queue->level,move.point});
+                    SessionRoomScriptExecutor::clear_destruction(candidate,objects,*queue);
+                    for (const auto& move:queue->moves) pending.teleports.push_back({move.subject,queue->level,move.point});
                     break;
                 case TickRequestKind::post_game_tick:
-                    check(!objects.find(session,0,"gate") && session.player().position.x==1 && tick.spell_cooldowns[0]==3);
+                    check(!objects.find(candidate,0,"gate") && candidate.player().position.x==1 && pending.spell_cooldowns[0]==3);
                     posts.push_back(request.object);break;
                 case TickRequestKind::teleport:
-                    check(request.object==player_id && tick.spell_cooldowns[0]==2 && tick.player.action_delay==0);
-                    check(request.position.x==int(moves)+2);SessionRoomScriptExecutor::place_next(session,objects,*queue);
-                    tick.player.position=session.player().position;++moves;break;
+                    check(request.object==player_id && pending.spell_cooldowns[0]==2 && pending.player.action_delay==0);
+                    check(request.position.x==int(moves)+2);SessionRoomScriptExecutor::place_next(candidate,objects,*queue);
+                    pending.player.position=candidate.player().position;++moves;break;
                 case TickRequestKind::save_game:
-                    check(finished && saved(session)==saved(direct));++saves;break;
+                    check(finished && without_random(candidate)==without_random(direct));++saves;break;
                 default:break;
             }
         };
-        hooks.ticks=[&] {
-            if (!finished) {check(moves==2);SessionRoomScriptExecutor::finish(session,objects,*queue);finished=true;}
+        hooks.ticks=[&](Session& candidate,GameTickState&) {
+            if (!finished) {check(moves==2);SessionRoomScriptExecutor::finish(candidate,objects,*queue);finished=true;}
             return 300001U;
         };
-        run_game_tick(tick,random,hooks);
+        // The binding/runtime copies belong to this outer fixture transaction.
+        // Refresh the driver candidate, never its committed owner.
+        const auto perform=hooks.perform;
+        hooks.perform=[&](Session& candidate,GameTickState& pending,const TickRequest& request) {
+            perform(candidate,pending,request);
+            if (request.kind==TickRequestKind::room_triggers || request.kind==TickRequestKind::clear_destruction) {
+                pending.level->objects.clear();for (const auto& binding:objects.bindings()) pending.level->objects.push_back(binding.object.identity);
+            }
+        };
+        SessionGameTickExecutor::run(session,tick,hooks);
         check(updates==std::vector<std::uint64_t>({gate_id,player_id}) && posts==std::vector<std::uint64_t>({player_id,3}));
-        check(finished && saves==1 && moves==2 && saved(session)==saved(direct) && tick.teleports.empty());
+        check(finished && saves==1 && moves==2 && without_random(session)==without_random(direct) && saved(session)!=saved(direct) && tick.teleports.empty());
         std::cout<<"staged live scripts preserve pending lookup, destruction/Post/cooldown/teleport ordering and save guards\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

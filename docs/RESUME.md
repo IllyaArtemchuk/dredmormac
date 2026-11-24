@@ -2347,3 +2347,12 @@ This composes measured subparts; full SpawnMonster/teleport tile effects and
 native Session GameTick scheduling are not yet adopted. Next connect shared
 candidate RNG/driver state with staged scripts, then the missing actor/effect/
 clock/director lifetimes. Preserve explicit boundaries and atomic save behavior.
+
+Shared Session/driver transaction: SessionGameTickExecutor now runs GameTick on
+candidate.random_ (no second RNG), with explicit candidate callbacks and atomic
+Session/GameTickState commit.64seed construction/cache/live-order cases and
+late/recursive rollback pass; staged script fixture also now uses this bridge.
+All76portable groups pass; focused shared-room-phases rerun passes. This is still
+an integration boundary: native scheduler adoption, field projection and saved
+driver state remain pending. Mac respawn0d9c749 queued45415969486. Next recover
+Monster PostGameTick animation body and remaining virtual/subsystem lifetimes.

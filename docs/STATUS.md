@@ -2083,3 +2083,17 @@ trap-origin exclusion. Original comparison covers the location slice, not the
 whole SpawnMonster, teleport tile effects or outer native scheduler adoption.
 Session's existing movement/actor limits remain guards. Mac verification pending
 for this milestone. Full GameTick/AI/effects/generation/UI/audio/game unfinished.
+
+SessionGameTickExecutor now transacts the recovered outer driver with Session's
+own libc/MT/normal-cache streams; callbacks receive candidate Session and driver
+state explicitly. Nested ticks, active script entry and unfinished script/horde
+exit reject without committing. All76 portable groups pass.64 seeds compare
+live appended updates, respawn-boundary construction, complete RNG/cache state,
+actor results and driver transitions against separately driven composition;
+late Post/clock exceptions preserve both committed owners. The staged script
+fixture now uses this shared-RNG bridge, retaining destruction/Post/cooldown/
+teleport/autosave order and confirming the driver's incidental MT consumption.
+Subsystem hooks remain mandatory and explicit, and callbacks must buffer I/O.
+This bridge does not adopt native scheduling, synchronize every Session/driver
+field, or persist driver state; the caller still owns those integrations. Full
+game remains unfinished. Respawn0d9c749 is queued in Mac45415969486.
