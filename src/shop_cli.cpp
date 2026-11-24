@@ -1,4 +1,5 @@
 #include "dredmor/shops.hpp"
+#include "dredmor/generation.hpp"
 #include <cstring>
 #include <iostream>
 #include <iomanip>
@@ -6,7 +7,24 @@
 using namespace dredmor;
 int main(int argc,char** argv) {
     try {
-        if (argc==2 && std::string(argv[1])=="--quick-sell") {
+        if (argc==2 && std::string(argv[1])=="--update") {
+            std::uint32_t seed;bool angry,level_angry;unsigned base_libc,base_mt,spawn_libc,spawn_mt;int width,height;Position player;
+            while (std::cin>>seed>>angry>>level_angry>>base_libc>>base_mt>>spawn_libc>>spawn_mt>>width>>height>>player.x>>player.y) {
+                if (width<1 || height<1 || width>512 || height>512 || base_libc>8 || base_mt>8 || spawn_libc>8 || spawn_mt>8) throw std::invalid_argument("invalid keeper update fixture");
+                std::vector<DungeonCell> cells(std::size_t(width)*height);std::vector<bool> occupied(cells.size());
+                for (std::size_t i=0;i<cells.size();++i) {unsigned kind,object;std::cin>>kind>>object;if (!std::cin || kind>255 || object>1) throw std::invalid_argument("invalid keeper update cell");cells[i].kind=kind;occupied[i]=object;}
+                DungeonLayout map(width,height,std::move(cells));GameRandom random;random.seed(seed);std::vector<int> events{0};
+                const auto result=update_shopkeeper(angry,level_angry,random,[&](GameRandom& stream) {
+                    events.push_back(1);for (unsigned i=0;i<base_libc;++i) stream.libc.next();for (unsigned i=0;i<base_mt;++i) stream.mt.u32();
+                },[&](GameRandom& stream)->std::optional<Position> {
+                    events.push_back(2);const auto location=find_good_location_near(map,player,occupied,stream.libc);return location.found?std::optional<Position>{location.position}:std::nullopt;
+                },[&](Position,GameRandom& stream) {
+                    events.push_back(3);for (unsigned i=0;i<spawn_libc;++i) stream.libc.next();for (unsigned i=0;i<spawn_mt;++i) stream.mt.u32();events.push_back(4);
+                });
+                std::cout<<result.angry<<' '<<result.monster_updated<<' '<<result.location_queried<<' '<<result.collector_spawned<<' '<<(result.collector_position?result.collector_position->x:-1)<<' '<<(result.collector_position?result.collector_position->y:-1)<<' '<<events.size();for (auto event:events) std::cout<<' '<<event;
+                std::cout<<' '<<random.libc.state()<<' '<<random.mt.state().index;for (auto word:random.mt.state().words) std::cout<<' '<<word;for (int i=0;i<8;++i) std::cout<<' '<<random.mt.u32();std::cout<<'\n';
+            }
+        } else if (argc==2 && std::string(argv[1])=="--quick-sell") {
             bool present,unpaid;unsigned kind;int subtype;std::int32_t cost,balance;std::uint32_t bits;
             while (std::cin>>present>>unpaid>>kind>>subtype>>cost>>bits>>balance) {
                 float scaler;std::memcpy(&scaler,&bits,4);const auto action=resolve_quick_sale(present,unpaid,ItemKind(kind),subtype,cost,scaler,balance);

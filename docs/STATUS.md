@@ -1477,3 +1477,18 @@ Remaining shop gaps include crafting recipe rebuilds, mouse-held mode, original
 quip text/UI/audio and keeper/monster AI/collector updates. Complete generated
 floor content/scripts/population and an original reference playthrough remain
 unimplemented/unverified; the complete game is not finished.
+
+
+Quick-sale sourcec858a98 passed actual arm64 macos-15 run45345266000,
+job138278187281: all84 checks plus relocated packaged-app smoke.
+Shopkeeper::Update's wrapper is now ported with unconditional flavour request,
+level anger, base-update callback, MT quarter roll, current-player location query
+and Dread Collector construction/placement callback in original RNG order.
+All2,048 actual wrapper executions match, including119 collector requests; actual
+colour queue and complete location searches execute, while base AI/collector
+constructor/teleport boundaries are explicit. Full libc/MT state+next8 match.
+All50 portable groups pass, including failed-callback rollback. This does not
+implement full Monster::Update or attach keeper AI to the provisional scheduler.
+New source awaits arm64 CI. Ordinary door session/native integration and preceding
+room scripts/content still need completion before true generated-floor gameplay;
+remaining AI/effects/original UI/audio and reference playthrough are unfinished.

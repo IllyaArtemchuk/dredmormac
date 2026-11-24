@@ -136,4 +136,19 @@ std::vector<std::size_t> move_shop_keepers(std::vector<ShopKeeperPosition>& keep
     return moved;
 }
 
+ShopkeeperUpdate update_shopkeeper(bool angry,bool level_angry,GameRandom& random,
+    const std::function<void(GameRandom&)>& monster_update,
+    const std::function<std::optional<Position>(GameRandom&)>& find_site,
+    const std::function<void(Position,GameRandom&)>& spawn_collector) {
+    ShopkeeperUpdate result;result.angry=angry || level_angry;
+    if (!result.angry) return result;
+    if (!monster_update || !find_site || !spawn_collector) throw std::invalid_argument("angry keeper update needs all callbacks");
+    auto candidate=random;monster_update(candidate);result.monster_updated=true;
+    if (candidate.mt.bounded(4)==0) {
+        result.location_queried=true;const auto position=find_site(candidate);
+        if (position) {spawn_collector(*position,candidate);result.collector_spawned=true;result.collector_position=position;}
+    }
+    random=std::move(candidate);return result;
+}
+
 }

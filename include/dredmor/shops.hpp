@@ -2,6 +2,7 @@
 #include "dredmor/currency.hpp"
 #include "dredmor/shop_layout.hpp"
 #include "dredmor/equipment.hpp"
+#include <functional>
 
 namespace dredmor {
 // Original virtual Item/Weapon/Armour::GetShopCost. A missing definition uses
@@ -54,4 +55,17 @@ struct ShopPedestalAction {
 // the virtual shop cost (whose base already includes stack quantity).
 ShopPedestalAction resolve_shop_pedestal(bool has_item,std::int32_t shop_cost,bool stackable,
     std::int32_t quantity,float buy_scaler,int dialog_choice,std::int32_t balance);
+struct ShopkeeperUpdate {
+    bool angry=false,monster_updated=false,location_queried=false,collector_spawned=false;
+    std::optional<Position> collector_position;
+    std::string flavour_text="You hear the sounds of a cash register.";
+};
+// Shopkeeper::Update wrapper: base monster update, quarter MT roll, current
+// player site query, then Dread Collector construction/placement. Callbacks must
+// act on provisional caller-owned state; this function commits RNG on success.
+ShopkeeperUpdate update_shopkeeper(bool angry,bool level_angry,GameRandom& random,
+    const std::function<void(GameRandom&)>& monster_update,
+    const std::function<std::optional<Position>(GameRandom&)>& find_site,
+    const std::function<void(Position,GameRandom&)>& spawn_collector);
+
 }

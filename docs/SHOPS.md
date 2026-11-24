@@ -301,3 +301,25 @@ full control flow is not compared. Local tests cover outside-shop refusal, sale
 without adjacent keeper, full-stack credit and unpaid rejection. Native controller
 smoke adds quick selling and save/reload of the resulting inventory/wallet state.
 All49 portable groups pass; actual arm64 validation is pending for quick selling.
+
+`update_shopkeeper` implements Shopkeeper::Update0x3f3ea's ordered wrapper. It
+always requests the cash-register flavour text. Level anger propagates to the
+keeper; angry keepers invoke base Monster::Update, then draw MT bounded4. Result0
+queries the current-player spawn site and, on success, constructs/places a Dread
+Collector. The three operations are callbacks over provisional caller state, so
+base AI and collector constructor random draws occur at their original points.
+RNG commits only on success; side-effect callbacks must use caller-owned candidates.
+Calm keepers invoke none of those callbacks and consume no random draws.
+
+    .venv/bin/python scripts/verify_keeper_update.py ORIGINAL build/dredmor-shop --cases 2048 --out PRIVATE.json
+
+All2,048 actual complete Shopkeeper::Update executions match, including119
+collector requests. Actual flavour-queue append and the complete nearby/bounded
+location helpers execute. Base Monster::Update and collector construction are
+controlled recording boundaries with varied libc/real-MT consumption; name lookup
+and final SafeTeleport record requests. Comparison includes anger, callback/event
+order, quarter rolls, site failures, collector kind/position, libc and full MT state
+plus next8. This does not establish complete base AI, constructor or teleport
+parity and is not yet attached to the Session's provisional monster scheduler.
+Local tests cover calm/angry ordering, unavailable sites and failed-construction
+RNG rollback. All50 portable groups pass; actual arm64 validation is pending.
