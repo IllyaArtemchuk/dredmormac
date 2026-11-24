@@ -86,6 +86,7 @@ struct SessionFloor {
     std::int32_t branch=0;
     std::vector<StairPlacement> stairs;
     std::vector<SecretLever> secret_levers;
+    std::vector<ScriptLever> script_levers;
     std::optional<SessionDoors> doors;
     std::vector<Actor> enemies;
     std::vector<GroundItem> ground;
@@ -154,6 +155,9 @@ public:
         const std::function<BreakableFrames(const BreakableRoomDefinition&)>& resources);
     bool strike_breakable(std::size_t index);
     TrapSelection select_trap_candidate(const std::vector<TrapCandidate>& pool,SpawnDepthContext depth,float deviation);
+    const std::vector<ScriptLever>& script_levers() const {return script_levers_;}
+    std::optional<std::size_t> create_script_lever(const RoomElementDefinition& definition,Position origin={0,0});
+    bool use_script_lever(std::size_t index,bool held_item=false);
     const std::vector<TurnEvent>& events() const { return events_; }
     const Progression& progression() const { return progression_; }
     SpawnDepthContext depth_context() const {return depth_context_;}
@@ -222,6 +226,8 @@ private:
                              std::shared_ptr<const std::vector<SpellDefinition>> spells);
     std::vector<StairPlacement> stairs_;
     std::vector<SecretLever> secret_levers_;
+    std::vector<ScriptLever> script_levers_;
+    void use_script_lever_impl(std::size_t index);
     void use_secret_lever_impl(std::size_t index);
     std::optional<SessionDoors> doors_;
     std::optional<DoorClickResult> last_door_click_;

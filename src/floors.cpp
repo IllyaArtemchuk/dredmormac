@@ -27,7 +27,7 @@ void validate_global_ids(const Session& session,const std::vector<SessionFloor>&
 }
 }
 SessionFloor Session::floor_state() const {
-    SessionFloor floor(world_);floor.depth=depth_context_;floor.branch=floor_branch_;floor.stairs=stairs_;floor.secret_levers=secret_levers_;
+    SessionFloor floor(world_);floor.depth=depth_context_;floor.branch=floor_branch_;floor.stairs=stairs_;floor.secret_levers=secret_levers_;floor.script_levers=script_levers_;
     floor.enemies=enemies_;floor.ground=ground_;floor.objects=custom_objects_;floor.breakables=breakables_;floor.traps=traps_;floor.shops=shops_;floor.shop_presence=shop_presence_;floor.doors=doors_;return floor;
 }
 void Session::floor_secret_levers(std::vector<SecretLever> levers) {
@@ -57,7 +57,7 @@ SessionFloor Session::swap_floor(SessionFloor floor,Position arrival) {
     auto next=*this;auto previous=floor_state();const auto turn=world_.turn();
     next.item_floor_=next_item_instance();
     floor.world.place_player(arrival,turn);next.world_=std::move(floor.world);next.player_.position=arrival;
-    next.depth_context_=floor.depth;next.doors_.reset();next.last_door_click_.reset();next.secret_levers_.clear();next.floor_stairs(std::move(floor.stairs),floor.branch);next.floor_secret_levers(std::move(floor.secret_levers));
+    next.script_levers_=std::move(floor.script_levers);next.depth_context_=floor.depth;next.doors_.reset();next.last_door_click_.reset();next.secret_levers_.clear();next.floor_stairs(std::move(floor.stairs),floor.branch);next.floor_secret_levers(std::move(floor.secret_levers));
     if (floor.doors) next.floor_doors(std::move(*floor.doors));
     next.enemies_=std::move(floor.enemies);next.ground_=std::move(floor.ground);next.custom_objects_=std::move(floor.objects);
     next.breakables_=std::move(floor.breakables);next.traps_=std::move(floor.traps);next.shops_=std::move(floor.shops);next.shop_presence_=floor.shop_presence;next.events_.clear();

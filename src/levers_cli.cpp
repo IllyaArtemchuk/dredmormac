@@ -4,8 +4,19 @@
 #include <iostream>
 #include <stdexcept>
 using namespace dredmor;
-int main() {
+int main(int argc,char** argv) {
     try {
+        if (argc==2 && std::string(argv[1])=="--scripted") {
+            ActivationState activation;bool tutorial,held;int mode;Position position,player;
+            while (std::cin>>activation.current>>activation.previous>>activation.older>>tutorial>>mode>>position.x>>position.y>>player.x>>player.y>>held) {
+                const bool handled=mode==0 || mode==2 || can_click_secret_lever({position,{0,0},false},player,held);
+                SecretLeverActivation result;if (handled) result=flip_script_lever(activation,tutorial);
+                std::cout<<handled<<' '<<activation.current<<' '<<activation.previous<<' '<<activation.older<<' '<<result.tutorial_event<<' '<<result.messages.size();
+                for (const auto& message:result.messages) std::cout<<' '<<std::quoted(message);
+                std::cout<<' '<<std::quoted(result.sound)<<'\n';
+            }
+            return 0;
+        }
         int width,height,mode;SecretLever lever;Position player;bool tutorial,held;
         while (std::cin>>width>>height>>lever.position.x>>lever.position.y>>lever.target.x>>lever.target.y>>lever.activated>>tutorial>>mode>>player.x>>player.y>>held) {
             if (width<1 || width>512 || height<1 || height>512 || mode<0 || mode>3) throw std::invalid_argument("invalid lever fixture");

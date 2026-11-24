@@ -1,10 +1,13 @@
 #pragma once
 #include "dredmor/world.hpp"
+#include "dredmor/clocks.hpp"
+#include "dredmor/room_records.hpp"
 #include <array>
 #include <string>
 #include <vector>
 
 namespace dredmor {
+struct ScriptLever {CustomRoomObject object;ActivationState activation;};
 struct SecretLever {Position position{},target{};bool activated=false;};
 struct SecretLeverActivation {
     bool revealed=false,tutorial_event=false;
@@ -19,4 +22,8 @@ struct SecretLeverActivation {
 SecretLeverActivation flip_secret_lever(SecretLever& lever,bool tutorial=false);
 // Original Clicked gate: exactly one cardinal tile away, no held mouse item.
 bool can_click_secret_lever(const SecretLever& lever,Position player,bool held_item=false);
+// Ordinary type0 lever. Tutorial activation occurs before the toggle.
+SecretLeverActivation flip_script_lever(ActivationState& activation,bool tutorial=false);
+std::optional<ScriptLever> create_script_lever(const RoomElementDefinition& definition,Position origin,DarwinRandom& random);
+
 }

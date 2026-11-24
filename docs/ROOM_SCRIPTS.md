@@ -309,3 +309,24 @@ level and preallocated registry storage are fixture assumptions; replacing a
 level during registry iteration is not claimed. Focused C++ tests compose clock
 expiry with trigger observation and delayed movement. All59 portable groups pass.
 Session/native adoption and full subsystem behavior remain unfinished.
+
+Ordinary Lever type0 now toggles ActivationState through actual-derived FlipLever
+0x7b86e behavior. It emits pull text and sound"lever"; an initially inactive
+lever in tutorial mode is activated before dispatch and then toggles off. Previous
+and older history words stay untouched by a flip. Actual Clicked0x7b77c,
+RemoteActivation0x7c36a and bump0x7c20c dispatch/cardinal/held-item gates match on
+8,192 full original fixtures via verify_script_levers.py. Ticker/sound/tutorial
+are controlled boundaries; no libc or MT draw occurs. Other lever types retain
+their separate evidence (secret type1 already implemented).
+
+Session ordinary levers use RoomElement chance planning, constructor0x7c00e/
+0x7c0e8 constants (blocking, no vision block, Lever name, dungeon/lever1.spr), and
+Draw0x7b74e activation frame0/1. Resource factory construction is not yet a full
+original-routine comparison. The Session owns collision, click/bump interaction,
+ID/can_push metadata, history advancement and cached-floor transfer. Save22
+preserves full current/previous/older state and object data; malformed history,
+appearance or missing state is rejected. Save1..21 remains readable and untouched
+when ordinary levers are absent. Session tests cover canonical roundtrip,
+continuation, held-item rejection, floor cache and creation failure rollback.
+All60 portable groups pass. Full object ordering/room script/tick-driver adoption
+and native controls remain work.

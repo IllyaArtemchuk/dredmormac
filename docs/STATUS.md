@@ -1664,3 +1664,16 @@ gameplay/RNG parity claim. Sourcef07199c and06e0731 Mac jobs are in progress.
 Next: Session script/tick integration with owned caches, saved room bindings,
 constructor/event lifecycle, deferred queues and native puzzle fixtures. The full
 game remains unfinished, including AI/effects/floor population/UI/audio parity.
+
+Placementf07199c, clock records06e0731 and tick driver6a6b8ce passed arm64 Mac
+runs45362965099/45363766566/45365001083 with packaged-app smoke.
+Ordinary type0 lever interactions now match8,192 actual original calls, including
+Clicked/RemoteActivation/bump, cardinal/held gate, tutorial activation-before-toggle,
+all activation history words, messages/sound and no RNG. Session now owns ordinary
+lever construction, collision, click/bump turns, two-update history, cached floors
+and save22 state; older formats remain supported. All60 portable groups pass.
+Construction defaults derive from Lever constructors/Draw/Build and existing
+RoomElement chance planning; full resource constructor is not an oracle claim.
+Native lever rendering/input is next. Session scheduling stays provisional; the
+verified outer tick driver and room script engine are not yet connected. Full
+puzzles/population/AI/effects/UI/audio and complete gameplay remain unfinished.

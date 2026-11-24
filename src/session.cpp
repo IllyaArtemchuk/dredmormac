@@ -67,6 +67,7 @@ bool Session::passable(Position position) const {
         if (shop.keeper.alive() && same(shop.keeper.position,position)) return false;
         for (const auto& pedestal:shop.pedestals) if (same(pedestal.position,position)) return false;
     }
+    for (const auto& lever:script_levers_) if (lever.object.blocks_movement && same(lever.object.position,position)) return false;
     for (const auto& object:custom_objects_) if (object.blocks_movement && same(object.position,position)) return false;
     for (const auto& object:breakables_) if (object.object.blocks_movement && same(object.object.position,position)) return false;
     for (const auto& trap:traps_) if (trap.has_origin_object && same(trap.origin,position)) return false;
@@ -552,6 +553,7 @@ void Session::enemy_turns() {
         // GameTick buff pass. This also clears the prior pass's damage residue.
         rebuild_equipment();
     }
+    for (auto& lever:script_levers_) lever.activation.advance_history();
     update_player_buffs_impl();update_triggers_impl(player_,remaining);
     for (auto it=spell_cooldowns_.begin();it!=spell_cooldowns_.end();) {
         if (it->second>0) --it->second;
@@ -562,6 +564,9 @@ void Session::step_impl(Action action) {
     events_.clear();last_door_click_.reset();if (!player_.alive()) return;
     if (world_.turn()==std::numeric_limits<std::uint64_t>::max()) throw std::overflow_error("turn counter exhausted");
     const auto destination=target(player_.position,action);
+    if (action!=Action::wait) for (std::size_t index=0;index<script_levers_.size();++index) if (same(script_levers_[index].object.position,destination)) {
+        use_script_lever_impl(index);world_.step(Action::wait);enemy_turns();return;
+    }
     if (action!=Action::wait && doors_) for (std::size_t index=0;index<doors_->doors.size();++index) {
         const auto& door=doors_->doors[index];if (door.destroyed || door.assembly.open) continue;
         for (std::size_t part=0;part<3;++part) if (same(door.assembly.parts[part],destination)) {

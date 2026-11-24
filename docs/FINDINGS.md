@@ -2487,3 +2487,11 @@ preallocated-registry fixtures; AI, room logic, visibility, destruction, directo
 save, clocks and platform methods remain supplied boundaries. No Session/gameplay
 parity claim. See ROOM_SCRIPTS.md and verify_game_tick.py. Binary SHA256
 `a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.
+
+Type0 lever interaction recovered:8,192 complete actual Flip/Clicked/Remote/bump
+calls match, including tutorial activation before toggle and unchanged previous/
+older history. High confidence for interaction kernel with UI/audio boundaries.
+Constructor constants0x7c00e/0x7c0e8 and Draw0x7b74e justify ordinary Session
+lever presentation, but no full resource-constructor oracle claim. Session save22
+is this port's state format, not original save compatibility. See ROOM_SCRIPTS.md.
+Binary SHA256`a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.
