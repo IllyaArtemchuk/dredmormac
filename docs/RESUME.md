@@ -1765,3 +1765,15 @@ implement full Monster::Update or attach keeper AI to the provisional scheduler.
 New source awaits arm64 CI. Ordinary door session/native integration and preceding
 room scripts/content still need completion before true generated-floor gameplay;
 remaining AI/effects/original UI/audio and reference playthrough are unfinished.
+
+
+Keeper-update source dd5bc9d passed arm64 Mac run45345852669 and packaged-app
+smoke. Ordinary Door::Clicked is now ported, including belt/bag pick priority,
+Burglary's belt-only shortcut, failed-pick return, XP/unlock requests, per-part
+kick resistance, foot-damage requests, linked destruction and listener wake RNG.
+All8,192 actual original clicks match with full libc/MT state+next8 (4,366
+unlocks,807 shatters,111 hurt-foot requests,152 wake messages). Explicit downstream
+XP/damage/death/audio/render/destruction boundaries remain. See docs/DOORS.md.
+The free-pick helper has static XML mapping evidence and focused unit coverage.
+Session/native door integration, full generated-floor content/population, AI and
+remaining effects/UI/audio/reference playthrough are still unfinished.
