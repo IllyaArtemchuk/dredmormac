@@ -190,6 +190,13 @@ std::optional<std::uint64_t> Session::create_ground_loot(const ItemFactoryTables
     std::string_view type,std::string_view subtype,int quantity,bool artifact,Position position) {
     auto next=*this;const auto result=next.create_ground_loot_impl(tables,context,type,subtype,quantity,artifact,position);*this=std::move(next);return result;
 }
+std::uint64_t Session::create_ground_treasure(const ItemFactoryTables& tables,const ItemFactoryContext& context,
+    const TreasureOptions& options,bool artifact,Position position) {
+    auto next=*this;if (!next.definitions_) throw std::invalid_argument("treasure creation needs item definitions");
+    const auto identifier=next.next_item_instance();
+    auto item=make_level_treasure(*next.definitions_,tables,context,options,artifact,identifier,next.random_);
+    next.drop(std::move(item),position);*this=std::move(next);return identifier;
+}
 std::optional<std::uint64_t> Session::create_ground_loot_impl(const ItemFactoryTables& tables,const ItemFactoryContext& context,
     std::string_view type,std::string_view subtype,int quantity,bool artifact,Position position) {
     if (!definitions_) throw std::invalid_argument("loot creation needs item definitions");

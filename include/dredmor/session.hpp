@@ -115,6 +115,8 @@ public:
     std::uint64_t create_ground_artifact(std::uint32_t definition,int quality,const ArtifactWords& words,Position position);
     std::optional<std::uint64_t> create_ground_loot(const ItemFactoryTables& tables,const ItemFactoryContext& context,
         std::string_view type,std::string_view subtype,int quantity,bool artifact,Position position);
+    std::uint64_t create_ground_treasure(const ItemFactoryTables& tables,const ItemFactoryContext& context,
+        const TreasureOptions& options,bool artifact,Position position);
     RoomLootCreation create_room_loot(const RoomLootRecord& record,const ItemFactoryTables& tables,
         const ItemFactoryContext& context,Position origin={0,0});
     std::optional<std::uint64_t> create_room_monster(const RoomMonsterRecord& record,

@@ -1485,3 +1485,29 @@ Private Capstone notes are /workspace/work/analysis/{63436,62578,5ffc4,7c00e}.tx
 The restored data root is /workspace/work/gameframe-home/games/dredmor/game/
 Dungeons of Dredmor.app/Contents/MacOS. CMake/Unicorn/Capstone are in .venv. This
 replacement machine has no previous Ghidra projects or GameFrame tool checkout.
+
+
+## 2026-11-24: secret pockets and level treasure
+
+Added GenerateSecretDoors63436 placement/carving/lever search with transactional
+layout and complete RNG state, and GenTreasure62578 with actual category, ammo,
+accessory, food/booze, selector and artifact behavior. The treasure factory is
+called at the original point between pocket carving and lever search. Session
+create_ground_treasure reserves item identities, places loot transactionally and
+continues deterministically across saves. No save-format change was needed.
+See docs/SECRET_DOORS.md for APIs, exact boundaries and comparison commands.
+Confirmed room template+7c is noblockers, not notreasure: XML callback199e80
+stores noblockers at19adfe, while notreasure reaches+80 at19ae38. The numeric ring
+filter also accepts armour types3/4/6 (the parser maps legs to6); this is preserved.
+All41 local test groups pass. Original comparisons:1,024 secret-pocket cases,
+2,048 GenTreasure cases and1,024 combined secret/actual-treasure cases, all zero
+mismatches. They compare positions/metadata, loot, quantities, artifact outputs,
+libc/normal cache and complete MT state+next8. Constructor/placement/virtual/external
+boundaries are explicit; preceding room content and entity activation are excluded.
+The refactored shared gear helper also passed2,100 simple and1,024 artifact factory
+regressions. Actual arm64 CI is pending for this source.
+Native floors remain prepared scenes. Complete ordered room content/decorations/
+shops/scripts, lever activation/world collision integration and later population,
+remaining AI/effects/UI/audio/FOV and a full reference playthrough remain unfinished.
+Next work is lever activation and connecting these phases after actual room content;
+no approximate content pass should be substituted merely to show a generated map.
