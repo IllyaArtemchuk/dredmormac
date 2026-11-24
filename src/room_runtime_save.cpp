@@ -22,16 +22,29 @@ std::string escape(std::string_view text) {
     }
     return result;
 }
-std::uint64_t profile_signature(const std::vector<RoomRuntimeRoom>& rooms) {
+using Templates=std::map<std::uint64_t,const std::vector<RoomScriptDefinition>*>;
+Templates templates_for(const std::vector<RoomRuntimeRoom>& rooms,const RoomRuntimeCatalogue& catalogue) {
+    Templates templates;
+    for (const auto& [identity,scripts]:catalogue) {
+        if (!identity || !scripts) throw std::runtime_error("invalid room runtime catalogue entry");
+        templates.emplace(identity,scripts.get());
+    }
+    for (const auto& room:rooms) if (room.trigger.scripts) {
+        if (!room.template_identity) throw std::runtime_error("saved runtime has zero template identity");
+        const auto [entry,inserted]=templates.emplace(room.template_identity,room.trigger.scripts.get());
+        if (!inserted && entry->second!=room.trigger.scripts.get()) throw std::runtime_error("saved runtime has conflicting template identity");
+        if (!catalogue.empty() && !catalogue.count(room.template_identity)) throw std::runtime_error("room template absent from runtime catalogue");
+    }
+    return templates;
+}
+std::uint64_t profile_signature(const std::vector<RoomRuntimeRoom>& rooms,const Templates& templates) {
     std::uint64_t hash=14695981039346656037ULL;
     auto integer=[&](std::uint64_t value) {for (unsigned byte=0;byte<8;++byte) {hash^=value&255U;hash*=1099511628211ULL;value>>=8;}};
     auto text=[&](const std::string& value) {integer(value.size());for (unsigned char c:value) {hash^=c;hash*=1099511628211ULL;}};
     auto point=[&](Position value) {integer(std::uint32_t(value.x));integer(std::uint32_t(value.y));};
-    std::map<std::uint64_t,const std::vector<RoomScriptDefinition>*> templates;
     integer(rooms.size());
     for (const auto& room:rooms) {
         integer(std::uint32_t(room.trigger.identity));point(room.origin);integer(room.template_identity);integer(bool(room.trigger.scripts));
-        if (room.trigger.scripts) templates.emplace(room.template_identity,room.trigger.scripts.get());
     }
     integer(templates.size());
     for (const auto& [identity,scripts]:templates) {
@@ -53,13 +66,7 @@ std::uint64_t profile_signature(const std::vector<RoomRuntimeRoom>& rooms) {
     }
     return hash;
 }
-void validate(const RoomRuntimeState& state,const std::vector<RoomRuntimeRoom>& rooms) {
-    std::map<std::uint64_t,const std::vector<RoomScriptDefinition>*> templates;
-    for (const auto& room:rooms) if (room.trigger.scripts) {
-        if (!room.template_identity) throw std::runtime_error("saved runtime has zero template identity");
-        const auto [entry,inserted]=templates.emplace(room.template_identity,room.trigger.scripts.get());
-        if (!inserted && entry->second!=room.trigger.scripts.get()) throw std::runtime_error("saved runtime has conflicting template identity");
-    }
+void validate(const RoomRuntimeState& state,const std::vector<RoomRuntimeRoom>& rooms,const Templates& templates) {
     if (state.triggers.success_counts.size()>100000 || state.prototypes.size()>100000) throw std::runtime_error("room runtime state limit exceeded");
     std::size_t events=0;for (const auto& [key,names]:state.triggers.events) {(void)key;events+=names.size();if (events>100000) throw std::runtime_error("room event state limit exceeded");}
     for (const auto& [key,count]:state.triggers.success_counts) {
@@ -74,8 +81,9 @@ void validate(const RoomRuntimeState& state,const std::vector<RoomRuntimeRoom>& 
     }
 }
 }
-void write_room_runtime_state(std::ostream& out,const RoomRuntimeState& state,const std::vector<RoomRuntimeRoom>& rooms) {
-    validate(state,rooms);out<<"<room-runtime previous=\""<<state.triggers.previous_room<<"\" profile=\""<<profile_signature(rooms)<<"\">\n";
+void write_room_runtime_state(std::ostream& out,const RoomRuntimeState& state,const std::vector<RoomRuntimeRoom>& rooms,const RoomRuntimeCatalogue& catalogue) {
+    const auto templates=templates_for(rooms,catalogue);
+    validate(state,rooms,templates);out<<"<room-runtime previous=\""<<state.triggers.previous_room<<"\" profile=\""<<profile_signature(rooms,templates)<<"\">\n";
     for (const auto& [key,count]:state.triggers.success_counts) out<<"<counter room=\""<<key.first<<"\" script=\""<<key.second<<"\" count=\""<<count<<"\"/>\n";
     for (const auto& [key,names]:state.triggers.events) for (const auto& name:names) out<<"<event room=\""<<key.first<<"\" object=\""<<escape(key.second)<<"\" name=\""<<escape(name)<<"\"/>\n";
     for (const auto& [key,type]:state.prototypes) {
@@ -83,9 +91,10 @@ void write_room_runtime_state(std::ostream& out,const RoomRuntimeState& state,co
     }
     out<<"</room-runtime>\n";if (!out) throw std::runtime_error("cannot write room runtime state");
 }
-RoomRuntimeState read_room_runtime_state(const XmlNode& node,const std::vector<RoomRuntimeRoom>& rooms) {
+RoomRuntimeState read_room_runtime_state(const XmlNode& node,const std::vector<RoomRuntimeRoom>& rooms,const RoomRuntimeCatalogue& catalogue) {
+    const auto templates=templates_for(rooms,catalogue);
     if (node.tag!="room-runtime" || node.attributes.size()!=2 || node.children.size()>300000 || node.text.find_first_not_of(" \t\r\n")!=std::string::npos) throw std::runtime_error("invalid room runtime snapshot");
-    if (number<std::uint64_t>(node,"profile")!=profile_signature(rooms)) throw std::runtime_error("room runtime snapshot belongs to another profile");
+    if (number<std::uint64_t>(node,"profile")!=profile_signature(rooms,templates)) throw std::runtime_error("room runtime snapshot belongs to another profile");
     RoomRuntimeState state;state.triggers.previous_room=number<std::int32_t>(node,"previous");
     for (const auto& child:node.children) {
         if (!child.children.empty() || child.text.find_first_not_of(" \t\r\n")!=std::string::npos) throw std::runtime_error("invalid room runtime record body");
@@ -101,6 +110,6 @@ RoomRuntimeState read_room_runtime_state(const XmlNode& node,const std::vector<R
             if (!state.prototypes.emplace(key,type).second) throw std::runtime_error("duplicate room prototype");
         } else throw std::runtime_error("invalid room runtime record");
     }
-    validate(state,rooms);return state;
+    validate(state,rooms,templates);return state;
 }
 }

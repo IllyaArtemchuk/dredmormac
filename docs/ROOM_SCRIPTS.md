@@ -462,3 +462,14 @@ staying, leaving and re-entry. Player constructor's assignment0x125dd2 installs
 room ID "player" atGameObj+0x70; this is a source observation for the future live
 Session binding, not a full Player constructor comparison. Native horde source
 f42a50e passed arm64 Mac run45389291770 and relocated packaged-app smoke.
+
+Room runtime snapshots now optionally validate against a game-wide immutable
+RoomRuntimeCatalogue. TypeAt prototypes for templates absent from the active
+floor remain valid and contribute to the profile signature; counters/history
+still validate only against the current floor. Tests travel between disjoint
+room sets, save/reload both, reuse the first prototype without another factory
+call and reject changed absent templates, unknown references, missing/null/zero
+catalogue entries and conflicting template pointers. Existing single-floor
+payload signatures remain unchanged. All68 portable groups pass. Latest native
+actor-placement source a6578f5 passed Mac run45393289621. This is runtime ownership
+infrastructure; Session/native scripts and full game remain incomplete.

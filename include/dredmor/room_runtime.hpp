@@ -5,6 +5,9 @@
 
 namespace dredmor {
 using RoomPrototypeKey=std::tuple<std::uint64_t,std::size_t,std::size_t>;
+// The catalogue is game-wide; a floor can retain prototypes constructed by
+// templates that are not present on that floor. Definitions remain immutable.
+using RoomRuntimeCatalogue=std::map<std::uint64_t,std::shared_ptr<const std::vector<RoomScriptDefinition>>>;
 struct RoomRuntimeState {
     RoomTriggerState triggers;
     // This map belongs to a game snapshot. Shared immutable definitions never
@@ -35,7 +38,8 @@ RoomTriggerPass run_room_scripts(const std::vector<RoomRuntimeRoom>& rooms,
 // Port snapshot payload; immutable room definitions remain caller-owned. Loading
 // validates every script/cache reference against that authoritative profile.
 void write_room_runtime_state(std::ostream& output,const RoomRuntimeState& state,
-    const std::vector<RoomRuntimeRoom>& rooms);
-RoomRuntimeState read_room_runtime_state(const XmlNode& node,const std::vector<RoomRuntimeRoom>& rooms);
+    const std::vector<RoomRuntimeRoom>& rooms,const RoomRuntimeCatalogue& catalogue={});
+RoomRuntimeState read_room_runtime_state(const XmlNode& node,const std::vector<RoomRuntimeRoom>& rooms,
+    const RoomRuntimeCatalogue& catalogue={});
 
 }

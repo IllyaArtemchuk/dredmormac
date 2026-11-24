@@ -66,6 +66,38 @@ int main() {
         run_room_scripts(entry_rooms,new_level,entry_hooks);check(entries==1);
         current_room=1;run_room_scripts(entry_rooms,new_level,entry_hooks);check(entries==1);
         current_room=0;run_room_scripts(entry_rooms,new_level,entry_hooks);check(entries==2);
+        // TypeAt caches belong to template condition objects, including when
+        // their template is absent from the current floor. Counters/history
+        // remain local to the floor; travelling must not reconstruct items.
+        RoomRuntimeCatalogue catalogue{{7,shared},{9,entry_scripts}};
+        RoomRuntimeState upstairs,downstairs;unsigned factory_calls=0;
+        RoomRuntimeHooks travel_hooks=entry_hooks;
+        travel_hooks.create_item=[&](auto,auto) {++factory_calls;return ScriptItemType{3,9};};
+        travel_hooks.tile_items=[](Position) {return std::vector<ScriptTileItem>{{true,{3,9}}};};
+        travel_hooks.perform=[](const auto&) {};
+        run_room_scripts(rooms,upstairs,travel_hooks);check(factory_calls==1 && upstairs.prototypes.size()==1);
+        downstairs.prototypes=upstairs.prototypes;
+        std::vector<RoomRuntimeRoom> downstairs_rooms={{{true,1,0,entry_scripts},{0,0},9}};
+        std::ostringstream downstairs_save;write_room_runtime_state(downstairs_save,downstairs,downstairs_rooms,catalogue);
+        downstairs=read_room_runtime_state(parse_xml(downstairs_save.str()),downstairs_rooms,catalogue);
+        check(downstairs.triggers.previous_room==-1 && downstairs.triggers.success_counts.empty() && downstairs.prototypes.size()==1);
+        run_room_scripts(downstairs_rooms,downstairs,travel_hooks);
+        upstairs.prototypes=downstairs.prototypes;
+        std::ostringstream upstairs_save;write_room_runtime_state(upstairs_save,upstairs,rooms,catalogue);
+        upstairs=read_room_runtime_state(parse_xml(upstairs_save.str()),rooms,catalogue);
+        run_room_scripts(rooms,upstairs,travel_hooks);
+        check(factory_calls==1 && upstairs.triggers.success_counts.at({0,0})==2 && downstairs.triggers.success_counts.at({0,0})==1);
+        auto changed_catalogue=catalogue;changed_catalogue[7]=changed;
+        bool absent_changed=false;try {read_room_runtime_state(parse_xml(downstairs_save.str()),downstairs_rooms,changed_catalogue);} catch(const std::runtime_error&) {absent_changed=true;}check(absent_changed);
+        bool absent_undefined=false;try {write_room_runtime_state(canonical,downstairs,downstairs_rooms);} catch(const std::runtime_error&) {absent_undefined=true;}check(absent_undefined);
+        auto conflicting_catalogue=catalogue;conflicting_catalogue[9]=shared;
+        bool catalogue_collision=false;try {write_room_runtime_state(canonical,downstairs,downstairs_rooms,conflicting_catalogue);} catch(const std::runtime_error&) {catalogue_collision=true;}check(catalogue_collision);
+        auto missing_catalogue=catalogue;missing_catalogue.erase(9);
+        bool missing_template=false;try {write_room_runtime_state(canonical,downstairs,downstairs_rooms,missing_catalogue);} catch(const std::runtime_error&) {missing_template=true;}check(missing_template);
+        auto invalid_catalogue=catalogue;invalid_catalogue[0]=shared;
+        bool zero_template=false;try {write_room_runtime_state(canonical,downstairs,downstairs_rooms,invalid_catalogue);} catch(const std::runtime_error&) {zero_template=true;}check(zero_template);
+        invalid_catalogue=catalogue;invalid_catalogue[10]={};
+        bool null_template=false;try {write_room_runtime_state(canonical,downstairs,downstairs_rooms,invalid_catalogue);} catch(const std::runtime_error&) {null_template=true;}check(null_template);
         std::cout<<"room runtime composes live activation/events, per-room repeats and source-order actions with template-shared prototypes isolated between snapshots\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }
