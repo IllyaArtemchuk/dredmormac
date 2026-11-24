@@ -183,6 +183,7 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
 - (BOOL)smokeFloors;
 - (BOOL)smokeSecretLevers;
 - (BOOL)smokeDecorations;
+- (BOOL)smokeAutomaticArmour;
 - (BOOL)smokeSaveLoad;
 - (void)saveDocument:(id)sender;
 - (void)openDocument:(id)sender;
@@ -850,6 +851,18 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     std::ostringstream before;_session->save(before);if (![self smokeSaveLoad]) return NO;std::ostringstream after;_session->save(after);
     [self display];return before.str()==after.str() && !_session->custom_objects()[3].playing;
 }
+- (BOOL)smokeAutomaticArmour {
+    const auto primary=_session->player().primary;const auto secondary=_session->player().secondary;
+    [self pickUpItems:nil];[self showInventory:nil];if ([self inventoryRows].count!=1 || !_session->inventory().bag()[0]) return NO;
+    const auto item=*_session->inventory().bag()[0];if (!item.artifact || item.room_local_id!="automatic-neck" || item.artifact->quality<1 || item.artifact->quality>3) return NO;
+    const auto& definition=_content->items().at(item.definition);if (definition.armour_type!=9 || dredmor::armour_constructor_rules(definition).type!=6) return NO;
+    if (item.artifact->name==definition.name) return NO;
+    if (![[self inventoryRows][0][@"name"] isEqualToString:[NSString stringWithUTF8String:item.artifact->name.c_str()]]) return NO;
+    [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];[_inventoryController equipSelection:nil];
+    if (!_session->equipment().slots()[9] || _session->inventory().bag()[0] || ![[self inventoryRows][0][@"location"] isEqualToString:@"Neck"] || ![self smokeSaveLoad]) return NO;
+    [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];[_inventoryController unequipSelection:nil];[_inventoryController close];
+    const auto& restored=_session->inventory().bag()[0];return restored && restored->artifact && restored->artifact->name==item.artifact->name && primary==_session->player().primary && secondary==_session->player().secondary && [self smokeSaveLoad];
+}
 - (BOOL)smokeFood {
     if (!_session->regeneration()) return NO;
     const auto hp=_session->player().health,mp=_session->player().mana;const auto turn=_session->world().turn();const auto primary=_session->player().primary[0];
@@ -1221,6 +1234,7 @@ int main(int argc,const char**argv) {
                     ([scene[@"smoke_floors"] boolValue] && ![view smokeFloors]) ||
                     ([scene[@"smoke_secret_levers"] boolValue] && ![view smokeSecretLevers]) ||
                     ([scene[@"smoke_decorations"] boolValue] && ![view smokeDecorations]) ||
+                    ([scene[@"smoke_automatic_armour"] boolValue] && ![view smokeAutomaticArmour]) ||
                     ([scene[@"smoke_food"] boolValue] && ![view smokeFood]) ||
                     ([scene[@"smoke_regeneration"] boolValue] && ![view smokeRegeneration]) ||
                     ([scene[@"smoke_casting"] boolValue] && ![view smokeCasting]) ||

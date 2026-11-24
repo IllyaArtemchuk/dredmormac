@@ -53,7 +53,7 @@ private:
     }
     InventoryItem make(std::size_t index,int amount=1) {
         if (next_instance_==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("starting item IDs exhausted");
-        auto item=make_inventory_item(content_.items().at(index),static_cast<std::uint32_t>(index),next_instance_++,session_.random_.libc);
+        auto item=construct_factory_item(content_.items().at(index),static_cast<std::uint32_t>(index),next_instance_++,content_.loot_context(session_.depth_context()),session_.random_);
         if (amount>1) item.quantity=amount;
         return item;
     }

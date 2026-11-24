@@ -1,6 +1,7 @@
 #include "dredmor/decorations.hpp"
 #include <stdexcept>
 #include <cstring>
+#include <algorithm>
 
 namespace dredmor {
 namespace {
@@ -8,8 +9,11 @@ std::string lower(std::string s) {for (auto& c:s) if (c>='A' && c<='Z') c+=('a'-
 std::string attribute(const XmlNode& node,std::string_view key) {
     std::string result;
     if (node.attribute_order.empty()) {for (const auto& a:node.attributes) if (lower(a.first)==key) result=a.second;}
-    else for (const auto& name:node.attribute_order) if (lower(name)==key) {
-        const auto found=node.attributes.find(name);if (found!=node.attributes.end()) result=found->second;
+    else {
+        for (const auto& name:node.attribute_order) if (lower(name)==key) {
+            const auto found=node.attributes.find(name);if (found!=node.attributes.end()) result=found->second;
+        }
+        for (const auto& a:node.attributes) if (lower(a.first)==key && std::find(node.attribute_order.begin(),node.attribute_order.end(),a.first)==node.attribute_order.end()) result=a.second;
     }
     return result;
 }

@@ -88,7 +88,7 @@ def verify(binary,port,count):
             field=next((j for j,(x,y) in enumerate(zip(a,b)) if x!=y),min(len(a),len(b)))
             raise AssertionError(f'secret treasure fixture {i}, field {field}: port {a[field:field+10]}, original {b[field:field+10]}')
     return dict(binary_sha256=hashlib.sha256(oracle.original.data).hexdigest(),cases=count,mismatches=0,
-                scope='actual GenerateSecretDoors calls actual GenTreasure/gear/thrown/food/booze selectors; controlled post-content grids/room flags/loot tables/tweaks; item/Buff/lever constructors, placement, refresh, list insertion and external boundaries supplied; all secrets/treasure selections+quantities/lever targets+positions/cells and complete libc+normal+MT states/next8; assets/entity lifecycle/activation and preceding room content excluded')
+                scope='actual GenerateSecretDoors calls actual GenTreasure/gear/thrown/food/booze selectors and ArmourC2 automatic-enchantment tail; controlled post-content grids/room flags/loot tables/tweaks; base item/Buff/lever initialization, placement, refresh, list insertion and external boundaries supplied; all secrets/treasure selections+quantities/lever targets+positions/cells and complete libc+normal+MT states/next8; assets/entity lifecycle/activation and preceding room content excluded')
 
 
 if __name__=='__main__':

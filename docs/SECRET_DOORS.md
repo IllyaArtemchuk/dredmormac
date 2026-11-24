@@ -40,8 +40,10 @@ the installation's `Tweaks`. The initial libc category roll occurs even for a
 forced artifact. Ranges are inclusive, tested in original order; gaps fall back
 to a weapon. Ammo chooses thrown/bolts using MT, then rolls and caps quantity by
 the definition's `maxstack`. Lockpicks use the same quantity roll without the cap.
-The original accessory filter treats armour types3,4,6 as its ring category,
-including the supplied parser's legs type6. Preserve that behavior.
+The original accessory filter accepts native armour types3,4,6 as its ring
+category. Native type6 means neck; legacy port equipment slot6 means legs.
+Use the recovered native classifier, not legacy slot numbers. Accessory
+construction also consumes automatic enchantment draws; see ARMOUR_CONSTRUCTION.md.
 
 Food dispatch chooses edible/booze with MT. Booze's target-level normal sample
 uses current depth+1, then the existing selection/fallback loop. Thrown selection
@@ -67,10 +69,11 @@ These passed1,024 isolated secret-pocket cases,2,048 actual GenTreasure cases an
 1,024 combined original secret-door/GenTreasure cases. Comparisons include plans,
 item selections/quantities, all cell fields, libc, normal cache and full MT state
 plus next8 outputs. Artifact cases additionally compare full generated text,
-quality, modifier arrays and damage. Item/Buff/lever construction, actor placement,
+quality, modifier arrays and damage. Base Item/Buff/lever construction, actor placement,
 virtual text/refresh, external list/math/string/allocation and libc calls have
 explicit boundaries; the combined oracle executes actual GenTreasure and all its
-selectors. Existing simple/artifact factory regressions also pass3,124 cases.
+selectors and the actual ArmourC2 automatic-enchantment tail plus CreateArtifact.
+Existing simple/artifact factory regressions also pass3,124 cases.
 Fixtures keep gear targets within allocated original tables: undefined original
 upper-bucket reads are not treated as valid gameplay behavior.
 

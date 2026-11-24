@@ -14,6 +14,17 @@ scene=importlib.util.module_from_spec(spec); spec.loader.exec_module(scene)
 
 
 class SceneTests(unittest.TestCase):
+    def test_automatic_armour_fixture_has_enchantment_words(self):
+        repository=Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as folder:
+            output=Path(folder)/'native-automatic-armour'
+            subprocess.run([sys.executable,str(repository/'scripts/make-smoke-scene.py'),str(output),'--content-source',str(repository/'tests/fixtures/content-root'),'--automatic-armour'],check=True,capture_output=True,text=True)
+            data=json.loads((output/'scene.json').read_text());root=Path(data['data_root'])
+            words=ET.parse(root/'game/text.xml').getroot()
+            self.assertTrue(all(words.find(tag) is not None for tag in ['startPhoneme','phoneme','title','noun','adjective','quality','material','decor']))
+            armour=next(item.find('armour') for item in ET.parse(root/'game/itemDB.xml').getroot() if item.get('name')=='Fixture pendant')
+            self.assertEqual(armour.get('type'),'neck');self.assertIsNone(armour.get('randoms'))
+
     def test_decorations_fixture_without_existing_text_database(self):
         repository=Path(__file__).resolve().parents[1]
         source=repository/'tests/fixtures/content-root'

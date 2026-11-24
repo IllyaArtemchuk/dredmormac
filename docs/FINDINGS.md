@@ -2052,7 +2052,8 @@ continues deterministically across saves. No save-format change was needed.
 See docs/SECRET_DOORS.md for APIs, exact boundaries and comparison commands.
 Confirmed room template+7c is noblockers, not notreasure: XML callback199e80
 stores noblockers at19adfe, while notreasure reaches+80 at19ae38. The numeric ring
-filter also accepts armour types3/4/6 (the parser maps legs to6); this is preserved.
+filter accepts original armour types3/4/6. Correction: original type6 is neck;
+the port legacy equipment-slot value6 means legs. See ARMOUR_CONSTRUCTION.md.
 All41 local test groups pass. Original comparisons:1,024 secret-pocket cases,
 2,048 GenTreasure cases and1,024 combined secret/actual-treasure cases, all zero
 mismatches. They compare positions/metadata, loot, quantities, artifact outputs,
@@ -2103,3 +2104,26 @@ frames and save/reload. Arm64 validation is pending for this decoration source.
 Complete ordered room content, shop construction/stock/interactions and room-script
 wiring remain unfinished; native scenes still use prepared floors. GenLevelContent1
 must not skip those earlier phases when connecting the verified secret/stair passes.
+
+
+## 2026-11-24: automatic accessory enchantment and armour enum correction
+
+The original item parser uses a different armour enum from the port's legacy
+equipment-slot field. Original type6 is neck, while legacy slot6 is legs.
+The earlier claim that the original accessory category included legs was incorrect.
+Treasure now classifies by recovered native type, retaining legacy slot values
+and existing canonical save fingerprints. Armour construction now executes the
+automatic ring/neck artifact path before outer factory artifact rolls, including
+its preliminary quality draws and predefined artifact overrides. Starting armour
+uses the same constructor wrapper; both original GiveArmour callers pass suppress0.
+See ARMOUR_CONSTRUCTION.md for evidence and exact comparison boundaries.
+All44 local groups pass. Original comparisons pass1,024 armour XML callbacks,
+1,024 automatic-enchantment tails,2,048 upgraded GenTreasure and1,024 combined
+secret/treasure cases, plus3,124 existing factory/artifact regressions.
+New native automatic-necklace fixture checks generated name/stats, pickup, equip,
+save/reload and unequip. Actual arm64 validation is pending for this change.
+Decoration source72898a9 passed actual macos-15 arm64 run45332192477,
+job138235736305: all74 tests plus relocated packaged-app smoke.
+Full ordered room content/shops/scripts, generated-floor integration, remaining
+population/AI/effects, original UI/audio/FOV and a reference playthrough remain
+unfinished. These constructor comparisons do not establish a complete game.

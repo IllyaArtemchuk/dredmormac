@@ -17,20 +17,29 @@ void emit_random(GameRandom& random) {
 }
 int main(int argc,char** argv) {
     try {
+        if (argc==2 && std::string(argv[1])=="--armour-rules") {
+            std::string line;while (std::getline(std::cin,line)) {const auto rules=armour_constructor_rules(read_item(parse_xml(line)));std::cout<<rules.type<<' '<<rules.randoms<<'\n';}return 0;
+        }
         const bool secret_mode=argc==2 && std::string(argv[1])=="--secret-floor";
-        if (argc!=1 && !secret_mode) throw std::invalid_argument("expected --secret-floor or no arguments");
+        const bool armour_mode=argc==2 && std::string(argv[1])=="--armour-constructor";
+        if (argc!=1 && !secret_mode && !armour_mode) throw std::invalid_argument("expected --secret-floor, --armour-constructor or no arguments");
         std::uint32_t seed;ItemFactoryContext context;int level_depth;bool artifact;TreasureOptions options;std::size_t count;
         while (std::cin>>seed>>context.depth.depth>>context.depth.alternate>>context.depth.alternate_depth>>level_depth>>context.level_set>>context.trap_deviation>>artifact>>options.roll_size) {
             context.level_depth=level_depth;for (auto& range:options.ranges) std::cin>>range.minimum>>range.maximum;
             std::cin>>count;if (count>10000) throw std::invalid_argument("too many treasure definitions");
             std::vector<ItemDefinition> definitions(count);ItemFactoryTables tables;
             for (std::size_t i=0;i<count;++i) {
-                auto& item=definitions[i];unsigned kind,mask;int craft,predefined,quality,maximum;
-                std::cin>>std::quoted(item.name)>>kind>>item.weapon_type>>item.armour_type>>item.level>>item.special>>item.debug>>craft>>predefined>>quality>>mask>>maximum>>item.food_mp;
+                auto& item=definitions[i];unsigned kind,mask;int craft,predefined,quality,maximum,randoms;
+                std::cin>>std::quoted(item.name)>>kind>>item.weapon_type>>item.armour_type>>item.level>>item.special>>item.debug>>craft>>predefined>>quality>>mask>>maximum>>item.food_mp>>randoms;
                 item.kind=ItemKind(kind);item.description="Description "+std::to_string(i);if (item.kind==ItemKind::misc) item.builtin_subtype=0;
                 item.wand_min_charge=item.wand_max_charge=1;
                 item.source.attributes["craftoutput"]=std::to_string(craft);item.source.attributes["artifact"]=std::to_string(predefined);item.source.attributes["maxstack"]=std::to_string(maximum);
                 XmlNode node;node.tag="artifact";node.attributes["quality"]=std::to_string(quality);item.source.children.push_back(std::move(node));
+                if (item.kind==ItemKind::armour) {
+                    XmlNode armour;armour.tag="armour";armour.attributes["randoms"]=std::to_string(randoms);
+                    for (const auto& type:{std::pair{"chest",0},std::pair{"head",5},std::pair{"feet",7},std::pair{"shield",1},std::pair{"ring",3},std::pair{"neck",6},std::pair{"waist",9},std::pair{"legs",11},std::pair{"hands",10},std::pair{"sleeve",12}}) if (type.second==item.armour_type) armour.attributes["type"]=type.first;
+                    item.source.children.push_back(std::move(armour));
+                }
                 register_factory_item(tables,std::uint32_t(i),item,mask);
             }
             if (!std::cin) throw std::invalid_argument("incomplete treasure fixture");
@@ -60,7 +69,8 @@ int main(int argc,char** argv) {
                 for (const auto& c:layout.cells()) std::cout<<' '<<unsigned(c.kind)<<' '<<unsigned(c.room_id)<<' '<<unsigned(c.door_flags)<<' '<<c.flags<<' '<<unsigned(c.stair_link);
                 emit_random(random);continue;
             }
-            const auto item=make_level_treasure(definitions,tables,context,options,artifact,1,random);
+            std::size_t armour_index=0;if (armour_mode) {std::cin>>armour_index;if (!std::cin || armour_index>=definitions.size()) throw std::invalid_argument("invalid armour constructor index");}
+            const auto item=armour_mode?construct_factory_item(definitions.at(armour_index),std::uint32_t(armour_index),1,context,random,artifact):make_level_treasure(definitions,tables,context,options,artifact,1,random);
             std::cout<<item.definition<<' '<<unsigned(item.kind)<<' '<<item.quantity<<' '<<item.stackable<<' '<<bool(item.artifact);
             if (item.artifact) {
                 const auto& a=*item.artifact;std::cout<<' '<<hex(a.name)<<' '<<hex(a.description)<<' '<<hex(a.buff_description)<<' '<<a.quality;

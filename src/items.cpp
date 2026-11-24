@@ -1,6 +1,7 @@
 #include "dredmor/items.hpp"
 #include "dredmor/legacy_number.hpp"
 #include <charconv>
+#include <algorithm>
 #include <stdexcept>
 
 namespace dredmor {
@@ -27,6 +28,27 @@ void damage_attributes(const XmlNode& node,Damage& target) {
         for (std::size_t i=0;i<damage_names.size();++i)
             if (lower(attr.first)==damage_names[i]) target[i]=integer(node,damage_names[i]);
 }
+}
+ArmourConstructorRules armour_constructor_rules(const ItemDefinition& definition) {
+    int native=definition.armour_type;
+    for (const auto& pair:{std::pair{0,5},std::pair{5,0},std::pair{6,11},std::pair{9,6},std::pair{11,9}}) if (definition.armour_type==pair.first) native=pair.second;
+    ArmourConstructorRules rules{native,false};bool found=false;
+    for (const auto& node:definition.source.children) if (lower(node.tag)=="armour") {
+        if (!found) {rules={0,true};found=true;}
+        std::string armour_type;
+        auto take=[&](const std::string& key,const std::string& value) {
+            if (lower(key)=="randoms") rules.randoms=legacy_integer(value)!=0;
+            if (lower(key)=="type") armour_type=value;
+        };
+        if (node.attribute_order.empty()) for (const auto& a:node.attributes) take(a.first,a.second);
+        else {
+            for (const auto& name:node.attribute_order) {const auto a=node.attributes.find(name);if (a!=node.attributes.end()) take(a->first,a->second);}
+            for (const auto& a:node.attributes) if (std::find(node.attribute_order.begin(),node.attribute_order.end(),a.first)==node.attribute_order.end()) take(a.first,a.second);
+        }
+        const std::pair<const char*,int> types[]={{"chest",0},{"head",5},{"feet",7},{"shield",1},{"ring",3},{"neck",6},{"waist",9},{"legs",11},{"hands",10},{"sleeve",12}};
+        for (const auto& type:types) if (armour_type==type.first) rules.type=type.second;
+    }
+    return rules;
 }
 ItemDefinition read_item(const XmlNode& source) {
     if (lower(source.tag)!="item") throw std::runtime_error("expected an item definition");

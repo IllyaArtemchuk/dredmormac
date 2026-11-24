@@ -45,4 +45,9 @@ struct ItemDefinition {
 // The original item callback compares ASCII tag/attribute names without case,
 // and repeated stat IDs assign the last value rather than summing.
 ItemDefinition read_item(const XmlNode& source);
+struct ArmourConstructorRules {int type=0;bool randoms=false;};
+// Original armour enum differs from the port's legacy equipment-slot numbering
+// in armour_type. XML source determines native defaults and randoms; bare
+// programmatic definitions retain the legacy slot meaning of armour_type.
+ArmourConstructorRules armour_constructor_rules(const ItemDefinition& definition);
 }

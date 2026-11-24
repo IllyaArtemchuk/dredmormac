@@ -10,15 +10,19 @@ int main() {
     try {
         auto definitions=std::make_shared<std::vector<ItemDefinition>>();
         for (auto xml:{"<item name='Sword' level='1' type='0'><weapon/></item>","<item name='Thrown' level='1' type='5' maxstack='2'><weapon/></item>","<item name='Bolt' level='1' type='6' maxstack='2'><weapon/></item>","<item name='Head' level='1'><armour type='head'/></item>","<item name='Ring' level='1'><armour type='ring'/></item>","<item name='Legs' level='1'><armour type='legs'/></item>","<item name='Potion'><potion/></item>","<item name='Wand'><wand mincharge='3' maxcharge='7'/></item>","<item name='Food' level='1'><food hp='2'/></item>","<item name='Booze' level='1'><food mp='2'/></item>","<item name='Mushroom'><mushroom/></item>"}) definitions->push_back(read_item(parse_xml(xml)));
+        // Isolate category selection from the separately tested constructor
+        // enchantments, while retaining the real XML armour-type mapping.
+        definitions->at(4).source.children[0].attributes["randoms"]="0";
         ItemDefinition lockpick;lockpick.name="Lockpick";lockpick.kind=ItemKind::misc;lockpick.builtin_subtype=0;definitions->push_back(lockpick);
+        definitions->push_back(read_item(parse_xml("<item name='Neck' level='1'><armour type='neck' randoms='0'/></item>")));
         ItemFactoryTables tables;for (std::size_t i=0;i<definitions->size();++i) register_factory_item(tables,std::uint32_t(i),definitions->at(i),15);
         ItemFactoryContext context;TreasureOptions options;options.roll_size=1;GameRandom random;random.seed(1);
-        // The recovered 'ring' path includes type6 legs; ordinary armour rejects
-        // those as well as ring types3/4. Preserve the original numeric test.
+        // Native type6 is neck armour, while the legacy port slot field uses9.
+        // Keep classifier semantics independent from the equipment-slot field.
         options.ranges[std::size_t(TreasureCategory::armour)]={0,0};
-        for (int i=0;i<8;++i) check(make_level_treasure(*definitions,tables,context,options,false,i+1,random).definition==3);
-        options.ranges[std::size_t(TreasureCategory::armour)]={0,-1};options.ranges[std::size_t(TreasureCategory::ring)]={0,0};bool legs=false;
-        for (int i=0;i<32;++i) {const auto item=make_level_treasure(*definitions,tables,context,options,false,i+1,random);check(item.definition==4 || item.definition==5);legs=legs || item.definition==5;}check(legs);
+        for (int i=0;i<8;++i) {const auto item=make_level_treasure(*definitions,tables,context,options,false,i+1,random);check(item.definition==3 || item.definition==5);}
+        options.ranges[std::size_t(TreasureCategory::armour)]={0,-1};options.ranges[std::size_t(TreasureCategory::ring)]={0,0};bool neck_seen=false;
+        for (int i=0;i<32;++i) {const auto item=make_level_treasure(*definitions,tables,context,options,false,i+1,random);check(item.definition==4 || item.definition==12);neck_seen=neck_seen || item.definition==12;}check(neck_seen);
         options.ranges[std::size_t(TreasureCategory::ring)]={0,-1};options.ranges[std::size_t(TreasureCategory::ammo)]={0,0};
         for (int i=0;i<32;++i) {const auto item=make_level_treasure(*definitions,tables,context,options,false,i+1,random);check((item.definition==1 || item.definition==2) && item.quantity>=1 && item.quantity<=2 && item.stackable);}
         // Initial category draw happens even for a forced artifact, before the
@@ -37,6 +41,6 @@ int main() {
         const auto pending=saved(session);rejected=false;try {session.create_ground_treasure(bad,context,options,false,{2,1});} catch(const std::runtime_error&) {rejected=true;}check(rejected && saved(session)==pending);
         const auto tweaks=Tweaks::read(parse_xml("<tweaks><tweak name='treasure roll size' ival='690'/><tweak name='ammo roll min' ival='270'/><tweak name='ammo roll max' ival='349'/></tweaks>"));
         const auto resolved=treasure_options(tweaks,Difficulty::medium);check(resolved.roll_size==690 && resolved.ranges[std::size_t(TreasureCategory::ammo)].minimum==270 && resolved.ranges[std::size_t(TreasureCategory::ammo)].maximum==349);
-        std::cout<<"level treasure categories, accessory quirk, stack caps, wand charges, transactional ground creation and save continuation passed\n";
+        std::cout<<"level treasure categories, accessory classification, stack caps, wand charges, transactional ground creation and save continuation passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

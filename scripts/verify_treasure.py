@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Compare full Level::GenTreasure with actual selectors and CreateArtifact.
 
-The separately verified item/Buff constructors, virtual text/refresh, external
-math/string/allocation and libc interfaces are supplied boundaries. Item pools,
+Base item/Buff initialization, virtual text/refresh, external
+math/string/allocation and libc interfaces are supplied boundaries. Armour's
+automatic-enchantment tail and full CreateArtifact execute. Item pools,
 tweaks and artifact word pools are controlled fixtures. No game code is emitted.
 """
 import argparse
@@ -10,6 +11,7 @@ import hashlib
 import json
 from pathlib import Path
 import random
+import struct
 import subprocess
 from verify_artifact_factory import Factory
 
@@ -25,10 +27,18 @@ class Treasure(Factory):
             ('__ZN6PotionC1EP11itemDBEntry',3),('__ZN4WandC1EP11itemDBEntry',4),
             ('__ZN4FoodC1EP11itemDBEntry',5),('__ZN8MushroomC1EP11itemDBEntry',8),('__ZN4MiscC1Ei',6)]}
         self.refresh=self.original.sentinel+0x800
+        self.armour_adapter=self.original.sentinel+0xe00
+        # Generated harness frame for the original automatic-enchantment tail;
+        # base item/armour initialization remains the recorded constructor boundary.
+        code=b'\x55\x89\xe5\x53\x57\x56\x83\xec\x1c\x8b\x7d\x08\xc7\x45\xe8'+struct.pack('<I',0x39cbe)+b'\x8d\x87\xc8\x01\x00\x00\x89\x45\xf0'
+        code+=b'\xe9'+struct.pack('<i',0x39fa4-(self.armour_adapter+len(code)+5));self.machine.mem_write(self.armour_adapter,code)
         for address in [*self.simple,self.refresh]:self.machine.hook_add(UC_HOOK_CODE,self.boundary,begin=address,end=address)
 
     def boundary(self,machine,address,size,user):
         from unicorn.x86_const import UC_X86_REG_ESP,UC_X86_REG_EAX,UC_X86_REG_EIP
+        if address==self.armour:
+            esp=machine.reg_read(UC_X86_REG_ESP);super().boundary(machine,address,size,user)
+            machine.reg_write(UC_X86_REG_ESP,esp);machine.reg_write(UC_X86_REG_EIP,self.armour_adapter);return
         if address not in [*self.simple,self.refresh,0x179b90]:return super().boundary(machine,address,size,user)
         esp=machine.reg_read(UC_X86_REG_ESP);returned,a,b=self.read(esp,3);result=a
         if address==0x179b90:
@@ -48,15 +58,16 @@ class Treasure(Factory):
         seed,depth,alternate,alt_depth,argument_depth,level_set,deviation,artifact,roll_size,ranges,self.full=case
         self.tweaks={'treasure roll size':roll_size}
         for name,(minimum,maximum) in zip(NAMES,ranges):self.tweaks[name+' roll min']=minimum;self.tweaks[name+' roll max']=maximum
-        converted=[[name,kind,weapon,level,special,craft,predefined,quality,mask] for name,kind,weapon,armour,level,special,debug,craft,predefined,quality,mask,maximum,mp in self.full]
+        converted=[[name,kind,weapon,level,special,craft,predefined,quality,mask] for name,kind,weapon,armour,level,special,debug,craft,predefined,quality,mask,maximum,mp,randoms in self.full]
         self.total_constructors=self.total_discarded=0
         return super().run([seed,depth,alternate,alt_depth,argument_depth,level_set,deviation,'unused','unused',1,artifact,converted,[]])
 
     def invoke_factory(self,types,level,quantity,artifact):
         self.write(self.vtable+0xd4,self.refresh)
         for entry,index in self.indices.items():
-            name,kind,weapon,armour,item_level,special,debug,craft,predefined,quality,mask,maximum,mp=self.full[index]
+            name,kind,weapon,armour,item_level,special,debug,craft,predefined,quality,mask,maximum,mp,randoms=self.full[index]
             self.write(entry+0x24,maximum);self.write(entry+0x34,debug);self.write(entry+0x230,armour);self.write(entry+0x36c,mp)
+            self.write(entry+0x23c,randoms)
             if kind==6:self.misc_entry=entry
         entries={index:entry for entry,index in self.indices.items()}
         for symbol,kind in [('_potionDBEntries',3),('_wandDBEntries',4),('_arrowDBEntries',1),('_mushroomDBEntries',8),('_foodDBEntries',5)]:
@@ -86,11 +97,11 @@ def fixture(rng,i):
     definitions=[]
     for level in [0,1,3,5]:
         for kind,weapon,armour in [(1,0,0),(1,5,0),(1,6,0),(2,0,0),(2,0,3),(2,0,6)]:
-            number=len(definitions);definitions.append([f'T{number}',kind,weapon,armour,level,0,0,0,0,rng.randrange(1,9),15,rng.choice([0,1,4,10]),0])
+            number=len(definitions);definitions.append([f'T{number}',kind,weapon,armour,level,0,0,0,0,rng.randrange(1,9),15,rng.choice([0,1,4,10]),0,rng.randrange(2)])
     for kind in [3,4,5,8]:
         for level in [1,3,5]:
-            number=len(definitions);definitions.append([f'T{number}',kind,0,0,level,0,0,0,0,1,15,0,int(kind==5 and level!=1)])
-    definitions.append(['Lockpick',6,0,0,0,0,0,0,0,1,15,0,0])
+            number=len(definitions);definitions.append([f'T{number}',kind,0,0,level,0,0,0,0,1,15,0,int(kind==5 and level!=1),0])
+    definitions.append(['Lockpick',6,0,0,0,0,0,0,0,1,15,0,0,0])
     # Rejections in ordered pools, while retaining eligible low-level entries.
     for j in range(6,24):
         if rng.randrange(4)==0:
@@ -121,7 +132,7 @@ def verify(binary,port,count):
             fields=[(j,x,y) for j,(x,y) in enumerate(zip(a,b)) if x!=y]
             raise AssertionError(f'treasure fixture {i}, {cases[i][:9]}, first fields {fields[:12]}, lengths {len(a)}/{len(b)}')
     return dict(binary_sha256=hashlib.sha256(oracle.original.data).hexdigest(),function='Level::GenTreasure 0x62578',cases=count,mismatches=0,
-                scope='complete GenTreasure, actual gear/thrown/food/booze selectors and CreateArtifact; controlled pools/tweaks/word tables, item/Buff constructors, virtual text/refresh and math/string/allocation/libc boundaries; definition/kind/quantity/stack flag/artifact text+quality+modifiers+damage, libc/normal cache/full MT state+next8; world registration/assets and complete constructors excluded')
+                scope='complete GenTreasure, actual gear/thrown/food/booze selectors, ArmourC2 automatic-enchantment tail and CreateArtifact; controlled pools/tweaks/word tables, base item/Buff initialization, virtual text/refresh and math/string/allocation/libc boundaries; definition/kind/quantity/stack flag/artifact text+quality+modifiers+damage, libc/normal cache/full MT state+next8; world registration/assets and complete base constructors excluded')
 
 
 if __name__=='__main__':

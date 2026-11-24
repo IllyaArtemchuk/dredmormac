@@ -135,6 +135,9 @@ add_test(NAME secret-lever-interaction COMMAND lever-tests)
 add_executable(decoration-tests tests/decorations.cpp)
 target_link_libraries(decoration-tests PRIVATE dredmor_core)
 add_test(NAME room-decorations COMMAND decoration-tests)
+add_executable(armour-constructor-tests tests/armour_constructor.cpp)
+target_link_libraries(armour-constructor-tests PRIVATE dredmor_core)
+add_test(NAME automatic-armour-artifacts COMMAND armour-constructor-tests)
 add_executable(trap-runtime-tests tests/traps.cpp)
 target_link_libraries(trap-runtime-tests PRIVATE dredmor_core)
 add_test(NAME trap-runtime COMMAND trap-runtime-tests)
@@ -355,6 +358,13 @@ if(APPLE)
     add_test(NAME native-decorations-window COMMAND $<TARGET_FILE:DredmorMac>
       ${CMAKE_BINARY_DIR}/native-decorations/scene.json --smoke-test)
     set_tests_properties(native-decorations-window PROPERTIES FIXTURES_REQUIRED native-decorations TIMEOUT 15)
+    add_test(NAME native-automatic-armour-fixture COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-automatic-armour
+      --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --automatic-armour)
+    set_tests_properties(native-automatic-armour-fixture PROPERTIES FIXTURES_SETUP native-automatic-armour)
+    add_test(NAME native-automatic-armour-window COMMAND $<TARGET_FILE:DredmorMac>
+      ${CMAKE_BINARY_DIR}/native-automatic-armour/scene.json --smoke-test)
+    set_tests_properties(native-automatic-armour-window PROPERTIES FIXTURES_REQUIRED native-automatic-armour TIMEOUT 15)
     add_test(NAME native-food-fixture COMMAND ${Python3_EXECUTABLE}
       ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-food
       --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --food)

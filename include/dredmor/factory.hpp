@@ -37,6 +37,11 @@ struct TreasureOptions {
 class Tweaks;
 enum class Difficulty : std::size_t;
 TreasureOptions treasure_options(const Tweaks& tweaks,Difficulty difficulty);
+// Basic factory constructor plus Armour's automatic random accessory artifact.
+// Caller can suppress it like ArmourC2's nonzero third argument. Other factory
+// artifact rolls happen after this constructor and may replace its artifact.
+InventoryItem construct_factory_item(const ItemDefinition& definition,std::uint32_t index,
+    std::uint64_t instance,const ItemFactoryContext& context,GameRandom& random,bool suppress_armour_randoms=false);
 // Level::GenTreasure, distinct from the room-record loot dispatcher. Always
 // consumes its initial libc category roll, including forced artifacts. Uses
 // current-level depth for selectors/artifact quality, argument-level level_set.

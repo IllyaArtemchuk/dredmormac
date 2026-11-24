@@ -85,6 +85,21 @@ TreasureOptions treasure_options(const Tweaks& tweaks,Difficulty difficulty) {
     for (std::size_t i=0;i<options.ranges.size();++i) options.ranges[i]={tweaks.integer(difficulty,std::string(names[i])+" roll min"),tweaks.integer(difficulty,std::string(names[i])+" roll max")};
     return options;
 }
+InventoryItem construct_factory_item(const ItemDefinition& definition,std::uint32_t index,
+    std::uint64_t instance,const ItemFactoryContext& context,GameRandom& random,bool suppress_armour_randoms) {
+    auto candidate=random;auto item=make_inventory_item(definition,index,instance,candidate.libc);
+    if (definition.kind==ItemKind::armour && !suppress_armour_randoms) {
+        const auto rules=armour_constructor_rules(definition);
+        if (rules.randoms && (rules.type==3 || rules.type==4 || rules.type==6)) {
+            if (!context.artifact_words) throw std::invalid_argument("automatic armour artifact needs word tables");
+            const auto first=std::uint32_t((std::uint64_t(candidate.libc.next())*6U)>>32);
+            const auto count=context.depth.alternate?10:context.depth.depth;
+            const int quality=int(first+candidate.libc.bounded(std::uint32_t(count))+1);
+            item.artifact=create_artifact(*context.artifact_words,artifact_request(definition,quality),candidate);
+        }
+    }
+    random=std::move(candidate);return item;
+}
 InventoryItem make_level_treasure(const std::vector<ItemDefinition>& definitions,
     const ItemFactoryTables& tables,const ItemFactoryContext& context,const TreasureOptions& options,
     bool artifact,std::uint64_t instance,GameRandom& random) {
@@ -99,7 +114,7 @@ InventoryItem make_level_treasure(const std::vector<ItemDefinition>& definitions
     auto gear=[&](ItemKind kind) {return pick_gear(definitions,tables,context,candidate,state,kind,false);};
     auto armour=[&](bool ring) {
         for (std::size_t attempt=0;attempt<options.max_retries;++attempt) {
-            const auto index=gear(ItemKind::armour);const auto type=definitions.at(index).armour_type;
+            const auto index=gear(ItemKind::armour);const auto type=armour_constructor_rules(definitions.at(index)).type;
             const bool accessory=type==3 || type==4 || type==6;
             if (accessory==ring) return index;
         }
@@ -140,7 +155,7 @@ InventoryItem make_level_treasure(const std::vector<ItemDefinition>& definitions
             index=pool.at(select_booze(food,candidate.libc,target));
         }
     } else index=gear(ItemKind::weapon);
-    const auto& definition=definitions.at(index);auto item=make_inventory_item(definition,index,instance,candidate.libc);
+    const auto& definition=definitions.at(index);auto item=construct_factory_item(definition,index,instance,context,candidate);
     if (artifact) {
         if (!context.artifact_words) throw std::invalid_argument("treasure artifact needs word tables");
         const auto quality=roll_depth_artifact_quality(context.depth.depth,candidate.libc);
@@ -219,7 +234,7 @@ std::optional<InventoryItem> make_loot_item(const std::vector<ItemDefinition>& d
     if (!money && (definition.kind==ItemKind::unknown || definition.kind==ItemKind::currency ||
         (definition.kind==ItemKind::misc && type!="misc"))) {random=std::move(candidate);return std::nullopt;}
     auto result=money?make_currency_item(definition,*index,instance,*money,skills,abilities):
-        make_inventory_item(definition,*index,instance,candidate.libc);
+        construct_factory_item(definition,*index,instance,context,candidate);
     if (artifact_roll!=ArtifactRoll::none) {
         if (!context.artifact_words) throw std::invalid_argument("artifact creation needs word tables");
         const auto quality=artifact_roll==ArtifactRoll::explicit_three?roll_explicit_artifact_quality(candidate.libc):
