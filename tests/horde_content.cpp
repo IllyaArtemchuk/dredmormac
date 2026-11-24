@@ -1,7 +1,9 @@
 #include "dredmor/content.hpp"
+#include "dredmor/floors.hpp"
 #include <chrono>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #define check(...) do {if (!(__VA_ARGS__)) throw std::runtime_error("horde content assertion at line "+std::to_string(__LINE__));} while(false)
 using namespace dredmor;
@@ -20,8 +22,8 @@ int main(int argc,char** argv) {
         TemporaryRoot root{std::filesystem::temp_directory_path()/("dredmor-horde-content-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()))};
         std::filesystem::copy(argv[1],root.path,std::filesystem::copy_options::recursive);
         std::ofstream(root.path/"game/monDB.xml")<<R"(<monDB><monster name="Fixture monster"><stats numFig="2" numRog="1"/>
-            <idleSprite down="fixture.spr"/><monster name="Fixture variant"><palette tint="120"/></monster>
-            </monster></monDB>)";
+            <idleSprite down="fixture.spr"/><monster name="Fixture variant" level="1"><palette tint="120"/></monster>
+            </monster><monster name="Floor monster" level="2"><stats numFig="2"/><idleSprite down="fixture.spr"/></monster></monDB>)";
         std::ofstream(root.path/"game/tweakDB.xml")<<R"(<tweakdb><tweak name="monster HP global scale" fval="1.1"/>
             <tweak name="monster additional HP percent per level" fval="0.1"/><tweak name="monster additional HP per level" ival="2"/>
             <tweak name="monster level adder" ival="3"/><tweak name="horde is overpowered change" ival="2"/></tweakdb>)";
@@ -63,6 +65,25 @@ int main(int argc,char** argv) {
         check(rejected && same_random(failed,before));
         auto invalid=options;invalid.position={-1,2};const auto skipped=without_words.create_horde(invalid,world,Difficulty::medium,9,counts,failed,42);
         check(!skipped.result.accepted && skipped.actors.empty() && same_random(failed,before));
+        auto make_world=[] {std::istringstream rows("#####\n#@..#\n#...#\n#####\n");return World::read(rows);};
+        Session session(make_world(),make_player({3,2,2}),19);
+        RoomMonsterRecord ordinary;ordinary.placement.relative={3,2};
+        auto spawn=[&] {
+            return session.create_room_monster(ordinary,[&](const auto& plan,auto& rng,auto& state) {
+                return content.create_room_monster(plan,{session.depth_context()},Difficulty::medium,rng,state);
+            });
+        };
+        check(spawn() && session.monster_spawn_state().counts.at("Fixture variant")==1);
+        SessionFloor second(make_world());second.depth.depth=1;
+        auto first=session.swap_floor(std::move(second),{1,1});
+        check(session.monster_spawn_state().counts.empty() && first.monster_state.counts.at("Fixture variant")==1);
+        check(spawn() && session.monster_spawn_state().counts.at("Floor monster")==1 && session.monster_spawn_state().counts.size()==1);
+        auto cached=session.swap_floor(std::move(first),{1,1});
+        check(session.monster_spawn_state().counts.at("Fixture variant")==1 && session.monster_spawn_state().counts.size()==1);
+        FloorRegistry floors;floors.add_floor(session,std::move(cached));std::ostringstream encoded;floors.save(session,encoded);
+        std::istringstream saved(encoded.str());auto restored=FloorRegistry::load(saved);
+        check(restored.first.monster_spawn_state().counts.at("Fixture variant")==1);
+        check(restored.second.cached()[0].monster_state.counts.at("Floor monster")==1 && restored.second.cached()[0].monster_state.counts.size()==1);
         std::cout<<"constructor-backed hordes preserve HP/MP across leader promotion, resolve colour/names/group links, keep counts unchanged, separate current depth, queue duplicate placements and roll back failures\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

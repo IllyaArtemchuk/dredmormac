@@ -91,6 +91,7 @@ struct SessionFloor {
     std::vector<ScriptLever> script_levers;
     std::optional<SessionDoors> doors;
     std::vector<Actor> enemies;
+    MonsterSpawnState monster_state;
     std::vector<GroundItem> ground;
     std::vector<CustomRoomObject> objects;
     std::vector<BreakableRoomObject> breakables;

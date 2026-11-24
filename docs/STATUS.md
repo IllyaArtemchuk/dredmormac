@@ -1813,3 +1813,11 @@ independent unless argument/current levels alias. Unplaced source coordinates ar
 uninitialized; port uses(-1,-1) as a policy, excluded from comparison. All67 portable
 groups pass. Next add Session deferred horde batches/group save and native room
 record creation; full scripting/tick/AI/effects/generation/UI/audio/game unfinished.
+
+Floor cache now retains each floor's MonsterSpawnState. Source CanSpawnMonster/
+SpawnMonster use the owning Level+0x90 map; travel previously kept the departing
+floor's counters active globally. SessionFloor snapshot/swap now carries counts,
+and existing per-floor Session payloads persist them without a format change.
+Tests spawn different monsters on two floors, return, then reload the full cache;
+each counter map stays with its floor. All67 portable groups pass. Native horde
+batch placement/group save adoption remains next; full gameplay still incomplete.
