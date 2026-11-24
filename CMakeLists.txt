@@ -431,6 +431,13 @@ if(APPLE)
     add_test(NAME native-decorations-window COMMAND $<TARGET_FILE:DredmorMac>
       ${CMAKE_BINARY_DIR}/native-decorations/scene.json --smoke-test)
     set_tests_properties(native-decorations-window PROPERTIES FIXTURES_REQUIRED native-decorations TIMEOUT 15)
+    add_test(NAME native-script-levers-fixture COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-script-levers
+      --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --script-levers)
+    set_tests_properties(native-script-levers-fixture PROPERTIES FIXTURES_SETUP native-script-levers)
+    add_test(NAME native-script-levers-window COMMAND $<TARGET_FILE:DredmorMac>
+      ${CMAKE_BINARY_DIR}/native-script-levers/scene.json --smoke-test)
+    set_tests_properties(native-script-levers-window PROPERTIES FIXTURES_REQUIRED native-script-levers TIMEOUT 20)
     add_test(NAME native-doors-fixture COMMAND ${Python3_EXECUTABLE}
       ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-doors
       --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --doors)

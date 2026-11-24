@@ -41,6 +41,7 @@ if __name__=='__main__':
     p.add_argument('--floors',action='store_true',help='Paired stairs, cached floor state, native run save/reload')
     p.add_argument('--secret-levers',action='store_true',help='Bump/click secret lever, wall opening and save/reload')
     p.add_argument('--decorations',action='store_true',help='Ordered conditional paintings/statues/floor engravings')
+    p.add_argument('--script-levers',action='store_true',help='Ordinary lever record, click/bump/history and saved activation')
     p.add_argument('--doors',action='store_true',help='Ordinary door picking, clicks, bumps, shattering and saves')
     p.add_argument('--shops',action='store_true',help='Keeper, stock, native buying/theft and saved shop state')
     p.add_argument('--automatic-armour',action='store_true',help='Automatic neck-armour enchantment, inventory and save/load')
@@ -70,6 +71,7 @@ if __name__=='__main__':
     if args.decorations and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers])):p.error('--decorations requires --content-source and excludes other fixture types')
     if args.shops and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers,args.decorations,args.automatic_armour])):p.error('--shops requires --content-source and excludes other fixture types')
     if args.automatic_armour and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers,args.decorations])):p.error('--automatic-armour requires --content-source and excludes other fixture types')
+    if args.script_levers and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers,args.decorations,args.shops,args.automatic_armour,args.doors])):p.error('--script-levers requires --content-source and excludes other fixture types')
     if args.doors and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers,args.decorations,args.shops,args.automatic_armour])):p.error('--doors requires --content-source and excludes other fixture types')
     if args.content_source:
         root=out/'installation';shutil.copytree(args.content_source,root,dirs_exist_ok=True)
@@ -77,6 +79,14 @@ if __name__=='__main__':
         (root/'tilesets/basic.png').write_bytes(png(384,640,(70,80,95,255)))
         (root/'sprites/hero/hero_idle_d.spr').write_bytes(sprite())
         (root/'dungeon').mkdir(exist_ok=True);(root/'dungeon/fixture.spr').write_bytes(sprite())
+        if args.script_levers:
+            (root/'dungeon/lever1.spr').write_bytes(sprite())
+            rows=['#######','#@....#','#.....#','#.....#','#######']
+            database=ET.Element('roomdb');room=ET.SubElement(database,'room',{'name':'Starting Room','width':'7','height':'5'})
+            for row in rows:ET.SubElement(room,'row',{'text':row.replace('@','.')})
+            ET.SubElement(room,'element',{'type':'lever','x':'3','y':'1','id':'fixture-switch','can_push':'0'})
+            ET.ElementTree(database).write(root/'game/rooms.xml',encoding='unicode')
+            scene.update(data_root=str(root),room_objects='Starting Room',rows=[row.replace('@','.') for row in rows],collision='\n'.join(rows)+'\n',smoke_script_levers=True,smoke_expected='{"turn":2,"x":2,"y":1}')
         if args.doors:
             rows=['#########','#@..#...#','#...#...#','#...#...#','#...#...#','######..#','#########']
             template=['#########','#...#...#','#...#...#','#...d...#','#...#...#','##D###..#','#########']

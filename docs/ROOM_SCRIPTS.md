@@ -330,3 +330,14 @@ when ordinary levers are absent. Session tests cover canonical roundtrip,
 continuation, held-item rejection, floor cache and creation failure rollback.
 All60 portable groups pass. Full object ordering/room script/tick-driver adoption
 and native controls remain work.
+
+Native RoomView now instantiates ordinary RoomElement typelever records in source
+order using Session creation, prepares dungeon/lever1.spr with at least two frames,
+and draws current activation. Mouse clicks and movement bumps use the ordinary
+lever Session path. Loaded ordinary lever count/position/ID/can_push must match the
+room before resource preparation and state/presentation commit. Save22 restores
+activation/history while preserving the earlier floor/load rollback architecture.
+The --script-levers synthetic Mac fixture covers click, bump, history settling,
+save/restore, distant click and malformed-history rollback. Local portable checks
+and fixture generation pass; arm64 native validation is pending for this source.
+No original VFX/audio/UI or full script/tick integration claim is made.

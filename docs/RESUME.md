@@ -1950,3 +1950,14 @@ RoomElement chance planning; full resource constructor is not an oracle claim.
 Native lever rendering/input is next. Session scheduling stays provisional; the
 verified outer tick driver and room script engine are not yet connected. Full
 puzzles/population/AI/effects/UI/audio and complete gameplay remain unfinished.
+
+Native room loading now instantiates ordinary lever elements, prepares their two
+sprite frames, renders activation, handles mouse clicks and preserves bump input
+through Session. Save/load checks room lever configuration before committing a
+prepared presentation. New --script-levers Mac fixture covers click, bump, history,
+restored activation, distant click and malformed-history rollback. All60 portable
+groups pass and fixture generation succeeds. Native source awaits arm64 Mac CI;
+Session sourcea77f057 also needs its Mac result checked. Full room script execution
+and verified tick-driver adoption are still pending; this does not complete puzzles
+or the game. Next connect live object bindings/actions/events and transactional
+prototype caches, save them and test a native scripted puzzle.
