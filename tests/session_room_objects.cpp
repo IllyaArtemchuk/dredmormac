@@ -99,6 +99,16 @@ int main() {
         auto after_consumed=session;check(after_consumed.inventory().remove(77));
         objects.synchronize_items(session,after_consumed);check(objects.carried().empty());
         check(!objects.unregister(ground.object.identity));
+        session=std::move(after_consumed);
+        auto future=gate;future.placement.relative={4,3};future.placement.id="future";check(session.create_custom_object(future)==1);
+        const auto registered_count=objects.bindings().size();const auto reserved=objects.reserve(session,{SessionRoomObjectKind::custom,2});
+        check(objects.unplaced().size()==1 && objects.bindings().size()==registered_count && objects.reference(reserved)->subject==2);
+        check(objects.object(session,reserved)->position.x==4 && !objects.find(session,8,"future"));
+        check(rejects([&]{saved(objects,session);}) && rejects([&]{objects.bind(session,{SessionRoomObjectKind::custom,2},layout);}));
+        auto abandoned=objects;check(abandoned.unregister(reserved) && !abandoned.reference(reserved) && objects.reference(reserved));
+        objects.place_reserved(session,reserved);
+        check(objects.unplaced().empty() && objects.bindings().back().object.identity==reserved && objects.bindings().back().object.assigned_room==-1);
+        objects.assign(reserved,"future",session,layout);check(objects.find(session,8,"future")->identity==reserved);
         auto malformed=parse_xml(encoded);malformed.children.push_back(malformed.children.front());
         check(rejects([&]{SessionRoomObjects::load(malformed,restored_session);}));
         malformed=parse_xml(encoded);malformed.children[0].attributes["subject"]="99";

@@ -23,11 +23,17 @@ public:
     explicit SessionRoomObjects(std::uint64_t level=1);
     const std::vector<SessionRoomObjectBinding>& bindings() const {return bindings_;}
     const std::vector<SessionRoomObjectBinding>& carried() const {return carried_;}
+    const std::vector<SessionRoomObjectBinding>& unplaced() const {return unplaced_;}
     // Finalization captures the owning tile's room byte. Hordes bypass their
     // record finalizer and must pass false. Duplicate labels are reported just
     // as SetRoomID reports its diagnostic boundary; the new label is retained.
     RoomIdAssignment bind(const Session& session,SessionRoomObjectRef reference,
         const DungeonLayout& layout,bool finalize=true);
+    // Constructors can allocate an object handle before its first placement.
+    // These objects have no level registration and cannot match room lookup.
+    std::uint64_t reserve(const Session& session,SessionRoomObjectRef reference);
+    void place_reserved(const Session& session,std::uint64_t identity);
+    std::optional<SessionRoomObjectRef> reference(std::uint64_t identity) const;
     RoomIdAssignment assign(std::uint64_t identity,std::string id,const Session& session,
         const DungeonLayout& layout,bool debug=false);
     bool unregister(std::uint64_t identity);
@@ -48,6 +54,7 @@ private:
     std::uint64_t level_=1,next_=1;
     std::vector<SessionRoomObjectBinding> bindings_;
     std::vector<SessionRoomObjectBinding> carried_;
+    std::vector<SessionRoomObjectBinding> unplaced_;
     std::vector<RoomObjectIdentity> registered(const Session& session) const;
 };
 }

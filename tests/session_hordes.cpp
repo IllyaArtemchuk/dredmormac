@@ -102,6 +102,7 @@ int main(int argc,char** argv) {
         script_room.source=parse_xml(R"(<room width="5" height="4"><script>
             <action on="success" action_type="move" id="gate" x="1" y="2"/>
             <action on="success" action_type="create" create_type="horde" name="Fixture variant" min="0" additional="0" at="1" id="ignored-script-horde"/>
+            <action on="success" action_type="create" create_type="customengraving" x="2" y="1" png="later.spr" id="later"/>
             <action on="success" action_type="move" id="player" at="1"/>
             <action on="success" action_type="create" create_type="horde" name="Fixture variant" min="0" additional="0" at="1" id="ignored-script-horde"/>
             <action on="success" action_type="remove" id="gate"/></script></room>)");
@@ -123,17 +124,21 @@ int main(int argc,char** argv) {
         rejected=false;try {SessionRoomScriptExecutor::run(scripted,script_profile,failed_objects,failed_runtime,failure);} catch(const std::runtime_error&) {rejected=true;}
         check(rejected && save(scripted)==scripted_before && failed_objects.bindings().size()==2 && failed_runtime.triggers.success_counts.empty());
         auto script_result=SessionRoomScriptExecutor::run(scripted,script_profile,script_objects,script_runtime,script_hooks);
-        check(groups==2 && script_result.player_teleported && scripted.enemies().size()==4 && scripted.custom_objects().empty() && !scripted.queued_horde_members());
-        check(scripted.player().position.x==2 && scripted.player().position.y==2 && script_objects.bindings().size()==5);
+        check(groups==2 && script_result.player_teleported && scripted.enemies().size()==4 && scripted.custom_objects().size()==1 && scripted.custom_objects()[0].room_local_id=="later" && !scripted.queued_horde_members());
+        check(scripted.player().position.x==2 && scripted.player().position.y==2 && script_objects.bindings().size()==6 && script_objects.unplaced().empty());
         for (const auto& actor:scripted.enemies()) check(actor.position.x==2 && actor.position.y==2 && actor.horde && actor.room_local_id.empty());
         check(!script_objects.object(scripted,gate_object));
-        for (std::size_t i=1;i<script_objects.bindings().size();++i) check(script_objects.bindings()[i].reference.subject==i+1 && script_objects.bindings()[i].object.assigned_room==-1 && script_objects.bindings()[i].object.id.empty());
+        check(script_objects.bindings()[1].object.id=="later" && script_objects.bindings()[1].object.identity==5 && script_objects.bindings()[2].object.identity==3);
+        for (const auto& binding:script_objects.bindings()) if (binding.reference.kind==SessionRoomObjectKind::monster) check(binding.object.assigned_room==-1 && binding.object.id.empty());
         Session direct(make_world(),make_player({3,2,2}),1);
-        for (const auto& created:script_program->created_records) check(content.queue_script_horde(direct,std::get<RoomHordeRecord>(created),layout,rooms));
+        for (const auto& created:script_program->created_records) {
+            if (const auto* horde=std::get_if<RoomHordeRecord>(&created)) check(content.queue_script_horde(direct,*horde,layout,rooms));
+            else check(direct.create_custom_object(std::get<CustomRoomDefinition>(created)));
+        }
         direct.place_queued_hordes();direct.swap_floor(direct.floor_state(),{2,2});check(save(direct)==save(scripted));
         std::ostringstream script_save;SessionRoomScriptExecutor::save(script_save,scripted,script_profile,script_objects,script_runtime);
         std::istringstream script_input(script_save.str());auto script_restored=SessionRoomScriptExecutor::load(script_input,script_profile);
-        check(save(script_restored.session)==save(scripted) && script_restored.objects.bindings().size()==5);
+        check(save(script_restored.session)==save(scripted) && script_restored.objects.bindings().size()==6);
         // Script removal runs destructor link cleanup, not OnDeath's panic or
         // quest callbacks. Orphan followers retain their own stats/names/quest.
         auto removal_program=std::make_shared<RoomScriptProgram>();RoomScriptDefinition remove_script;
@@ -143,7 +148,8 @@ int main(int argc,char** argv) {
         removal_profile.rooms={{{true,1,0,std::shared_ptr<const std::vector<RoomScriptDefinition>>(removal_program,&removal_program->scripts)},{0,0},1}};
         const auto orphan_before=scripted.enemies()[1],other_leader=scripted.enemies()[2];
         const auto random_before=*parse_xml(save(scripted)).first("random");
-        script_objects.assign(script_objects.bindings()[1].object.identity,"victim",scripted,layout);
+        const auto leader_object=script_objects.bindings()[2].object.identity;check(script_objects.reference(leader_object)->subject==2);
+        script_objects.assign(leader_object,"victim",scripted,layout);
         RoomRuntimeState removal_state;SessionRoomScriptExecutor::run(scripted,removal_profile,script_objects,removal_state);
         check(scripted.enemies().size()==3 && scripted.enemies()[0].id==orphan_before.id && !scripted.enemies()[0].horde->leader);
         const auto& orphan=scripted.enemies()[0];
@@ -157,7 +163,7 @@ int main(int argc,char** argv) {
         check(scripted.enemies()[1].primary==other_leader.primary && scripted.enemies()[1].horde->moniker==other_leader.horde->moniker);
         std::ostringstream removed_save;SessionRoomScriptExecutor::save(removed_save,scripted,removal_profile,script_objects,removal_state);
         std::istringstream removed_input(removed_save.str());auto removed=SessionRoomScriptExecutor::load(removed_input,removal_profile);
-        check(save(removed.session)==save(scripted) && removed.objects.bindings().size()==3);
+        check(save(removed.session)==save(scripted) && removed.objects.bindings().size()==4);
         std::cout<<"horde placement batches preserve pending occupancy, duplicate sites, group links/colour/stats through save24/floor cache and rollback failed construction\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

@@ -2302,3 +2302,21 @@ late action failure. Extended native source awaits Mac CI. Complete simple item
 constructors, dynamic/expansion registration, original prototype object/resource
 lifetime, trap/deferred world lifetime, full GameTick/AI/effects/generation/UI/audio
 and the entire game remain unfinished.
+
+Room object handles can now be reserved at construction while their owning-level
+registration remains absent. Unplaced objects support direct handle/reference
+resolution, stay out of room lookup, and cannot be saved until placement finishes.
+Placement appends registration while retaining the already reserved handle and
+port assigned-room policy. Scripted hordes now use this single opaque handle
+domain for all deferred moves/destruction, replacing actor-ID queue tokens.
+A later immediate Create can therefore register before earlier horde placements
+without changing the horde objects' construction-time handles. Tests interleave
+two groups, a later engraving, player/object moves and removal; registration
+order differs from handle order as expected, all source metadata/RNG remain equal
+to direct batched construction, and saved continuation still validates. Standalone
+reservation tests cover snapshot isolation, lookup exclusion, save guards,
+placement and explicit later finalization. All72 portable groups pass. This is
+port handle/lifetime integration over previously compared constructor/placement
+rules; no new full GameTick adoption claim. Item-type123fb2f is running Mac
+45408432394. Next split script/destruction/placement phases for the verified outer
+GameTick; full scheduling/AI/effect/generation/UI/audio/game remain unfinished.

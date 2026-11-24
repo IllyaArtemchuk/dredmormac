@@ -89,19 +89,43 @@ std::vector<RoomObjectIdentity> SessionRoomObjects::registered(const Session& se
 }
 RoomIdAssignment SessionRoomObjects::bind(const Session& session,SessionRoomObjectRef reference,const DungeonLayout& layout,bool finalize) {
     geometry(session,layout);
-    if (bindings_.size()+carried_.size()>=100000 || next_==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("room object binding limit exceeded");
+    if (bindings_.size()+carried_.size()+unplaced_.size()>=100000 || next_==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("room object binding limit exceeded");
     const auto live=resolve(session,reference);if (!live) throw std::invalid_argument("room binding refers to a missing Session object");
     if (live->room_local_id.size()>4096) throw std::invalid_argument("room object label limit exceeded");
     for (const auto& binding:bindings_) if (binding.reference.kind==reference.kind && binding.reference.subject==reference.subject)
         throw std::invalid_argument("Session object already has a room binding");
     for (const auto& binding:carried_) if (binding.reference.kind==reference.kind && binding.reference.subject==reference.subject)
         throw std::invalid_argument("carried Session object already has a room binding");
+    for (const auto& binding:unplaced_) if (binding.reference.kind==reference.kind && binding.reference.subject==reference.subject)
+        throw std::invalid_argument("unplaced Session object already has a room binding");
     RoomObjectIdentity object{next_,level_,-1,"",reference.kind==SessionRoomObjectKind::player,live->position};
     if (object.global) object.id=live->room_local_id;
     auto entries=registered(session);entries.push_back(object);
     RoomIdAssignment result;result.object=object;
     if (finalize) result=assign_room_object_id(object,live->room_local_id,&layout,entries);
     bindings_.push_back({reference,result.object});++next_;return result;
+}
+std::uint64_t SessionRoomObjects::reserve(const Session& session,SessionRoomObjectRef ref) {
+    if (bindings_.size()+carried_.size()+unplaced_.size()>=100000 || next_==std::numeric_limits<std::uint64_t>::max()) throw std::runtime_error("room object binding limit exceeded");
+    const auto live=resolve(session,ref);if (!live) throw std::invalid_argument("cannot reserve a missing Session object");
+    for (const auto* collection:{&bindings_,&carried_,&unplaced_}) for (const auto& binding:*collection)
+        if (binding.reference.kind==ref.kind && binding.reference.subject==ref.subject) throw std::invalid_argument("Session object already has a room binding");
+    if (ref.kind==SessionRoomObjectKind::player) throw std::invalid_argument("reserve unplaced level objects, not the registered player");
+    const auto identity=next_;
+    // Assigned-room -1 is a port initialization policy; original GameObj does
+    // not initialize that field until record finalization supplies it.
+    unplaced_.push_back({ref,{identity,0,-1,"",false,live->position}});++next_;return identity;
+}
+void SessionRoomObjects::place_reserved(const Session& session,std::uint64_t identity) {
+    const auto found=std::find_if(unplaced_.begin(),unplaced_.end(),[&](const auto& binding){return binding.object.identity==identity;});
+    if (found==unplaced_.end()) throw std::invalid_argument("no reserved room object to place");
+    const auto live=resolve(session,found->reference);if (!live) throw std::invalid_argument("reserved room object has disappeared");
+    auto placed=*found;placed.object.level=level_;placed.object.position=live->position;bindings_.push_back(std::move(placed));unplaced_.erase(found);
+}
+std::optional<SessionRoomObjectRef> SessionRoomObjects::reference(std::uint64_t identity) const {
+    for (const auto* collection:{&bindings_,&carried_,&unplaced_}) for (const auto& binding:*collection)
+        if (binding.object.identity==identity) return binding.reference;
+    return std::nullopt;
 }
 RoomIdAssignment SessionRoomObjects::assign(std::uint64_t identity,std::string id,const Session& session,const DungeonLayout& layout,bool debug) {
     geometry(session,layout);
@@ -117,7 +141,11 @@ bool SessionRoomObjects::unregister(std::uint64_t identity) {
     const auto found=std::find_if(bindings_.begin(),bindings_.end(),[&](const auto& value){return value.object.identity==identity;});
     if (found==bindings_.end()) {
         const auto detached=std::find_if(carried_.begin(),carried_.end(),[&](const auto& value){return value.object.identity==identity;});
-        if (detached==carried_.end()) return false;
+        if (detached==carried_.end()) {
+            const auto pending=std::find_if(unplaced_.begin(),unplaced_.end(),[&](const auto& value){return value.object.identity==identity;});
+            if (pending==unplaced_.end()) return false;
+            unplaced_.erase(pending);return true;
+        }
         carried_.erase(detached);return true;
     }
     bindings_.erase(found);return true;
@@ -129,13 +157,17 @@ void SessionRoomObjects::erase_subject(SessionRoomObjectRef reference) {
     carried_.erase(std::remove_if(carried_.begin(),carried_.end(),[&](const auto& binding) {
         return binding.reference.kind==reference.kind && binding.reference.subject==reference.subject;
     }),carried_.end());
+    unplaced_.erase(std::remove_if(unplaced_.begin(),unplaced_.end(),[&](const auto& binding) {
+        return binding.reference.kind==reference.kind && binding.reference.subject==reference.subject;
+    }),unplaced_.end());
     if (reference.kind==SessionRoomObjectKind::custom || reference.kind==SessionRoomObjectKind::breakable || reference.kind==SessionRoomObjectKind::lever)
-        for (auto& binding:bindings_) if (binding.reference.kind==reference.kind && binding.reference.subject>reference.subject) --binding.reference.subject;
+        for (auto* collection:{&bindings_,&unplaced_}) for (auto& binding:*collection) if (binding.reference.kind==reference.kind && binding.reference.subject>reference.subject) --binding.reference.subject;
 }
 std::optional<ScriptObjectState> SessionRoomObjects::object(const Session& session,std::uint64_t identity) const {
-    const auto found=std::find_if(bindings_.begin(),bindings_.end(),[&](const auto& value){return value.object.identity==identity;});
-    if (found==bindings_.end()) return std::nullopt;
-    auto live=resolve(session,found->reference);if (live) {live->identity=identity;live->room_local_id=found->object.id;}return live;
+    for (const auto* collection:{&bindings_,&unplaced_}) for (const auto& binding:*collection) if (binding.object.identity==identity) {
+        auto live=resolve(session,binding.reference);if (live) {live->identity=identity;live->room_local_id=binding.object.id;}return live;
+    }
+    return std::nullopt;
 }
 std::optional<ScriptObjectState> SessionRoomObjects::find(const Session& session,std::int32_t room,std::string_view id) const {
     // Match registered order, not actor/item/custom vector grouping. Missing
@@ -186,6 +218,7 @@ void SessionRoomObjects::synchronize_items(const Session& before,const Session& 
 void SessionRoomObjects::save(std::ostream& out,const Session& session) const {
     // Do not silently drop stale registrations during save. The lifetime owner
     // must remove them at the destruction/detachment phase first.
+    if (!unplaced_.empty()) throw std::runtime_error("finish reserved room object placements before saving");
     for (const auto& binding:bindings_) if (!resolve(session,binding.reference)) throw std::runtime_error("cannot save stale Session room binding");
     for (const auto& binding:carried_) if (!carried_item(session,binding.reference.subject)) throw std::runtime_error("cannot save stale carried Session room binding");
     out<<"<room-bindings level=\""<<level_<<"\" next=\""<<next_<<"\">\n";
