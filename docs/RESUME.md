@@ -1820,3 +1820,14 @@ counters. Activation changes compare two stored updates, not one. All53 portable
 groups pass. See docs/ROOM_SCRIPTS.md. Clock record constructors/XML, event queue,
 condition/action runtime and Session/native population remain separate; full
 generated game, damage/death/AI/effects/UI/audio parity are still unfinished.
+
+
+Clock source cd83a6a passed arm64 Mac run45350961452 and packaged-app smoke.
+RoomScript's condition loop and11 raw condition kinds now implement ordered
+short circuit/negation, missing-object values, entry/exit, relative coordinates,
+monster death, activation history, clocks and event queries. All4,096 original
+passes/6,213 evaluated conditions match, including2,095 controlled diagnostic
+requests; real virtual/clock/activation queries execute with explicit lookup,
+event and returning-error boundaries. All54 portable groups pass. New source
+awaits Mac CI. TypeAt/XML/actions/event queue/scheduling/Session entities still
+need work, along with full generated floors/AI/damage/effects/UI/audio parity.

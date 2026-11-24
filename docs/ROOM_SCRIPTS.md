@@ -42,3 +42,30 @@ negative and wrapping counters. All53 portable groups pass.
 These primitives are not yet installed as Session entities or a room script
 runtime. Clock constructors/record XML, Level event queue, condition/action
 execution, lever/clock population and full original scheduling remain work.
+
+Room condition evaluation now ports AllConditionsPositiveIn (0x1a522c), the
+ObjectCondition lookup/missing wrapper (0x1a6012), base Object condition,
+Entered/Exited, At, IsDead/IsAlive, ActivatedChanged, Event, Stopped/Started and
+Activated methods. Negation belongs to the outer script loop: it stops at the
+first raw value equal to that condition's negation flag. An empty list succeeds.
+Entered/Exited compare resolved current/previous room identities, not proximity.
+At adds the script room origin with signed 32-bit wrapping. Missing objects use
+the condition's explicit missing value without invoking its subtype or event
+query. Event queries use the resolved object's local ID, not its lookup alias.
+
+ActivatedChanged first requires an activatable, then its two-update change query;
+wanted values0/1 filter the final activation state, other uint32 values allow any
+change. Activated and clock queries compare their boolean result with the stored
+low byte. IsDead/IsAlive require a Monster and use its dead field, not HP. Wrong
+object types produce diagnostic requests; their complete original error-handler
+behavior is outside the port. In particular the original dead/alive methods
+continue to inspect the field if a supplied error handler returns.
+
+`verify_room_conditions.py` executes 4,096 original full condition passes, with
+6,213 evaluated conditions and2,095 controlled diagnostic requests, all matching.
+It compares ordered evaluation/short circuit, negation, missing values, wrapped
+coordinates, lookup/event arguments and diagnostics. Real condition virtuals,
+activation and clock queries execute. Object lookup, event queue, strings and a
+returning error handler are recording boundaries; diagnostic fixtures do not
+establish original fatal-error behavior. All54 portable groups pass. TypeAt,
+XML construction, script actions/scheduler and Session entities remain work.
