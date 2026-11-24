@@ -2454,3 +2454,11 @@ See docs/ROOM_SCRIPTS.md for marshalling/lookup/record-body boundaries. New sour
 awaits Mac CI. Actor scope/registration, record constructors, Session/native
 script execution/save and full generated gameplay/AI/effects/UI/audio remain next.
 Mutable TypeAt caches must not leak between transactional Session snapshots.
+
+Room lookup0x609ac / MatchesRoomID0x36aee / SetRoomID0x36d4a:
+ordered registry at Level+b0, exact level/name, global-room override, assigned
+room byte and self-alias duplicate semantics recovered with high confidence.
+8,192 full original routine fixtures match via verify_room_scopes.py; string,
+allocation, global-kind and returning diagnostic boundaries remain explicit.
+See ROOM_SCRIPTS.md. Original binary SHA256
+`a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.

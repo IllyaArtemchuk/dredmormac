@@ -1627,3 +1627,11 @@ See docs/ROOM_SCRIPTS.md for marshalling/lookup/record-body boundaries. New sour
 awaits Mac CI. Actor scope/registration, record constructors, Session/native
 script execution/save and full generated gameplay/AI/effects/UI/audio remain next.
 Mutable TypeAt caches must not leak between transactional Session snapshots.
+
+Room object scope lookup/ID assignment now matches4,096 actual lookups and4,096
+assignments, including owner-level/global matching, first registered duplicate,
+self-renaming alias, case-sensitive names, strict coordinate bounds, tile room
+bytes and debug payloads. All57 portable groups pass. Parent metadata source
+2e63eff also passed arm64 Mac run45360683131. Scope source awaits Mac CI.
+Registration/removal lifetime, Session/native script bindings/save and full
+constructor/scheduler/gameplay integration remain unfinished.

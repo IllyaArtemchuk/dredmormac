@@ -211,3 +211,25 @@ are still unfinished. TypeAt caches are mutable condition state; a transactional
 Session integration must own/copy those caches rather than sharing mutations with
 an older snapshot. Whole template/cache lifetime and original save parity remain
 unverified.
+
+Room object lookup uses the ordered Level registry at+0xb0, separately from its
+main object list. Level::ObjectMatchingRoomID0x609ac calls MatchesRoomID0x36aee:
+owner-level equality, then either IsGlobalRoomObject or assigned-room equality,
+then exact label equality. Player's global override allows cross-room lookup
+within its own level. No alive/deferred-destruction predicate runs here.
+
+GameObj::SetRoomID0x36d4a first writes its new label and resets assigned room to-1.
+An in-bounds owner grid supplies tile byte+1, independently of RoomInfo identity.
+A nonempty name queries the registry after this write, so a registered self can
+match before a later duplicate. An earlier other object requests roomError;
+this port reports the duplicate and does not claim original fatal-handler parity.
+Debug flag8 logs nonempty names even without an owner level.
+
+verify_room_scopes.py executes those three full original routines on4,096 lookup
+and4,096 assignment fixtures, comparing tested counts, resolved identities,
+assigned scope/name, self aliasing, diagnostic requests and debug payloads.
+String/allocation helpers, global-kind query and returning error logger are
+controlled boundaries. Registration lifetime, teleport and scheduler integration
+are separate. Original binary SHA256 remains
+`a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.
+All57 portable groups pass.
