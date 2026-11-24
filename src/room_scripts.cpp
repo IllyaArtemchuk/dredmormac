@@ -7,13 +7,19 @@
 #include <stdexcept>
 
 namespace dredmor {
-RoomCondition read_room_condition(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room) {
-    auto lower=[](std::string text) {for (auto& c:text) if (c>='A' && c<='Z') c=char(c-'A'+'a');return text;};
-    if (lower(node.tag)!="condition") throw std::invalid_argument("expected room condition");
+namespace {
+std::string script_lower(std::string text) {for (auto& c:text) if (c>='A' && c<='Z') c=char(c-'A'+'a');return text;}
+RoomAttributes script_attributes(const XmlNode& node) {
     RoomAttributes attributes;
-    auto assign=[&](const std::string& key) {const auto found=node.attributes.find(key);if (found!=node.attributes.end()) attributes[lower(key)]=found->second;};
+    auto assign=[&](const std::string& key) {const auto found=node.attributes.find(key);if (found!=node.attributes.end()) attributes[script_lower(key)]=found->second;};
     for (const auto& key:node.attribute_order) assign(key);
     for (const auto& entry:node.attributes) if (std::find(node.attribute_order.begin(),node.attribute_order.end(),entry.first)==node.attribute_order.end()) assign(entry.first);
+    return attributes;
+}
+}
+RoomCondition read_room_condition(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room) {
+    if (script_lower(node.tag)!="condition") throw std::invalid_argument("expected room condition");
+    auto attributes=script_attributes(node);
     auto take=[&](const char* name,bool required=false,std::string fallback="") {
         const auto found=attributes.find(name);
         if (found==attributes.end()) {if (required) throw std::invalid_argument(std::string("room condition requires ")+name);return fallback;}
@@ -95,12 +101,8 @@ RoomScriptEvaluation all_room_conditions_positive(const std::vector<RoomConditio
     return result;
 }
 RoomAction read_room_action(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room,const RoomActionReaders& readers) {
-    auto lower=[](std::string text) {for (auto& c:text) if (c>='A' && c<='Z') c=char(c-'A'+'a');return text;};
-    if (lower(node.tag)!="action" || !node.children.empty()) throw std::invalid_argument("expected room action attributes");
-    RoomAttributes attributes;
-    auto assign=[&](const std::string& key) {const auto found=node.attributes.find(key);if (found!=node.attributes.end()) attributes[lower(key)]=found->second;};
-    for (const auto& key:node.attribute_order) assign(key);
-    for (const auto& entry:node.attributes) if (std::find(node.attribute_order.begin(),node.attribute_order.end(),entry.first)==node.attribute_order.end()) assign(entry.first);
+    if (script_lower(node.tag)!="action" || !node.children.empty()) throw std::invalid_argument("expected room action attributes");
+    auto attributes=script_attributes(node);
     auto take=[&](const char* name,bool required=true) {
         const auto found=attributes.find(name);
         if (found==attributes.end()) {if (required) throw std::invalid_argument(std::string("room action requires ")+name);return std::string{};}
@@ -183,6 +185,24 @@ std::vector<RoomActionRequest> perform_room_action(const RoomAction& action,cons
 }
 void perform_room_actions(const std::vector<RoomAction>& actions,const RoomActionContext& context) {
     for (const auto& action:actions) (void)perform_room_action(action,context);
+}
+RoomScriptDefinition read_room_script(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room,const RoomActionReaders& readers) {
+    if (script_lower(node.tag)!="script") throw std::invalid_argument("expected room script");
+    RoomScriptDefinition result;const auto attributes=script_attributes(node);
+    if (const auto repeat=attributes.find("repeat");repeat!=attributes.end()) result.success_repeat=legacy_integer(repeat->second);
+    auto candidate=room;
+    for (const auto& child:node.children) {
+        const auto tag=script_lower(child.tag);
+        if (tag=="condition") result.conditions.push_back(read_room_condition(child,markers,candidate));
+        else if (tag=="action") {
+            auto values=script_attributes(child);const auto route=values.find("on");
+            if (route==values.end() || (route->second!="success" && route->second!="failure")) throw std::invalid_argument("room action requires success/failure routing");
+            const bool success=route->second=="success";values.erase(route);auto action=child;action.attributes=std::move(values);action.attribute_order.clear();
+            auto definition=read_room_action(action,markers,candidate,readers);
+            (success?result.success:result.failure).push_back(std::move(definition));
+        } else throw std::invalid_argument("unsupported room script child");
+    }
+    room=std::move(candidate);return result;
 }
 void set_room_event(RoomEventQueue& events,std::int32_t assigned_room,std::string_view object_id,std::string_view event) {
     events[{assigned_room,std::string(object_id)}].insert(std::string(event));

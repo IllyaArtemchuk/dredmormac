@@ -31,6 +31,11 @@ int main() {
         for (const auto& cell:numeric.cells) check(cell.kind==0);
         definition.source.children.push_back(parse_xml("<element x='0' y='0' type='lever'/>"));
         numeric=definition.numeric_template();for (const auto& cell:numeric.cells) check(cell.kind==0);
+        RoomDefinition scripted;scripted.name="Script point fixture";scripted.rows={"123","..."};
+        scripted.source=parse_xml("<room width='3' height='2'><script repeat='-1'><condition condition_type='type_at' type='weapon' at='1'/><action on='success' action_type='spell' casts='Spell' sourceat='2'/></script></room>");
+        const auto script_numeric=scripted.numeric_template();check(script_numeric.cells[0].kind==1 && script_numeric.cells[1].kind==1 && script_numeric.cells[2].kind==0);
+        RoomActionReaders script_readers;script_readers.spell=[](std::string_view name){check(name=="Spell");return ScriptSpellBinding{6,"cast"};};
+        const auto scripts=scripted.scripts(script_readers);check(scripts.size()==1 && scripts[0].success_repeat==-1 && scripts[0].conditions[0].point.x==0 && scripts[0].success[0].spell==6 && scripts[0].success[0].spell_origin.x==1 && scripts[0].success[0].spell_target.x==-1);
         room.cells[30].kind=0;
         auto element=read_room_element(parse_xml("<ELEMENT AT='3' TYPE='bookshelf' CONTENTS='Fixture Bolt' CAN_PUSH='258' ID='shelf' percent=' 0tail'/>"),markers,room);
         check(element.placement.relative.x==2 && element.placement.relative.y==4 && element.placement.percent==0);

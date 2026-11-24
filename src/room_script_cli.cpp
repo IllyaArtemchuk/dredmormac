@@ -5,6 +5,24 @@
 using namespace dredmor;
 int main(int argc,char** argv) {
     try {
+        if (argc==2 && std::string(argv[1])=="--script-metadata") {
+            std::string xml;
+            while (std::cin>>std::quoted(xml)) {
+                RoomStamp room;room.width=room.height=7;room.cells.resize(49);std::vector<std::string> lookups;std::vector<XmlNode> records;RoomActionReaders readers;
+                readers.spell=[&](std::string_view name) {lookups.emplace_back(name);return ScriptSpellBinding{17,"cast"};};
+                readers.record=[&](const XmlNode& record,const RoomMarkers&,RoomStamp&) {records.push_back(record);return std::uint64_t(records.size());};
+                const auto script=read_room_script(parse_xml(xml),{{'3',{2,4}}},room,readers);auto emit=[](auto value){std::cout<<value<<' ';};
+                emit(script.success_repeat);emit(script.conditions.size());
+                for (const auto& c:script.conditions) {emit(int(c.kind));emit(c.negated);emit(c.missing_value);emit(c.wanted);emit(c.point.x);emit(c.point.y);emit(std::quoted(c.object_id));emit(std::quoted(c.event_name));emit(std::quoted(c.item_type));emit(std::quoted(c.item_subtype));emit(bool(c.cached_item));}
+                for (const auto* actions:{&script.success,&script.failure}) {
+                    emit(actions->size());for (const auto& action:*actions) {emit(int(action.kind));emit(std::quoted(action.object_id));emit(std::quoted(action.text));emit(std::quoted(action.property));emit(action.value);emit(action.point.x);emit(action.point.y);emit(action.spell_origin.x);emit(action.spell_origin.y);emit(action.spell_target.x);emit(action.spell_target.y);emit(action.spell);emit(action.record);emit(std::quoted(action.cast_sound));}
+                }
+                emit(lookups.size());for (const auto& name:lookups) emit(std::quoted(name));
+                emit(records.size());for (const auto& record:records) {emit(std::quoted(record.tag));emit(record.attributes.size());for (const auto& attribute:record.attributes) {emit(std::quoted(attribute.first));emit(std::quoted(attribute.second));}}
+                for (auto cell:room.cells) emit(unsigned(cell.kind));std::cout<<'\n';
+            }
+            return 0;
+        }
         if (argc==2 && std::string(argv[1])=="--metadata") {
             std::string xml;
             while (std::cin>>std::quoted(xml)) {

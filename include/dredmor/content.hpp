@@ -5,6 +5,7 @@
 #include "dredmor/abilities.hpp"
 #include "dredmor/names.hpp"
 #include "dredmor/room_records.hpp"
+#include "dredmor/room_scripts.hpp"
 #include "dredmor/artifact.hpp"
 #include "dredmor/spells.hpp"
 #include "dredmor/decorations.hpp"
@@ -29,6 +30,7 @@ struct RoomDefinition {
     // All recognized object records in original source order. Scripts have a
     // separate list; lever/clock/magicblocker retain raw pending definitions.
     std::vector<RoomRecord> records() const;
+    std::vector<RoomScriptDefinition> scripts(const RoomActionReaders& readers={}) const;
 };
 class GameContent {
 public:

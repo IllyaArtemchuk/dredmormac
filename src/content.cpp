@@ -122,16 +122,26 @@ RoomStamp RoomDefinition::numeric_template() const {
         };
         if (tag=="customblocker" || tag=="customengraving" || tag=="custombreakable" || tag=="trap" || tag=="monster" ||
             tag=="pedestal" || tag=="element" || tag=="loot" || tag=="horde" || tag=="lever" || tag=="clock" || tag=="magicblocker") prefix="";
-        if (tag=="condition" && value("condition_type")=="at") prefix="";
+        if (tag=="condition" && (value("condition_type")=="at" || value("condition_type")=="type_at")) prefix="";
         if (tag=="action") {
             const auto type=value("action_type");
             if (type=="create" || type=="move") prefix="";
-            if (type=="spell") prefix="target";
+            if (type=="spell") {
+                auto attributes=node.attributes;(void)take_room_point(attributes,"source",markers,result);prefix="target";
+            }
         }
         if (prefix) {auto attributes=node.attributes;(void)take_room_point(attributes,*prefix,markers,result);}
         if (tag=="script") for (const auto& child:node.children) points(child);
     };
     for (const auto& node:source.children) points(node);
+    return result;
+}
+std::vector<RoomScriptDefinition> RoomDefinition::scripts(const RoomActionReaders& readers) const {
+    auto numeric=numeric_template();RoomMarkers markers;
+    for (std::size_t y=0;y<rows.size();++y) for (std::size_t x=0;x<std::min(rows[y].size(),std::size_t(numeric.width));++x)
+        if (rows[y][x]>='1' && rows[y][x]<='9') markers[rows[y][x]]={int(x),int(y)};
+    std::vector<RoomScriptDefinition> result;
+    for (const auto& node:source.children) if (ascii_lower(node.tag)=="script") result.push_back(read_room_script(node,markers,numeric,readers));
     return result;
 }
 World RoomDefinition::instantiate(bool custom_blockers) const {

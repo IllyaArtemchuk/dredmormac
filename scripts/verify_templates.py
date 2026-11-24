@@ -13,13 +13,16 @@ NUMERIC_MAPPING.update({str(i):(0,0,0) for i in range(1,10)})
 
 def apply_points(room,cells,width):
     markers={symbol:(x,y) for y,row in enumerate(room.findall('row')) for x,symbol in enumerate(row.get('text','')[:width]) if symbol in '123456789'}
-    object_tags={'customblocker','customengraving','custombreakable','trap','monster','pedestal','element','loot','horde'}
+    object_tags={'customblocker','customengraving','custombreakable','trap','monster','pedestal','element','loot','horde','lever','clock','magicblocker'}
     for node in room.iter():
         tag=node.tag.lower();attributes={k.lower():v for k,v in node.attrib.items()};prefix=None
-        if tag in object_tags or (tag=='condition' and attributes.get('condition_type')=='at'):prefix=''
+        if tag in object_tags or (tag=='condition' and attributes.get('condition_type') in ('at','type_at')):prefix=''
         if tag=='action':
             if attributes.get('action_type') in ('create','move'):prefix=''
-            elif attributes.get('action_type')=='spell':prefix='target'
+            elif attributes.get('action_type')=='spell':
+                if 'sourceat' in attributes:
+                    x,y=markers[attributes['sourceat']];index=y*width+x;cells[index]=(1,cells[index][1],cells[index][2])
+                prefix='target'
         if prefix is not None and prefix+'at' in attributes:
             marker=attributes[prefix+'at'];x,y=markers[marker];index=y*width+x
             cells[index]=(1,cells[index][1],cells[index][2])

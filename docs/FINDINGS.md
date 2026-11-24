@@ -2441,3 +2441,16 @@ ID matter, independent of position/global level. All56 portable groups pass.
 See docs/ROOM_SCRIPTS.md for explicit call/library boundaries. New lifecycle code
 awaits Mac CI. Parent script XML, record/actor scope finalization, constructors,
 Session/native wiring and full generated game/AI/damage/UI/audio remain unfinished.
+
+
+Lifecycle sourcea8e3d04 passed arm64 Mac run45357852239 and packaged-app smoke.
+Parent script XML now preserves repeat(default1), exact required on routing, child
+order and ignored script attrs. All1,024 actual outer SAX callback fixtures match
+with factories/properties/registration, typed children, resolver/record payload
+order and numeric template effects. RoomDefinition::scripts exposes definitions;
+numeric ingestion now resolves TypeAt and spell source markers. All191 base/346
+total supplied templates match independent expansion; all56 portable groups pass.
+See docs/ROOM_SCRIPTS.md for marshalling/lookup/record-body boundaries. New source
+awaits Mac CI. Actor scope/registration, record constructors, Session/native
+script execution/save and full generated gameplay/AI/effects/UI/audio remain next.
+Mutable TypeAt caches must not leak between transactional Session snapshots.

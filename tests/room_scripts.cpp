@@ -18,6 +18,10 @@ int main() {
         check(type_definition.point.x==2 && type_definition.point.y==-1 && type_definition.item_subtype=="random" && !type_definition.cached_item);
         bool rejected=false;try {read_room_condition(parse_xml("<condition condition_type='at' id='x' x='1'/>"),markers,template_room);} catch(const std::invalid_argument&) {rejected=true;}check(rejected);
         rejected=false;try {read_room_condition(parse_xml("<condition condition_type='entered' unused='1'/>"),markers,template_room);} catch(const std::invalid_argument&) {rejected=true;}check(rejected);
+        const auto script_definition=read_room_script(parse_xml("<script REPEAT=' -1tail' ignored='yes'><action on='failure' action_type='ticker' text='failure'/><condition condition_type='entered'/><action on='success' action_type='ticker' text='first'/><action on='success' action_type='ticker' text='second'/></script>"),markers,template_room);
+        check(script_definition.success_repeat==-1 && script_definition.conditions.size()==1 && script_definition.success.size()==2 && script_definition.success[0].text=="first" && script_definition.success[1].text=="second" && script_definition.failure[0].text=="failure");
+        check(read_room_script(parse_xml("<script/>"),markers,template_room).success_repeat==1);
+        rejected=false;try {read_room_script(parse_xml("<script><action action_type='ticker' text='missing route'/></script>"),markers,template_room);} catch(const std::invalid_argument&) {rejected=true;}check(rejected);
         RoomScriptContext context;context.room=2;context.player_room=2;context.previous_room=1;
         RoomCondition entered;entered.kind=RoomConditionKind::entered;check(room_condition_value(entered,context).positive);
         context.previous_room=2;check(!room_condition_value(entered,context).positive);context.player_room=3;entered.kind=RoomConditionKind::exited;check(room_condition_value(entered,context).positive);

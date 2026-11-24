@@ -185,3 +185,29 @@ fixtures, comparing every result and complete queue contents/counts. Container
 insertion/destruction and strings are supplied. Actor room assignment/finalization,
 constructors, script metadata aggregation and Session/native scheduling/save remain
 work. All56 portable groups pass.
+
+Parent script metadata now defaults repeat to1, uses atoi for repeat, and ignores
+other script attributes as the original callback does. Child conditions/actions
+remain ordered within their respective lists. Actions require exact on="success"
+or on="failure" routing; each route retains its source order. The typed parent
+reader accepts condition/action children; malformed nesting and other child forms
+are not an original fatal-handler comparison.
+
+`verify_room_script_metadata.py` executes actual outer roomDBXMLLoader Start/End
+callbacks, factories, property/subclass readers and vector registration on1,024
+mixed script fixtures. Repeat defaults/source-order case aliases/ignored script
+attributes, interleaved children, routing, resolver order, created-record payloads
+and numeric template cells all match. Raw attribute-to-map marshalling, library
+helpers, spell lookup and created-record factory/body are supplied. Full Expat/file
+loading, created-record body semantics and scheduling/save remain separate.
+
+RoomDefinition::scripts now exposes the typed definitions with caller-provided
+spell/record readers. Numeric template ingestion also resolves TypeAt and scripted
+spell source markers, in addition to targets. All191 base/346 total supplied
+numeric templates match independent XML expansion; focused ingestion tests cover
+the previously omitted marker paths. All56 portable groups pass. Session/native
+script activation, actor room bindings and full constructor/scheduler integration
+are still unfinished. TypeAt caches are mutable condition state; a transactional
+Session integration must own/copy those caches rather than sharing mutations with
+an older snapshot. Whole template/cache lifetime and original save parity remain
+unverified.
