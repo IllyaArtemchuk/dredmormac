@@ -12,6 +12,7 @@ class Equipment {
 public:
     using Slots=std::array<std::optional<InventoryItem>,12>;
     const Slots& slots() const { return slots_; }
+    void clear_unpaid_flags();
     [[nodiscard]] std::optional<InventoryItem> equip(const InventoryItem& item,EquipmentSlot slot,
                                                    const std::vector<ItemDefinition>& definitions);
     std::optional<InventoryItem> remove(EquipmentSlot slot);

@@ -2203,3 +2203,20 @@ random-colour text and tile callbacks remain outside the comparison.
 All47 local groups pass. Actual arm64 validation is pending for these kernels.
 Full shop ownership/session/native UI and generated-floor content still need
 integration; do not present these isolated transitions as a complete shop system.
+
+
+Shop-presence source37a95f3 passed actual arm64 macos-15 run45340722927,
+job138263464480: all80 tests and relocated packaged-app smoke.
+Session now owns keepers/pedestals/stock and connects buy/decline/unpaid taking
+to wallet, inventory-mode transfer/full-bag floor drop and guard movement.
+Construction invokes the keeper callback after variant and before stock to
+preserve constructor difficulty-rank draws. Movement applies the measured shop
+presence phase to caller-supplied numeric13 positions, including anger/clearing;
+audio/dialog requests are events. Session20 persists modeled shop actors/items/
+placement/stock/guard/anger/presence and cached-floor identity reservations.
+Prior1..19 saves still load. See SHOPS.md for APIs, transfer-mode choice and limits.
+Native shop UI/rendering, sale/debt dialog, mouse-held transfers, hostile keeper
+AI and exact arrival music/global sequencing still need integration. Current
+prepared-floor cache and provisional scheduler are not full generated gameplay.
+
+All48 local CTest groups pass for Session shop integration; actual arm64 CI is pending.

@@ -55,6 +55,15 @@ struct Actor {
     bool alive() const { return health>0 && !corpse; }
 };
 struct GroundItem { InventoryItem item;Position position; };
+struct ShopPedestal {Position position{};std::optional<InventoryItem> item;};
+struct SessionShop {
+    Actor keeper;
+    Position guard{},home{};
+    int variant=0;
+    bool guarding=false,angry=false;
+    std::vector<Position> tiles;
+    std::vector<ShopPedestal> pedestals;
+};
 struct RoomLootCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
 struct RoomTrapCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
 enum class SpellUse { cast,unknown,cooling_down,equipment_required,invalid_target,insufficient_gold,insufficient_mana,muted,dead };
@@ -70,8 +79,10 @@ struct SessionFloor {
     std::vector<CustomRoomObject> objects;
     std::vector<BreakableRoomObject> breakables;
     std::vector<TrapInstance> traps;
+    std::vector<SessionShop> shops;
+    ShopPresenceState shop_presence{};
 };
-enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken,spell_damage,trap_click,trap_triggered,trap_spell_missing,spell_heal,spell_mana,lever_used };
+enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken,spell_damage,trap_click,trap_triggered,trap_spell_missing,spell_heal,spell_mana,lever_used,shop_purchase,shop_theft,shop_insufficient_funds,shop_presence };
 struct TurnEvent {
     EventKind kind;
     std::uint64_t actor=0,target=0;
@@ -101,6 +112,14 @@ public:
     const std::vector<BreakableRoomObject>& breakables() const { return breakables_; }
     const std::vector<TrapInstance>& traps() const {return traps_;}
     bool passable(Position position) const;
+    const std::vector<SessionShop>& shops() const {return shops_;}
+    ShopPresenceState shop_presence() const {return shop_presence_;}
+    std::size_t create_shop(const ShopRoomMarkers& absolute_points,std::vector<Position> tiles,
+        const ItemFactoryTables& tables,const ItemFactoryContext& context,
+        const std::function<Actor(GameRandom&)>& keeper_constructor);
+    ShopPedestalAction use_shop_pedestal(std::size_t shop,std::size_t pedestal,int choice,float buy_scaler);
+    void refresh_shop_guards();
+    void update_shop_presence();
     bool has_unpaid_goods() const {return carried_unpaid_goods(inventory_.bag(),inventory_.belt(),equipment_.slots());}
     std::optional<std::size_t> create_custom_object(const CustomRoomDefinition& definition,Position origin={0,0});
     std::optional<std::size_t> create_pedestal(const RoomPedestalRecord& definition,Position origin={0,0});
@@ -197,6 +216,8 @@ private:
     std::vector<BreakableRoomObject> breakables_;
     std::vector<TrapInstance> traps_;
     std::vector<TurnEvent> events_;
+    std::vector<SessionShop> shops_;
+    ShopPresenceState shop_presence_{};
     Inventory inventory_;
     Equipment equipment_;
     ClassRanks ranks_{};
@@ -219,6 +240,9 @@ private:
     std::uint64_t next_item_instance() const;
     void currency_transfer_impl(std::int32_t amount,CurrencyOperation operation);
     void pickup_impl();
+    void update_shop_presence_impl();
+    void refresh_shop_guards_impl();
+    void validate_shop(const SessionShop& shop) const;
     void pickup_currency();
     bool hit_breakable_impl(std::size_t index);
     std::optional<std::uint64_t> create_ground_loot_impl(const ItemFactoryTables& tables,const ItemFactoryContext& context,

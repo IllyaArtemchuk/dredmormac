@@ -3,6 +3,10 @@
 #include <stdexcept>
 
 namespace dredmor {
+void Equipment::clear_unpaid_flags() {
+    for (std::size_t i=0;i<slots_.size();++i) if (i!=std::size_t(EquipmentSlot::ranged) && slots_[i]) slots_[i]->for_sale=false;
+}
+
 namespace {
 std::int32_t add(std::int32_t a,std::int32_t b) {
     std::uint32_t bits=std::uint32_t(a)+std::uint32_t(b);std::int32_t value;std::memcpy(&value,&bits,4);return value;

@@ -95,6 +95,10 @@ std::optional<InventoryItem> Inventory::remove(std::uint64_t instance) {
     }
     return std::nullopt;
 }
+void Inventory::clear_unpaid_flags() {
+    for (auto& item:bag_) if (item) item->for_sale=false;
+    for (auto& item:belt_) if (item) item->for_sale=false;
+}
 bool Inventory::consume_one(std::uint64_t instance) {
     for (auto& slot:bag_) if (slot && slot->instance==instance) {if (slot->quantity>1) --slot->quantity;else slot.reset();return true;}
     for (auto& slot:belt_) if (slot && slot->instance==instance) {if (slot->quantity>1) --slot->quantity;else slot.reset();return true;}

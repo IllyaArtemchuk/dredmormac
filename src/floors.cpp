@@ -18,13 +18,17 @@ void validate_global_ids(const Session& session,const std::vector<SessionFloor>&
         for (const auto& actor:value.enemies) if (!actor.id || !actors.insert(actor.id).second) throw std::runtime_error("actor identity appears on multiple floors");
         for (const auto& ground:value.ground) item(ground.item.instance);
         for (const auto& trap:value.traps) item(trap.instance);
+        for (const auto& shop:value.shops) {
+            if (!shop.keeper.id || !actors.insert(shop.keeper.id).second) throw std::runtime_error("keeper identity appears on multiple floors");
+            for (const auto& pedestal:shop.pedestals) if (pedestal.item) item(pedestal.item->instance);
+        }
     };
     floor(session.floor_state());for (const auto& value:cached) floor(value);
 }
 }
 SessionFloor Session::floor_state() const {
     SessionFloor floor(world_);floor.depth=depth_context_;floor.branch=floor_branch_;floor.stairs=stairs_;floor.secret_levers=secret_levers_;
-    floor.enemies=enemies_;floor.ground=ground_;floor.objects=custom_objects_;floor.breakables=breakables_;floor.traps=traps_;return floor;
+    floor.enemies=enemies_;floor.ground=ground_;floor.objects=custom_objects_;floor.breakables=breakables_;floor.traps=traps_;floor.shops=shops_;floor.shop_presence=shop_presence_;return floor;
 }
 void Session::floor_secret_levers(std::vector<SecretLever> levers) {
     if (levers.size()>4096) throw std::invalid_argument("too many secret levers");
@@ -53,7 +57,7 @@ SessionFloor Session::swap_floor(SessionFloor floor,Position arrival) {
     floor.world.place_player(arrival,turn);next.world_=std::move(floor.world);next.player_.position=arrival;
     next.depth_context_=floor.depth;next.secret_levers_.clear();next.floor_stairs(std::move(floor.stairs),floor.branch);next.floor_secret_levers(std::move(floor.secret_levers));
     next.enemies_=std::move(floor.enemies);next.ground_=std::move(floor.ground);next.custom_objects_=std::move(floor.objects);
-    next.breakables_=std::move(floor.breakables);next.traps_=std::move(floor.traps);next.events_.clear();
+    next.breakables_=std::move(floor.breakables);next.traps_=std::move(floor.traps);next.shops_=std::move(floor.shops);next.shop_presence_=floor.shop_presence;next.events_.clear();
     // Reuse the save validator for actor/item/trigger identities, positions,
     // buff profiles and all other floor payloads before replacing live state.
     std::ostringstream encoded;next.save(encoded);std::istringstream input(encoded.str());
@@ -81,6 +85,11 @@ void FloorRegistry::add_floor(Session& session,SessionFloor floor) {
         if (actor.id==std::numeric_limits<std::uint64_t>::max() || !actors.insert(actor.id).second) throw std::invalid_argument("invalid cached actor identity");
         next.next_actor_=std::max(next.next_actor_,actor.id+1);
     }
+    for (auto& shop:floor.shops) {
+        auto& actor=shop.keeper;if (!actor.id) actor.id=next.next_actor_++;
+        if (actor.id==std::numeric_limits<std::uint64_t>::max() || !actors.insert(actor.id).second) throw std::invalid_argument("invalid cached keeper identity");
+        next.next_actor_=std::max(next.next_actor_,actor.id+1);
+    }
     auto fresh=next.next_item_instance();
     auto reserve=[&](std::uint64_t& id) {
         if (!id) id=fresh;
@@ -89,6 +98,7 @@ void FloorRegistry::add_floor(Session& session,SessionFloor floor) {
     };
     for (auto& ground:floor.ground) reserve(ground.item.instance);
     for (auto& trap:floor.traps) reserve(trap.instance);
+    for (auto& shop:floor.shops) for (auto& pedestal:shop.pedestals) if (pedestal.item) reserve(pedestal.item->instance);
     next.item_floor_=fresh;next.player_.triggers.clear();const auto placeholder=floor.world.player();
     next.swap_floor(std::move(floor),placeholder);next.world_.place_player(placeholder,visit_turn);auto validated=next.floor_state();
     auto cached=cached_;cached.push_back(std::move(validated));
@@ -146,6 +156,10 @@ std::pair<Session,FloorRegistry> FloorRegistry::load(std::istream& input,
         for (const auto& actor:floor.enemies) if (actor.id>=actor_base) throw std::runtime_error("cached actor exceeds the global identity sequence");
         for (const auto& ground:floor.ground) if (ground.item.instance>=item_base) throw std::runtime_error("cached item exceeds the global identity reservation");
         for (const auto& trap:floor.traps) if (trap.instance>=item_base) throw std::runtime_error("cached trap exceeds the global identity reservation");
+        for (const auto& shop:floor.shops) {
+            if (shop.keeper.id>=actor_base) throw std::runtime_error("cached keeper exceeds the global identity sequence");
+            for (const auto& pedestal:shop.pedestals) if (pedestal.item && pedestal.item->instance>=item_base) throw std::runtime_error("cached shop item exceeds the global identity reservation");
+        }
         registry.add_floor(session,std::move(floor));
     }
     session.item_floor_=item_base;session.next_actor_=actor_base;

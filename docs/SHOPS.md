@@ -166,3 +166,38 @@ cleared flags including ranged omission. The unpaid oracle now also compares
 2,048 complete clear operations alongside query cases. Neither phase consumes
 random state. Later DoSteppedOn random-colour draws and object callbacks remain
 outside this comparison and must not be omitted in a complete movement pipeline.
+
+Session shop ownership is now integrated. `create_shop` rolls keeper variant,
+invokes a provisional keeper constructor on the same RNG, then constructs stock
+in pedestal order. This callback point preserves MonsterC2 difficulty-rank draws
+between variant and stock. Actors and items reserve global session identities;
+invalid placement or constructor failure rolls back all state. Session stores
+keeper/home/guard/variant/anger, owned pedestal stock and the explicit numeric13
+floor positions supplied by its caller. Pedestals and living keepers block motion.
+Empty pedestals remain blocking. The keeper is an NPC separate from hostile enemies.
+
+`use_shop_pedestal` connects measured costs/decisions to the wallet and owned item.
+The integration selects the original inventory-mode transfer path: belt/bag insert,
+or a ground drop at the player if full. It preserves the original destination
+stack's existing flag when merging, as the existing inventory kernel does.
+The optional original mouse-held-item mode is not yet integrated. Taking unpaid
+stock requests the measured guard movement; a paid purchase clears its flag.
+Raw action results preserve original handled semantics and do not advance a turn.
+Distance/modal UI gates belong to the caller. Session movement applies the shop
+presence phase for explicit shop tiles, sets anger and clears the modeled carried
+flags on theft exit. Music/dialog requests become typed session events; playback
+and full DoSteppedOn callback scheduling remain separate.
+
+Port save20 retains all shop fields and item/actor payloads, accepting prior1..19
+formats. Item and actor identities include cached-shop reservations and reject
+cross-floor duplicates. Cached floors retain empty/stocked pedestals, keeper
+position/guard/anger and presence state across visits and whole-run saves.
+This preserves modeled prepared-floor state; original arrival music/global-state
+sequencing, hostile keeper AI, sale/debt dialog and the full generated-floor pass
+remain unfinished. It is not original save compatibility.
+
+Local integration tests cover RNG callback order, constructor/placement rollback,
+blocking, buy/decline/insufficient funds, unpaid taking/guarding/theft exit, full
+inventory drops, Session20 round trips, malformed keeper IDs and whole-run cached
+shop reservations/travel. Component original comparisons establish the rules;
+a complete original shop playthrough has not yet been executed.

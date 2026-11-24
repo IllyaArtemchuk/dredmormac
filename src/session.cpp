@@ -61,6 +61,10 @@ Actor* Session::enemy_at(Position position,std::uint64_t excluding) {
 bool Session::passable(Position position) const {
     if (!world_.passable(position)) return false;
     for (const auto& lever:secret_levers_) if (same(lever.position,position)) return false;
+    for (const auto& shop:shops_) {
+        if (shop.keeper.alive() && same(shop.keeper.position,position)) return false;
+        for (const auto& pedestal:shop.pedestals) if (same(pedestal.position,position)) return false;
+    }
     for (const auto& object:custom_objects_) if (object.blocks_movement && same(object.position,position)) return false;
     for (const auto& object:breakables_) if (object.object.blocks_movement && same(object.object.position,position)) return false;
     for (const auto& trap:traps_) if (trap.has_origin_object && same(trap.origin,position)) return false;
@@ -146,6 +150,7 @@ std::uint64_t Session::spawn_enemy(Actor enemy) {
     else {
         if (enemy.id==player_.id || std::any_of(enemies_.begin(),enemies_.end(),[&](const Actor& a){return a.id==enemy.id;}))
             throw std::invalid_argument("duplicate actor ID");
+        for (const auto& shop:shops_) if (shop.keeper.id==enemy.id) throw std::invalid_argument("actor ID is owned by a shop keeper");
         next_actor_=std::max(next_actor_,enemy.id+1);
     }
     enemies_.push_back(std::move(enemy));return enemies_.back().id;
@@ -161,6 +166,7 @@ void Session::drop(InventoryItem item,Position position) {
     for (const auto& slot:equipment_.slots()) if (slot && slot->instance==item.instance) throw std::invalid_argument("ground item is already equipped");
     for (const auto& existing:ground_) if (existing.item.instance==item.instance) throw std::invalid_argument("duplicate ground item");
     for (const auto& existing:traps_) if (existing.instance==item.instance) throw std::invalid_argument("ground item ID is owned by a trap");
+    for (const auto& shop:shops_) for (const auto& pedestal:shop.pedestals) if (pedestal.item && pedestal.item->instance==item.instance) throw std::invalid_argument("ground item is owned by a shop");
     ground_.push_back({item,position});
 }
 std::uint64_t Session::next_item_instance() const {
@@ -174,6 +180,7 @@ std::uint64_t Session::next_item_instance() const {
     for (const auto& slot:equipment_.slots()) if (slot) observe(*slot);
     for (const auto& ground:ground_) observe(ground.item);
     for (const auto& trap:traps_) {InventoryItem identity;identity.instance=trap.instance;observe(identity);}
+    for (const auto& shop:shops_) for (const auto& pedestal:shop.pedestals) if (pedestal.item) observe(*pedestal.item);
     return identifier;
 }
 std::uint64_t Session::create_ground_item(std::uint32_t definition,Position position,std::int32_t quantity) {
@@ -571,6 +578,7 @@ void Session::step_impl(Action action) {
     player_.position=world_.player();
     if (outcome==Outcome::moved) player_facing_=action==Action::north?2:action==Action::south?0:action==Action::west?1:3;
     if (outcome==Outcome::moved) events_.push_back({EventKind::moved,player_.id});
+    if (outcome==Outcome::moved && !shops_.empty()) update_shop_presence_impl();
     if (outcome==Outcome::moved) pickup_currency();
     if (outcome==Outcome::moved) activate_traps_impl(player_);
     enemy_turns();
