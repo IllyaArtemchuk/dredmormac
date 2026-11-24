@@ -60,4 +60,12 @@ private:
     std::vector<Position> doors_;
     std::uint32_t floor_count_=0;
 };
+struct LocationSearch {bool found=false;Position position{};};
+// Original spawn-site helpers. A failed search retains its final trial point.
+// Occupancy is the tile object-list emptiness, not only blocking actors.
+LocationSearch find_good_location_bounded(const DungeonLayout& layout,Position minimum,Position maximum,
+    const std::vector<bool>& occupied,DarwinRandom& random);
+LocationSearch find_good_location_near(const DungeonLayout& layout,Position center,
+    const std::vector<bool>& occupied,DarwinRandom& random);
+
 }

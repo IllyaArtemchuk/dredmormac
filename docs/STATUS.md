@@ -1447,3 +1447,17 @@ arm64 verification is pending for the selling source. Quick-sell is a different
 original route and remains unimplemented; hostile item use and keeper AI, mouse
 item mode, long quip text, original UI/audio and full generated gameplay remain
 outstanding. The current app is still incomplete.
+
+
+Keeper selling source669945a passed actual arm64 macos-15 run45343826909,
+job138273500138: all83 checks and relocated packaged-app smoke. Native shop
+smoke passed declined/accepted sale, payment and saved proceeds before debt/theft.
+FindGoodLocationNear/BoundedBy are now ported with exact occupancy/neighborhood
+checks, x-major fast scan and51-attempt bounded fallback. All2,048 actual original
+functions plus real PassableOnAllSides executions match result/final references,
+libc and unchanged full MT. Count1 consumes a draw; the local singleton fixture
+was corrected to reflect the actual RNG primitive. See LOCATIONS.md.
+These are prerequisites for Dread Collector/other spawn placement; keeper/monster
+AI and SafeTeleport remain outside their scope. New source awaits arm64 CI.
+
+All49 portable CTest groups pass after location-search integration.
