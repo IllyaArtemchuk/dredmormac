@@ -6,7 +6,13 @@
 using namespace dredmor;
 int main(int argc,char** argv) {
     try {
-        if (argc==2 && std::string(argv[1])=="--sell") {
+        if (argc==2 && std::string(argv[1])=="--quick-sell") {
+            bool present,unpaid;unsigned kind;int subtype;std::int32_t cost,balance;std::uint32_t bits;
+            while (std::cin>>present>>unpaid>>kind>>subtype>>cost>>bits>>balance) {
+                float scaler;std::memcpy(&scaler,&bits,4);const auto action=resolve_quick_sale(present,unpaid,ItemKind(kind),subtype,cost,scaler,balance);
+                std::cout<<action.handled<<' '<<action.refused_unpaid<<' '<<action.refused_protected<<' '<<action.destroy_item<<' '<<action.quote<<' '<<action.balance<<' '<<bool(action.payment)<<' '<<(action.payment?action.payment->delta:0)<<'\n';
+            }
+        } else if (argc==2 && std::string(argv[1])=="--sell") {
             bool angry,unpaid;std::int32_t cost,choice,balance;std::uint32_t bits;
             while (std::cin>>angry>>unpaid>>cost>>bits>>choice>>balance) {
                 float scaler;std::memcpy(&scaler,&bits,4);const auto action=resolve_keeper_sale(angry,unpaid,cost,scaler,choice,balance);

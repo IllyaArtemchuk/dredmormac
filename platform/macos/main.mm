@@ -689,6 +689,12 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     try {const bool result=_session->eat_food(instance) || _session->drink_potion(instance);if (result) [self recordBreakableAnimations];self.needsDisplay=YES;return result;}
     catch (const std::exception& error) {fprintf(stderr,"consumable failed: %s\n",error.what());return NO;}
 }
+- (BOOL)quickSellInventoryInstance:(uint64_t)instance {
+    try {
+        if (!_content) return NO;const auto action=_session->quick_sell_inventory_item(instance,_content->tweaks().real(dredmor::Difficulty::medium,"store sell price scaler"));
+        self.needsDisplay=YES;return action.handled;
+    } catch(const std::exception& error) {[self showFailure:error];return NO;}
+}
 - (BOOL)sellInventoryInstance:(uint64_t)instance {
     try {
         const auto* item=_session->inventory().find(instance);if (!item || !_content) return NO;
@@ -952,12 +958,16 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     if (!declinedSale || [self inventoryRows].count!=1 || _session->player().zorkmids!=90) return fail("declined sale");
     [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];NSTimer *acceptSale=prepareChoice(@"Sell");[_inventoryController sellSelection:nil];const BOOL acceptedSale=!acceptSale.valid;[acceptSale invalidate];[_inventoryController close];
     if (!acceptedSale || [self inventoryRows].count || _session->player().zorkmids!=95 || ![self smokeSaveLoad]) return fail("sold item save");
+    _session->create_ground_item(0,_session->player().position);[self pickUpItems:nil];[self showInventory:nil];
+    if ([self inventoryRows].count!=1) return fail("quick sale fixture ownership");
+    [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];[_inventoryController quickSellSelection:nil];[_inventoryController close];
+    if ([self inventoryRows].count || _session->player().zorkmids!=100 || ![self smokeSaveLoad]) return fail("quick sale save");
     move(125,@"\uf701");move(125,@"\uf701");move(124,@"\uf703");move(124,@"\uf703");
     if (!choose({7,3},@"Take unpaid") || !_session->has_unpaid_goods() || !_session->shops()[0].guarding || _session->shops()[0].keeper.position.x!=5 || ![self smokeSaveLoad]) return fail("taking and guard save");
     bool labelled=false;for (NSDictionary *row in [self inventoryRows]) if ([row[@"for_sale"] boolValue] && [row[@"location"] hasPrefix:@"Unpaid"]) labelled=true;if (!labelled) return fail("unpaid inventory label");
     move(123,@"\uf702");move(123,@"\uf702");move(126,@"\uf700");move(126,@"\uf700");
-    if (!choose({5,1},@"Don't Buy") || !_session->has_unpaid_goods() || _session->player().zorkmids!=95) return fail("declined debt");
-    if (!choose({5,1},@"Buy") || _session->has_unpaid_goods() || _session->player().zorkmids!=85 || _session->shops()[0].guarding || _session->shops()[0].keeper.position.x!=6 || ![self smokeSaveLoad]) return fail("settled debt save");
+    if (!choose({5,1},@"Don't Buy") || !_session->has_unpaid_goods() || _session->player().zorkmids!=100) return fail("declined debt");
+    if (!choose({5,1},@"Buy") || _session->has_unpaid_goods() || _session->player().zorkmids!=90 || _session->shops()[0].guarding || _session->shops()[0].keeper.position.x!=6 || ![self smokeSaveLoad]) return fail("settled debt save");
     move(126,@"\uf700");
     if (!choose({6,1},@"Take unpaid") || !_session->has_unpaid_goods() || !_session->shops()[0].guarding || ![self smokeSaveLoad]) return fail("second unpaid taking");
     move(123,@"\uf702");NSTimer *notice=prepareChoice(@"OK");move(123,@"\uf702");const BOOL dismissed=!notice.valid;[notice invalidate];if (!dismissed) return fail("theft notice dialog");

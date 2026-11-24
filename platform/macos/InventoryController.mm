@@ -35,7 +35,7 @@
         NSButton *drink=[NSButton buttonWithTitle:@"Use" target:self action:@selector(useSelection:)];
         drink.frame=NSMakeRect(395,28,60,28);drink.autoresizingMask=NSViewMinXMargin;[content addSubview:drink];
         NSButton *sell=[NSButton buttonWithTitle:@"Sell" target:self action:@selector(sellSelection:)];
-        sell.frame=NSMakeRect(465,28,60,28);sell.autoresizingMask=NSViewMinXMargin;[content addSubview:sell];
+        sell.toolTip=@"Sell to a nearby keeper. Hold Shift to sell immediately while inside a calm shop.";sell.frame=NSMakeRect(465,28,60,28);sell.autoresizingMask=NSViewMinXMargin;[content addSubview:sell];
         [self refresh];[window center];
     }
     return self;
@@ -57,7 +57,14 @@
         ![self.inventoryOwner unequipInventorySlot:[_rows[row][@"slot"] integerValue]]) NSBeep();
     [self refresh];
 }
+- (void)quickSellSelection:(id)sender {
+    const NSInteger row=_tableView.selectedRow;
+    if (row<0 || row>=(NSInteger)_rows.count || [_rows[row][@"equipped"] boolValue] ||
+        ![self.inventoryOwner quickSellInventoryInstance:[_rows[row][@"instance"] unsignedLongLongValue]]) NSBeep();
+    [self refresh];
+}
 - (void)sellSelection:(id)sender {
+    if (NSApp.currentEvent.modifierFlags&NSEventModifierFlagShift) {[self quickSellSelection:sender];return;}
     const NSInteger row=_tableView.selectedRow;
     if (row<0 || row>=(NSInteger)_rows.count || [_rows[row][@"equipped"] boolValue] ||
         ![self.inventoryOwner sellInventoryInstance:[_rows[row][@"instance"] unsignedLongLongValue]]) NSBeep();

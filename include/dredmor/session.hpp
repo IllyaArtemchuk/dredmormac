@@ -118,6 +118,8 @@ public:
         const ItemFactoryTables& tables,const ItemFactoryContext& context,
         const std::function<Actor(GameRandom&)>& keeper_constructor);
     ShopPedestalAction use_shop_pedestal(std::size_t shop,std::size_t pedestal,int choice,float buy_scaler);
+    bool on_shop_floor() const;
+    ShopSellAction quick_sell_inventory_item(std::uint64_t instance,float sell_scaler);
     ShopSellAction sell_inventory_item(std::size_t shop,std::uint64_t instance,int choice,float sell_scaler);
     std::int32_t shop_debt(float buy_scaler) const;
     ShopDebtAction settle_shop_debt(std::size_t shop,int choice,float buy_scaler);

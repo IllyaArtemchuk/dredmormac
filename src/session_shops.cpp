@@ -57,6 +57,19 @@ ShopPedestalAction Session::use_shop_pedestal(std::size_t shop_index,std::size_t
     }
     *this=std::move(next);return action;
 }
+bool Session::on_shop_floor() const {
+    for (const auto& shop:shops_) for (auto point:shop.tiles) if (same(point,player_.position)) return true;
+    return false;
+}
+ShopSellAction Session::quick_sell_inventory_item(std::uint64_t instance,float scaler) {
+    const auto* item=inventory_.find(instance);
+    if (!item || !player_.alive() || !on_shop_floor() || shop_presence_.level_angry) return {};
+    const auto* definition=definitions_?&definitions_->at(item->definition):nullptr;
+    const auto action=resolve_quick_sale(true,item->for_sale,item->kind,definition?definition->builtin_subtype:-1,item_shop_cost(definition,*item),scaler,player_.zorkmids);
+    auto next=*this;next.events_.clear();
+    if (action.destroy_item) {next.inventory_.remove(instance);next.currency_transfer_impl(action.quote,CurrencyOperation::give);}
+    *this=std::move(next);return action;
+}
 ShopSellAction Session::sell_inventory_item(std::size_t index,std::uint64_t instance,int choice,float scaler) {
     const auto& shop=shops_.at(index);const auto* item=inventory_.find(instance);
     if (!item || !player_.alive() || !shop.keeper.alive()) return {};
@@ -93,9 +106,7 @@ void Session::refresh_shop_guards_impl() {
 }
 void Session::refresh_shop_guards() {auto next=*this;next.refresh_shop_guards_impl();*this=std::move(next);}
 void Session::update_shop_presence_impl() {
-    bool inside=false;
-    for (const auto& shop:shops_) for (auto point:shop.tiles) if (same(point,player_.position)) inside=true;
-    const auto transition=step_shop_presence(inside?13:1,shop_presence_,has_unpaid_goods());shop_presence_=transition.state;
+    const auto transition=step_shop_presence(on_shop_floor()?13:1,shop_presence_,has_unpaid_goods());shop_presence_=transition.state;
     for (auto event:transition.events) {
         if (event==ShopPresenceEvent::anger_keepers) {
             for (auto& shop:shops_) shop.angry=true;

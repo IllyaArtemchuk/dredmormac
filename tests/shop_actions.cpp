@@ -30,6 +30,9 @@ int main() {
         const auto offer=resolve_keeper_sale(false,false,30,.5f,0,1);check(offer.handled && offer.quote_dialog && offer.quote==15 && !offer.destroy_item);
         const auto sale=resolve_keeper_sale(false,false,30,.5f,1,1);check(sale.destroy_item && sale.payment && sale.balance==16 && sale.payment->delta==15);
         check(resolve_keeper_sale(false,true,30,.5f,1,0).refused_unpaid && resolve_keeper_sale(false,false,0,1.f,1,0).refused_price && resolve_keeper_sale(true,false,30,1.f,1,0).monster_fallback);
+        const auto quick=resolve_quick_sale(true,false,ItemKind::weapon,-1,-10,.5f,0);check(quick.destroy_item && quick.quote==-5 && quick.balance==-5 && quick.payment && !quick.payment->money_sound);
+        check(resolve_quick_sale(true,false,ItemKind::weapon,-1,0,1.f,0).destroy_item);
+        check(resolve_quick_sale(true,false,ItemKind::misc,3,10,1.f,0).refused_protected && resolve_quick_sale(true,true,ItemKind::weapon,-1,10,1.f,0).refused_unpaid && !resolve_quick_sale(false,false,ItemKind::weapon,-1,10,1.f,0).destroy_item);
         ShopDebtEntries debt;debt[0]={true,true,11};debt[1]={true,true,11};debt[65]={true,true,100};debt[69]={true,true,5};
         check(shop_debt(debt,1.25f)==32);const auto refused=resolve_shop_debt(true,false,true,32,0,100,4);check(refused.debt_dialog && !refused.payment && refused.chat_counter==4);
         const auto settled=resolve_shop_debt(true,false,true,32,1,100,4);check(settled.payment && settled.balance==68 && settled.clear_unpaid && settled.force_keeper_move && settled.chat_counter==4);

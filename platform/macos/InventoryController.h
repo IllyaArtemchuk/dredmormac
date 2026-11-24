@@ -5,6 +5,7 @@
 - (BOOL)unequipInventorySlot:(NSInteger)slot;
 - (BOOL)useInventoryConsumable:(uint64_t)instance;
 - (BOOL)sellInventoryInstance:(uint64_t)instance;
+- (BOOL)quickSellInventoryInstance:(uint64_t)instance;
 @end
 
 @interface DredmorInventoryController : NSWindowController<NSTableViewDataSource>
@@ -16,4 +17,5 @@
 - (void)unequipSelection:(id)sender;
 - (void)useSelection:(id)sender;
 - (void)sellSelection:(id)sender;
+- (void)quickSellSelection:(id)sender;
 @end

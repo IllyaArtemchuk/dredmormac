@@ -94,6 +94,14 @@ ShopSellAction resolve_keeper_sale(bool angry,bool unpaid,std::int32_t shop_cost
     result.quote_dialog=true;if (!choice) return result;
     result.payment=transfer_currency(balance,result.quote,CurrencyOperation::give);result.balance=result.payment->balance;result.destroy_item=true;return result;
 }
+ShopSellAction resolve_quick_sale(bool present,bool unpaid,ItemKind kind,int subtype,std::int32_t cost,float scaler,std::int32_t balance) {
+    ShopSellAction result;result.balance=balance;if (!present) return result;
+    if (unpaid) {result.refused_unpaid=true;return result;}
+    if (kind==ItemKind::misc && subtype==3) {result.refused_protected=true;return result;}
+    const float scaled=float(cost)*scaler;result.quote=truncate(scaled);
+    result.payment=transfer_currency(balance,result.quote,CurrencyOperation::give);result.balance=result.payment->balance;
+    result.handled=true;result.destroy_item=true;return result;
+}
 ShopPedestalAction resolve_shop_pedestal(bool has_item,std::int32_t shop_cost,bool stackable,
     std::int32_t quantity,float buy_scaler,int dialog_choice,std::int32_t balance) {
     ShopPedestalAction result;result.balance=balance;

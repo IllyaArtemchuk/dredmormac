@@ -1734,3 +1734,19 @@ These are prerequisites for Dread Collector/other spawn placement; keeper/monste
 AI and SafeTeleport remain outside their scope. New source awaits arm64 CI.
 
 All49 portable CTest groups pass after location-search integration.
+
+
+Location source3cbcaae passed actual arm64 macos-15 run45344658393,
+job138276214819: all84 checks and relocated packaged-app smoke.
+Quick-sell now matches2,048 actual FastSellItem executions, including unpaid/
+kind6-subtype3 rejection, zero/negative offers, wallet wrapping and unchanged RNG.
+Actual picked-up/empty-hand methods run; hover tests cover48 slots/two UI scales
+and check selection/held clear, owned bag removal and recipe refresh requests.
+Cost/wallet/tweak/destruction/recipe rebuilds are boundaries. Session gates quick
+selling by explicit shop floor and calm level; native Shift-Sell uses it, and the
+shop smoke checks controller quick sale and saved proceeds. All49 local groups
+pass. New quick-selling source awaits actual arm64 validation.
+Remaining shop gaps include crafting recipe rebuilds, mouse-held mode, original
+quip text/UI/audio and keeper/monster AI/collector updates. Complete generated
+floor content/scripts/population and an original reference playthrough remain
+unimplemented/unverified; the complete game is not finished.

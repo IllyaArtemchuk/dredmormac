@@ -46,6 +46,10 @@ int main() {
         check(selling.sell_inventory_item(0,100,1,0.f).refused_price && selling.inventory().find(100));
         const auto sold=selling.sell_inventory_item(0,100,1,.5f);check(sold.destroy_item && selling.player().zorkmids==15 && !selling.inventory().find(100) && saved(loaded(selling))==saved(selling));
         stack.instance=101;stack.for_sale=true;selling.inventory().insert(stack,false);check(selling.sell_inventory_item(0,101,1,.5f).refused_unpaid && selling.inventory().find(101));
+        auto quick=fixture();stack.instance=200;stack.for_sale=false;quick.inventory().insert(stack,false);check(!quick.quick_sell_inventory_item(200,.5f).destroy_item && quick.inventory().find(200));
+        for (int i=0;i<3;++i) quick.step(Action::east);for (int i=0;i<3;++i) quick.step(Action::south);check(quick.on_shop_floor());
+        check(quick.quick_sell_inventory_item(200,.5f).destroy_item && quick.player().zorkmids==15 && !quick.inventory().find(200));
+        stack.instance=201;stack.for_sale=true;quick.inventory().insert(stack,false);check(quick.quick_sell_inventory_item(201,.5f).refused_unpaid && saved(loaded(quick))==saved(quick));
         auto full=fixture();for (std::uint64_t i=10;i<58;++i) {InventoryItem item;item.instance=i;item.kind=ItemKind::armour;item.definition=1;check(full.inventory().insert(item,false).outcome==InsertOutcome::placed);}
         full.give_currency(100);full.use_shop_pedestal(0,0,0,1.f);check(full.player().zorkmids==90 && !full.shops()[0].pedestals[0].item && full.ground_items().size()==1 && !full.ground_items()[0].item.for_sale);
         auto corrupt=saved(s);const auto id=corrupt.find("<keeper id=\"2\"");check(id!=std::string::npos);corrupt.replace(id,14,"<keeper id=\"1\"");rejected=false;try {std::istringstream in(corrupt);Session::load(in,definitions());} catch(const std::exception&) {rejected=true;}check(rejected);

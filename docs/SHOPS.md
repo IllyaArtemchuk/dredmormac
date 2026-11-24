@@ -277,3 +277,27 @@ declines a sale, sells it, then tests unpaid taking/debt settlement and theft ex
 including wallet and save checks. Quick selling is a distinct original path and
 remains pending; the native action uses the confirmed keeper offer path. Actual
 arm64 validation is pending for this selling source.
+
+`resolve_quick_sale` and Session quick selling now implement FastSellItem0x48150's
+transfer rules: unpaid items and kind6/subtype3 reject; eligible items are removed
+and credited at the Float32-scaled virtual cost without a dialog or positive-value
+gate. Zero and negative quotes therefore still sell. The existing currency
+INT_MIN recursion guard applies. Session permits the action on explicit shop floor
+while the level is calm, matching HandleMouseClick0x12e5c3..0x12e681's tile13/
+level-anger gate. Native Shift-Sell uses this route; regular Sell keeps the keeper
+offer dialog. Native mouse-held inventory mode remains absent.
+
+    .venv/bin/python scripts/verify_quick_selling.py ORIGINAL build/dredmor-shop --cases 2048 --out PRIVATE.json
+
+All2,048 actual complete FastSellItem executions match transfer/refusal/quote/
+payment results and unchanged RNG, with real CurrentPickedUpItem and hand-empty
+methods. Controlled single-item hover covers all48 original bag locations and
+both original inventory pixel scales. Harness additionally checks selected/held
+clearing, owned bag removal and one/two FilterRecipes requests. Cost/wallet/tweak/
+destruction/recipe functions are boundaries. The port comparison concerns the
+transfer kernel; Cocoa table coordinates are not claimed as original pixel UI.
+Crafting recipe rebuilds remain unimplemented, and the original input caller's
+full control flow is not compared. Local tests cover outside-shop refusal, sale
+without adjacent keeper, full-stack credit and unpaid rejection. Native controller
+smoke adds quick selling and save/reload of the resulting inventory/wallet state.
+All49 portable groups pass; actual arm64 validation is pending for quick selling.
