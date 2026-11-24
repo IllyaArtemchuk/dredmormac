@@ -207,6 +207,9 @@ public:
     std::size_t queued_horde_members() const;
     std::vector<std::uint64_t> place_queued_hordes();
     const MonsterSpawnState& monster_spawn_state() const {return monster_state_;}
+    DungeonLayout room_spawn_layout(const DungeonLayout& initial) const;
+    std::optional<std::uint64_t> create_respawn_monster(const DungeonLayout& initial,const std::vector<Position>& special_sites,
+        const std::function<std::optional<Actor>(const MonsterSpawnWorld&,GameRandom&,MonsterSpawnState&)>& constructor);
     RoomTrapCreation create_room_trap(const RoomTrapRecord& record,const ItemFactoryTables& tables,
         const ItemFactoryContext& context,const TrapMap& map,Position origin={0,0});
     // Low-level cast: no mana/cooldown/turn scheduling. Unsupported dispatch or
@@ -311,6 +314,7 @@ private:
     void validate_shop(const SessionShop& shop) const;
     void validate_hordes() const;
     void unlink_horde_member(std::uint64_t identity);
+    std::vector<bool> occupied_tiles(const DungeonLayout& layout) const;
     void pickup_currency();
     bool hit_breakable_impl(std::size_t index);
     std::optional<std::uint64_t> create_ground_loot_impl(const ItemFactoryTables& tables,const ItemFactoryContext& context,

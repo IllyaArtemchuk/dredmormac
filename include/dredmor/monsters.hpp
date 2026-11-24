@@ -5,6 +5,7 @@
 #include "dredmor/random.hpp"
 #include "dredmor/selection.hpp"
 #include <optional>
+#include "dredmor/generation.hpp"
 
 namespace dredmor {
 struct MonsterDefinition {
@@ -34,6 +35,11 @@ struct MonsterSpawnState {std::map<std::string,std::int32_t,std::less<>> counts;
 bool can_spawn_monster(const MonsterDefinition& definition,std::int32_t depth,
     const MonsterSpawnState& state,bool horde=false);
 struct MonsterSpawnContext {SpawnDepthContext depth;std::size_t level_set=0;bool expansion=false;};
+struct MonsterSpawnWorld {
+    const DungeonLayout& layout;
+    const std::vector<bool>& occupied;
+    const std::vector<Position>& special_sites;
+};
 void register_monster(MonsterTables& tables,std::uint32_t index,const MonsterDefinition& definition,std::uint32_t level_sets);
 MonsterTables build_base_monster_tables(const Catalog& catalog,const std::vector<MonsterDefinition>& definitions);
 std::optional<std::uint32_t> find_registered_monster(const MonsterTables& tables,const std::vector<MonsterDefinition>& definitions,std::string_view display_name);

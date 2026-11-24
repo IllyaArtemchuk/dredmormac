@@ -72,6 +72,10 @@ public:
     Actor create_monster(std::string_view name,Position position,Difficulty difficulty,int dungeon_level,DarwinRandom& random) const;
     Actor create_room_monster(const RoomPopulationPlan& plan,MonsterSpawnContext context,Difficulty difficulty,
         GameRandom& random,MonsterSpawnState& state) const;
+    // GameTick's SpawnMonster(-1,-1,0,0,1,1) route; constructor precedes the
+    // placement search, then spawn counts/flags commit after a site is found.
+    std::optional<Actor> create_respawn_monster(const MonsterSpawnWorld& world,MonsterSpawnContext context,Difficulty difficulty,
+        GameRandom& random,MonsterSpawnState& state,Position requested={-1,-1}) const;
     // The original constructor reads global current-level depth. If argument
     // and current layout references alias, a horde's depth reduction affects
     // construction too; otherwise constructor_depth remains independent.

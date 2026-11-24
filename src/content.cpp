@@ -1,6 +1,7 @@
 #include "dredmor/content.hpp"
 #include "dredmor/monster_sprites.hpp"
 #include "dredmor/selection.hpp"
+#include "dredmor/spawn_locations.hpp"
 #include "dredmor/legacy_number.hpp"
 #include "dredmor/room_records.hpp"
 #include <algorithm>
@@ -343,6 +344,20 @@ Actor GameContent::create_room_monster(const RoomPopulationPlan& plan,MonsterSpa
     auto actor=monster_actor(definition,plan.position,input);monster_appearance(actor,definition,candidate.libc);
     actor.monster_flags=finish_random_monster_spawn(definition,next,candidate.mt);
     random=std::move(candidate);state=std::move(next);return actor;
+}
+std::optional<Actor> GameContent::create_respawn_monster(const MonsterSpawnWorld& world,MonsterSpawnContext context,Difficulty difficulty,
+    GameRandom& random,MonsterSpawnState& state,Position requested) const {
+    auto candidate=random;auto counts=state;std::optional<Actor> result;
+    const auto index=select_room_monster(monster_tables(),monsters_,context,tweaks_.integer(difficulty,"monster boost chance"),counts,candidate);
+    if (index) {
+        const auto& definition=monsters_.at(*index);
+        auto input=tweaks_.monster_input(definition,difficulty,context.depth.depth);
+        input.ranks=monster_creation_ranks(input.ranks,tweaks_.integer(difficulty,"monster level adder"),candidate.libc);
+        auto actor=monster_actor(definition,requested,input);monster_appearance(actor,definition,candidate.libc);
+        const auto point=select_monster_spawn_position(world.layout,world.occupied,world.special_sites,requested,definition.special,candidate.libc);
+        if (point) {actor.position=*point;actor.monster_flags=finish_random_monster_spawn(definition,counts,candidate.mt);result=std::move(actor);}
+    }
+    random=std::move(candidate);state=std::move(counts);return result;
 }
 HordePopulation GameContent::create_horde(HordeOptions options,const HordeWorld& world,Difficulty difficulty,
     std::int32_t constructor_depth,const MonsterSpawnState& counts,GameRandom& random,std::uint64_t first_identity) const {

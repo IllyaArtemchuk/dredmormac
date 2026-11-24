@@ -2064,3 +2064,22 @@ object/player/director bodies are controlled boundaries; this does not yet adopt
 GameTick as the native Session scheduler or persist its separate driver state.
 Next connect candidate-owned shared RNG/driver state and the remaining actor,
 effect/clock/director lifetimes. Full game remains unfinished.
+
+Staged script6d7f1ac passed arm64 Mac45411130461 including packaged-app smoke.
+Normal SpawnMonster location search (0x641a9..0x642ef, empty-special-site exit
+0x63a95) now matches8,192 original slices with full libc/MT and unchanged heap.
+Either -1 coordinate randomizes both; ordinary searches accept empty kind1/14,
+special1 samples ordered sites and accepts occupied kind7, and an empty special
+list returns null after two coordinate draws. Fixed coordinates bypass searching.
+The finite search budget and invalid-input rejection are port guards.
+GameContent respawn composes the existing selector, direct selected-definition
+constructor/appearance, location search, and successful count/flag updates in
+source order. Session commits actor/counts/RNG together and derives current
+occupancy including separate trap origins, plus shop/secret/door geometry.
+Horde searches share this live overlay and occupancy rather than duplicating an
+incomplete list. All75 portable groups pass, including64 constructor-order/RNG
+cases, save roundtrip, injected failure rollback, secret opening, shop tiles and
+trap-origin exclusion. Original comparison covers the location slice, not the
+whole SpawnMonster, teleport tile effects or outer native scheduler adoption.
+Session's existing movement/actor limits remain guards. Mac verification pending
+for this milestone. Full GameTick/AI/effects/generation/UI/audio/game unfinished.

@@ -23,22 +23,8 @@ std::optional<HordeResult> Session::queue_room_horde(const RoomHordeRecord& reco
     auto next=*this;const auto plan=plan_room_population(RoomPopulationRecord{record},origin,next.random_.libc);
     if (plan.request==PopulationRequest::none) {random_.libc=next.random_.libc;return std::nullopt;}
     if (!constructor || layout.width()!=world_.width() || layout.height()!=world_.height()) throw std::invalid_argument("horde construction needs matching floor geometry");
-    std::vector<bool> occupied(std::size_t(layout.width())*layout.height(),false);
-    auto mark=[&](Position point) {
-        if (point.x>=0 && point.y>=0 && point.x<layout.width() && point.y<layout.height()) occupied[std::size_t(point.y)*layout.width()+point.x]=true;
-    };
-    mark(player_.position);
-    for (const auto& actor:enemies_) mark(actor.position);
-    for (const auto& item:ground_) mark(item.position);
-    for (const auto& object:custom_objects_) mark(object.position);
-    for (const auto& object:breakables_) mark(object.object.position);
-    for (const auto& trap:traps_) mark(trap.position);
-    for (const auto& lever:script_levers_) mark(lever.object.position);
-    for (const auto& lever:secret_levers_) mark(lever.position);
-    for (const auto& stair:stairs_) mark(stair.position);
-    if (doors_) for (const auto& door:doors_->doors) for (auto point:door.assembly.parts) mark(point);
-    for (const auto& shop:shops_) {mark(shop.keeper.position);for (const auto& pedestal:shop.pedestals) mark(pedestal.position);}
-    const HordeWorld world{layout,layout,occupied,occupied,rooms};
+    const auto current=next.room_spawn_layout(layout);const auto occupied=next.occupied_tiles(current);
+    const HordeWorld world{current,current,occupied,occupied,rooms};
     auto population=constructor(plan,world,next.monster_state_,next.random_,next.next_actor_);
     auto result=std::move(population.result);
     if (result.members.size()!=population.actors.size() || result.teleports.size()!=population.actors.size() ||

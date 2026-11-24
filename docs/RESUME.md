@@ -2337,3 +2337,13 @@ object/player/director bodies are controlled boundaries; this does not yet adopt
 GameTick as the native Session scheduler or persist its separate driver state.
 Next connect candidate-owned shared RNG/driver state and the remaining actor,
 effect/clock/director lifetimes. Full game remains unfinished.
+
+Latest: staged scripts6d7f1ac passed Mac45411130461/package. Spawn location kernel
+now matches8,192 original slices (private monster-spawn-locations-8192.json), and
+GameContent/Session respawn adapter plus shared live occupancy/geometry passes
+all75 portable groups (build-respawn-content-75.log). See spawn_locations.hpp,
+verify_spawn_locations.py, session_population.cpp and tests/respawn_content.cpp.
+This composes measured subparts; full SpawnMonster/teleport tile effects and
+native Session GameTick scheduling are not yet adopted. Next connect shared
+candidate RNG/driver state with staged scripts, then the missing actor/effect/
+clock/director lifetimes. Preserve explicit boundaries and atomic save behavior.
