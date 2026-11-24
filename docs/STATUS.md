@@ -1856,3 +1856,19 @@ catalogue entries and conflicting template pointers. Existing single-floor
 payload signatures remain unchanged. All68 portable groups pass. Latest native
 actor-placement source a6578f5 passed Mac run45393289621. This is runtime ownership
 infrastructure; Session/native scripts and full game remain incomplete.
+
+SessionRoomObjects now binds measured room lookup/finalization to live typed
+Session storage while retaining explicit cross-type registration order and
+opaque object identities independent of actor/item IDs. Positions, monster
+liveness and lever history resolve live; assigned tile-room bytes and labels
+remain binding-owned. Source player ID defaults to "player" and is global.
+Non-finalized horde registrations retain empty IDs/assigned room -1. Value
+snapshots and a validated standalone binding payload preserve order, sequence,
+scopes and references. Missing typed objects cannot match lookup; saving stale
+bindings fails until the lifetime owner unregisters them. Index-based static
+object references require adjustment by the future deletion owner; this layer
+does not yet run native scripts or automate Session construction/lifetime.
+All69 portable groups pass, including live Session activation through the full
+RoomRuntime, cross-type duplicate lookup, room-byte capture, movement, snapshot
+isolation, session+binding reload and malformed reference guards. Full game is
+still incomplete; next connect action/deferred phases and immutable profiles.
