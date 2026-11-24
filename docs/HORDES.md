@@ -83,3 +83,30 @@ asks for "horde is overpowered change". That lookup therefore produces zero in
 the supplied installation. A content adapter must not silently substitute the
 similarly spelled key. Strict port configuration getters remain separate from
 this original lookup behavior until that adapter is installed.
+
+## Actual monster tint and sprite definitions
+
+Monster::TintSprites0xefebc now matches4,096 complete original fixtures: selected
+angle, ordered resource requests, all20 sprite handles, Bob current/animation
+flags/counters, libc and unchanged MT. Random angle uses one libc draw with
+multiplier0x59ffff5d >>53. All four idle requests are mandatory; attack/hit/beam
+presence depends on the left path. Missing attack/beam clears handles, whereas
+missing hit leaves old handles untouched. Dig requires both paths. Current sprite
+switches to idle-down and clears animation state only when Bob+19 is zero and
+the resource handle changes. A returning loader is the resource/cache boundary.
+
+The seven sprite XML tags also match2,048 actual monDBXMLLoader_StartElement
+callbacks across inherited, repeated, empty and case-alias updates. Attribute
+source order matters. Tint routing loads right before left in directional groups,
+then up/down; cast precedes die, then dig-up/down. MonsterDefinition now retains
+all those paths. Full horde comparisons with actual names and actual TintSprites
+match4,096 wrappers/5,987 members including full tint handles/request order and
+both RNG streams. Resource cache/IO, complete constructors, Session group/save
+ownership and native actor rendering remain separate. All65 portable groups pass.
+
+SPR palette transformation itself is separately original-compared on1,152
+palettes/294,912 colours. Decoder/read apply it per frame before RGBA expansion;
+alpha and delays are retained. See scripts/verify_sprite_tint.py and
+scripts/verify_monster_sprites.py. Latest Mac-verified palette source09ea0b7 passed
+run45378878264; name source162e461 passed run45377684653, both with packaged-app
+smoke. Current monster-routing changes await Mac CI.

@@ -2546,3 +2546,14 @@ index expansion, preserving index0 alpha and delays. No native monster tint
 adoption/resource-cache claim. Angles outside +/-360000 are a port work-budget
 guard. See scripts/verify_sprite_tint.py. Binary SHA256
 `a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.
+
+Monster::TintSprites0xefebc matches4,096 complete original wrappers, including
+all20 sprite handles, callback load order/path/angle, libc, unchanged MT and Bob
+current/flags/counters. Missing left hit path preserves previous hit handles;
+missing left attack/beam clears them. monDBXMLLoader_StartElement0xdca60 matches
+2,048 sprite-tag fixtures with inherited/repeated/case-alias source-order updates.
+Actual tint and names inside4,096 complete SpawnHorde wrappers also match5,987
+members and both random streams. High confidence for routing; resource cache/IO
+and Session/native ownership remain boundaries. See HORDES.md and
+verify_monster_sprites.py. Binary SHA256
+`a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.

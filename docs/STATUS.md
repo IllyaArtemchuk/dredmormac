@@ -1757,3 +1757,13 @@ mixed-double rounding, black NaNs, strict hue wrapping and -1 bypass. All64
 portable groups pass. Source awaits Mac CI. Monster TintSprites resource routing
 is the next missing piece; Session horde metadata/native adoption, scripting/tick,
 AI/effects/generation/UI/audio and full gameplay remain unfinished.
+
+Palette09ea0b7 passed arm64 Mac run45378878264; names162e461 passed45377684653,
+both with packaged-app smoke. Complete monster tint routing now matches4,096
+original cases; seven sprite XML tags match2,048 original callback fixtures.
+All20 paths/handles, exact load/clear/retain order, Bob animation state, libc and
+unchanged MT are compared. Actual names+tint inside4,096 full hordes match5,987
+members and both RNG streams. All65 portable groups pass. Source awaits Mac CI.
+Next connect complete horde construction/group metadata to Session/native save
+and rendering; native room scripts/tick adoption and full population/AI/effects/
+generation/UI/audio/gameplay remain unfinished.

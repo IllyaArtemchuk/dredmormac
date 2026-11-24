@@ -14,10 +14,10 @@ def signed(value):return value if value<2**31 else value-2**32
 
 
 class Hordes(Placement):
-    def __init__(self,binary,real_names=False):
+    def __init__(self,binary,real_names=False,real_tint=False):
         from unicorn import UC_HOOK_CODE
-        super().__init__(binary);self.real_names=real_names;self.construct=self.original.sentinel+0x400;self.can_spawn=self.original.sentinel+0x420;self.rebuild=self.original.sentinel+0x440
-        self.addresses=[self.construct,self.can_spawn,self.rebuild,0xdc570,0xc8b80,0xd2cb0,0xefebc,0x29990,0x64a40,0x64dec,0x64df1,0x85fc0]
+        super().__init__(binary);self.real_names=real_names;self.real_tint=real_tint;self.construct=self.original.sentinel+0x400;self.can_spawn=self.original.sentinel+0x420;self.rebuild=self.original.sentinel+0x440
+        self.addresses=[self.construct,self.can_spawn,self.rebuild,0xdc570,0xc8b80,0xd2cb0,0xefebc,0x29990,0x64a40,0x64dec,0x64df1,0x85fc0,0xefd20]
         for address in self.addresses:self.machine.hook_add(UC_HOOK_CODE,self.boundary,begin=address,end=address)
 
     def draw(self,count):
@@ -31,7 +31,9 @@ class Hordes(Placement):
         if address==0x64df1:
             px,py,sx,sy,*_=self.search_args;self.searches.append([signed(sx),signed(sy),signed(self.read(px)[0]),signed(self.read(py)[0]),int(bool(machine.reg_read(UC_X86_REG_EAX))),0]);return
         returned,a,b,c,d=self.read(esp,5);result=0;hidden=False
-        if address==0x85fc0:self.string(a,str(signed(b)));result=a;hidden=True
+        if address==0xefd20:
+            self.tint_requests.append((self.cstring(a),signed(b)));result=999+len(self.tint_requests)
+        elif address==0x85fc0:self.string(a,str(signed(b)));result=a;hidden=True
         elif address==self.original.address('__Z8tweakValPKc'):
             key=self.cstring(a);stage,result={'additional horde size':(0,self.default_extra),'minimum horde size':(1,self.default_min),'horde is overpowered change':(2,self.chance)}[key];self.trace.append([stage,result,0,0,0])
         elif address==self.can_spawn:
@@ -41,6 +43,10 @@ class Hordes(Placement):
         elif address==self.construct:
             if a!=self.level:raise AssertionError('horde constructor level')
             index=self.definition_ids[b];identity=len(self.actors)+1;actor=self.allocate(0x46c);self.actors[actor]=(identity,index);self.actor_ids[identity]=actor;self.trace.append([5,index,signed(self.read(a+0x64)[0]),identity,0]);self.draw(self.ctor_draws)
+            if self.real_tint:
+                from verify_monster_sprites import ACTOR
+                for i,offset in enumerate(ACTOR):self.write(actor+offset,2000+i)
+                self.write(actor+0x3ac,b);self.write(actor+0x24,76);self.write(actor+0x1c,1,2);self.machine.mem_write(actor+0x17,b'\x03')
             self.write(actor,self.actor_vtable);self.write(actor+0x304,*self.percentages);self.string(actor+0x444,'');self.string(actor+0x3bc,'');self.write(actor+0x3c0,actor+0x3c0,actor+0x3c0)
             if self.searches:self.searches[-1][-1]=1
             result=actor
@@ -53,7 +59,9 @@ class Hordes(Placement):
             self.draw(self.mon_draws if stage==6 else self.platoon_draws);self.string(a,('Mon ' if stage==6 else 'Platoon ')+str(self.state));result=a;hidden=True
         elif address==0xefebc:
             if b!=0xffffffff:raise AssertionError('wrong horde tint argument')
-            self.trace.append([8,self.actors[a][0],-1,0,0]);self.draw(1)
+            self.trace.append([8,self.actors[a][0],-1,0,0]);
+            if self.real_tint:return
+            self.draw(1)
         elif address==self.rebuild:self.trace.append([9,self.actors[a][0],0,0,0])
         elif address==0x29990:
             if d!=self.level:raise AssertionError('wrong horde teleport level')
@@ -64,7 +72,7 @@ class Hordes(Placement):
 
     def run(self,seed,fields,percentages,rows,pool,rooms,argument,current):
         depth,expansion,level_set,x,y,minimum,additional,self.default_min,self.default_extra,self.chance,named,self.named_index,quest,self.ctor_draws,self.mon_draws,self.platoon_draws=fields
-        self.heap=0x73000000;self.state=seed;self.trace=[];self.actors={};self.actor_ids={};self.searches=[];self.teleports=[];self.selected=0;self.table_level=0;self.rows=rows;self.percentages=percentages
+        self.heap=0x73000000;self.state=seed;self.tint_requests=[];self.trace=[];self.actors={};self.actor_ids={};self.searches=[];self.teleports=[];self.selected=0;self.table_level=0;self.rows=rows;self.percentages=percentages
         self.level=self.allocate(0x100);cur=self.allocate(0x100);self.actor_vtable=self.allocate(0x100);self.write(self.actor_vtable+0xd4,self.rebuild);vtable=self.allocate(0x100);self.write(vtable+0x14,self.can_spawn);self.write(vtable+0x34,self.construct);self.write(self.level,vtable)
         for pointer,cells,is_current in [(self.level,argument,False),(cur,current,True)]:
             grid=self.allocate(25*44);self.write(pointer+4,grid);self.write(pointer+0x44,5,5);self.write(pointer+0x64,depth);self.write(pointer+0x84,level_set)
@@ -75,7 +83,12 @@ class Hordes(Placement):
         for i,bounds in enumerate(rooms):info=self.allocate(0x30);self.write(info+0x1c,*bounds);self.write(room_entries+i*4,info)
         self.definitions=[];self.definition_ids={}
         for special,allowed in rows:
-            entry=self.allocate(0x100);self.write(entry+0xf0,special);self.definition_ids[entry]=len(self.definitions);self.definitions.append(entry)
+            entry=self.allocate(0x100)
+            if self.real_tint:
+                from verify_monster_sprites import DEFINITION
+                index=len(self.definitions)
+                for i,offset in enumerate(DEFINITION):self.string(entry+offset,f'M{index}/{i}' if (index+i)%3 else '')
+            self.write(entry+0xf0,special);self.definition_ids[entry]=len(self.definitions);self.definitions.append(entry)
         for bucket in range(15):
             sets=self.allocate(64);self.write(self.original.address('_monsterTables')+bucket*12,sets,sets+64,sets+64)
             for set_ in range(4):
@@ -108,11 +121,18 @@ class Hordes(Placement):
         for search in self.searches:result.extend(search)
         result.append(len(self.trace))
         for event in self.trace:result.extend(event)
+        if self.real_tint:
+            result.append(int(bool(self.tint_requests)))
+            if self.tint_requests:
+                from verify_monster_sprites import ACTOR
+                leader=next(iter(self.actors));result.extend([self.tint_requests[0][1],self.read(leader+0x24)[0],self.machine.mem_read(leader+0x17,1)[0],*self.read(leader+0x1c,2)])
+                result.extend(self.read(leader+offset)[0] for offset in ACTOR);result.append(len(self.tint_requests))
+                for path,tint in self.tint_requests:result.extend([path,tint])
         return list(map(str,result))
 
 
-def verify(binary,port,count,real_names=False):
-    oracle=Hordes(binary,real_names);rng=random.Random(0x6491a);lines=[];expected=[];members=searches=failed_accepted=0
+def verify(binary,port,count,real_names=False,real_tint=False):
+    oracle=Hordes(binary,real_names,real_tint);rng=random.Random(0x6491a);lines=[];expected=[];members=searches=failed_accepted=0
     for i in range(count):
         seed=rng.getrandbits(32);depth=rng.choice([-2147483648,-1,0,1,9,10,14,15,2147483647]);position=([-1,-1] if i%5==0 else [-1,2] if i%23==0 else [rng.randrange(5),rng.randrange(5)])
         fields=[depth,rng.randrange(2),rng.randrange(4),*position,rng.choice([-2147483648,2147483647,-3,-1,0,2]),rng.choice([-2,-1,0,1,3]),rng.randrange(-2,4),rng.randrange(-2,5),rng.choice([-1,0,1,2,3,25,2147483647]),rng.randrange(2),0,rng.randrange(2),rng.randrange(4),rng.randrange(4),rng.randrange(4)]
@@ -134,13 +154,13 @@ def verify(binary,port,count,real_names=False):
         try:expected.append(oracle.run(seed,fields,percentages,rows,pool,rooms,argument,current))
         except Exception as error:raise RuntimeError(f'horde fixture{i}: {lines[-1]}') from error
         members+=len(oracle.actors);searches+=len(oracle.searches);failed_accepted+=sum(not row[4] and row[5] for row in oracle.searches)
-    process=subprocess.run([str(port.resolve())]+(['--names'] if real_names else []),input='\n'.join(lines)+'\n',capture_output=True,text=True,check=True);actual=[shlex.split(line) for line in process.stdout.splitlines()]
+    process=subprocess.run([str(port.resolve())]+(['--names-tint'] if real_tint else ['--names'] if real_names else []),input='\n'.join(lines)+'\n',capture_output=True,text=True,check=True);actual=[shlex.split(line) for line in process.stdout.splitlines()]
     if len(actual)!=len(expected):raise AssertionError('horde result count differs')
     for i,(a,b) in enumerate(zip(actual,expected)):
         if a!=b:raise AssertionError(f'horde fixture{i}, lengths{len(a)}/{len(b)}, differences{[(j,x,y) for j,(x,y) in enumerate(zip(a,b)) if x!=y][:14]}: {lines[i]}')
-    return dict(binary_sha256=hashlib.sha256(oracle.original.data).hexdigest(),cases=count,actual_name_generators=real_names,members=members,searches=searches,failed_searches_accepted=failed_accepted,mismatches=0,scope='Actual complete Level::SpawnHorde and actual bounded location/PassableOnAllSides execute. Coordinates/default tweaks, surviving argument-depth reduction, selection at original capped depth, eligibility/rejections, named overrides, leader percentage modifiers/names/group links, quest counts, queued placements, failed-search coordinate acceptance, full callback order and libc/MT state+next8 compared. Constructor/tint/rebuild/eligibility/named lookup/queue/library boundaries use controlled libc draws. Name functions are either controlled libc-only callbacks or actual GenMonName/GenPlatoonName as indicated; actual mode supplies word pools and decimal itos formatting. Current/argument maps have equal dimensions with distinct contents/occupancy; actual constructors/tint resources/subclass teleport/Session scheduling/save excluded.')
+    return dict(binary_sha256=hashlib.sha256(oracle.original.data).hexdigest(),cases=count,actual_name_generators=real_names,actual_tint_routing=real_tint,members=members,searches=searches,failed_searches_accepted=failed_accepted,mismatches=0,scope='Actual complete Level::SpawnHorde and actual bounded location/PassableOnAllSides execute. Coordinates/default tweaks, surviving argument-depth reduction, selection at original capped depth, eligibility/rejections, named overrides, leader percentage modifiers/names/group links, quest counts, queued placements, failed-search coordinate acceptance, full callback order and libc/MT state+next8 compared. Constructor/rebuild/eligibility/named lookup/queue/library boundaries use controlled libc draws. Tint is either a controlled draw or the actual complete Monster::TintSprites, with sprite resource loads supplied, as indicated. Name functions are either controlled libc-only callbacks or actual GenMonName/GenPlatoonName as indicated; actual mode supplies word pools and decimal itos formatting. Current/argument maps have equal dimensions with distinct contents/occupancy; actual constructors/resource cache/IO/subclass teleport/Session scheduling/save excluded.')
 
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('binary',type=Path);parser.add_argument('port',type=Path);parser.add_argument('--cases',type=int,default=2048);parser.add_argument('--names',action='store_true');parser.add_argument('--out',type=Path,required=True)
-    args=parser.parse_args();report=verify(args.binary,args.port,args.cases,args.names);args.out.write_text(json.dumps(report,indent=2)+'\n');print(f"{report['cases']} complete original horde wrappers / {report['members']} members match")
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('binary',type=Path);parser.add_argument('port',type=Path);parser.add_argument('--cases',type=int,default=2048);parser.add_argument('--names',action='store_true');parser.add_argument('--tint',action='store_true');parser.add_argument('--out',type=Path,required=True)
+    args=parser.parse_args();report=verify(args.binary,args.port,args.cases,args.names or args.tint,args.tint);args.out.write_text(json.dumps(report,indent=2)+'\n');print(f"{report['cases']} complete original horde wrappers / {report['members']} members match")

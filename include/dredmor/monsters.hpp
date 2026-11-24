@@ -17,6 +17,8 @@ struct MonsterDefinition {
     SecondaryStats secondary{};
     Damage damage{},resistance{};
     std::array<std::string,4> idle_sprites{}; // left, right, up, down
+    std::array<std::string,4> attack_sprites{},hit_sprites{},beam_sprites{};
+    std::string die_sprite,cast_sprite,dig_up_sprite,dig_down_sprite;
     std::vector<XmlNode> source_chain;
 };
 MonsterDefinition read_monster(const XmlNode& node,const MonsterDefinition* parent=nullptr);

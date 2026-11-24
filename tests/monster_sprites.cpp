@@ -1,0 +1,48 @@
+#include "dredmor/monster_sprites.hpp"
+#include <iostream>
+#include <stdexcept>
+#define check(...) do {if (!(__VA_ARGS__)) throw std::runtime_error("monster sprite assertion at line "+std::to_string(__LINE__));} while(false)
+using namespace dredmor;
+int main() {
+    try {
+        const auto parent=read_monster(parse_xml(R"(<monster name="parent">
+            <idleSprite left="L" right="R" up="U" down="D"/>
+            <attackSprite left="AL" right="AR" up="AU" down="AD"/>
+            <hitSprite left="HL" right="HR" up="HU" down="HD"/>
+            <beamSprite left="BL" right="BR" up="BU" down="BD"/>
+            <dieSprite name="die"/><castSpellSprite name="cast"/>
+            <digSprites upSprite="dig up" downSprite="dig down"/>
+        </monster>)"));
+        const auto child=read_monster(parse_xml(R"(<monster name="child">
+            <IDLESPRITE left="first" LEFT="last"/><idleSprite down="down"/>
+            <attackSprite left=""/><hitSprite left=""/><beamSprite left=""/>
+            <digSprites downSprite=""/><dieSprite name=""/>
+        </monster>)"),&parent);
+        check(child.idle_sprites==std::array<std::string,4>({"last","R","U","down"}));
+        check(child.attack_sprites[0].empty() && child.attack_sprites[1]=="AR" && child.cast_sprite=="cast");
+        MonsterSpriteState state;state.hit={91,92,93,94};state.attack.fill(42);state.beam.fill(43);
+        state.dig_up=state.dig_down=44;state.die=45;state.current=46;state.frame=12;state.phase=13;state.animation_flag=7;
+        DarwinRandom random(1);std::vector<std::string> paths;std::vector<int> angles;
+        auto load=[&](const auto& path,int angle) {paths.push_back(path);angles.push_back(angle);return 999+paths.size();};
+        check(tint_monster_sprites(child,state,120,random,load)==120 && random.state()==1);
+        check(paths==std::vector<std::string>({"R","last","U","down","cast"}));
+        check(state.hit==std::array<MonsterSpriteHandle,4>({91,92,93,94}));
+        check(state.attack==std::array<MonsterSpriteHandle,4>{} && state.beam==std::array<MonsterSpriteHandle,4>{});
+        check(state.dig_up==0 && state.dig_down==0 && state.die==0 && state.cast==1004);
+        check(state.current==1003 && state.frame==0 && state.phase==0 && state.animation_flag==0);
+        // Matching down sprite leaves all animation counters untouched.
+        state.frame=42;state.phase=43;state.animation_flag=9;paths.clear();
+        tint_monster_sprites(child,state,0,random,load);
+        check(state.current==1003 && state.frame==42 && state.phase==43 && state.animation_flag==9);
+        // A preserved current sprite stays selected even as every handle changes.
+        state.preserve_current=true;state.current=8765;paths.clear();angles.clear();
+        DarwinRandom expected(1);const auto angle=std::int32_t((std::uint64_t(expected.next())*0x59ffff5dull)>>53);
+        check(tint_monster_sprites(parent,state,-1,random,load)==angle && random.state()==expected.state());
+        check(state.current==8765 && state.frame==42 && state.animation_flag==9 && paths.size()==20);
+        for (auto value:angles) check(value==angle);
+        check(paths==std::vector<std::string>({"R","L","U","D","AR","AL","AU","AD","HR","HL","HU","HD","BR","BL","BU","BD","cast","die","dig up","dig down"}));
+        // Empty idle strings still issue four mandatory load requests.
+        MonsterDefinition empty;paths.clear();tint_monster_sprites(empty,state,1,random,load);check(paths==std::vector<std::string>(4));
+        std::cout<<"monster sprite XML inheritance/aliases, tint RNG, resource order, optional clearing/retention and animation reset passed\n";
+    } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
+}

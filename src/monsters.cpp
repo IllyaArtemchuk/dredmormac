@@ -1,4 +1,5 @@
 #include "dredmor/monsters.hpp"
+#include <algorithm>
 #include <charconv>
 #include <cstdlib>
 #include <cmath>
@@ -73,6 +74,15 @@ std::optional<std::string> attribute(const XmlNode& node,std::string_view key) {
     for (const auto& pair:node.attributes) if (lower(pair.first)==key) return pair.second;
     return std::nullopt;
 }
+template<class F> void ordered_attributes(const XmlNode& node,F assign) {
+    auto apply=[&](const std::string& key) {
+        const auto found=node.attributes.find(key);
+        if (found!=node.attributes.end()) assign(lower(key),found->second);
+    };
+    for (const auto& key:node.attribute_order) apply(key);
+    for (const auto& pair:node.attributes)
+        if (std::find(node.attribute_order.begin(),node.attribute_order.end(),pair.first)==node.attribute_order.end()) apply(pair.first);
+}
 int integer(const XmlNode& node,std::string_view key,int fallback=0) {
     auto value=attribute(node,key);if (!value) return fallback;
     int result;auto parsed=std::from_chars(value->data(),value->data()+value->size(),result);
@@ -109,9 +119,21 @@ MonsterDefinition read_monster(const XmlNode& node,const MonsterDefinition* pare
             const auto id=integer(child,"id"),amount=integer(child,"amount");
             if (id<0 || id>=(tag=="primarybuff"?6:24)) throw std::runtime_error("monster buff ID out of bounds");
             if (tag=="primarybuff") result.primary[id]=amount;else result.secondary[id]=amount;
-        } else if (tag=="idlesprite") {
+        } else if (tag=="idlesprite" || tag=="attacksprite" || tag=="hitsprite" || tag=="beamsprite") {
             const std::array<std::string_view,4> keys={"left","right","up","down"};
-            for (std::size_t i=0;i<4;++i) if (auto value=attribute(child,keys[i])) result.idle_sprites[i]=*value;
+            auto& sprites=tag=="idlesprite"?result.idle_sprites:tag=="attacksprite"?result.attack_sprites
+                :tag=="hitsprite"?result.hit_sprites:result.beam_sprites;
+            ordered_attributes(child,[&](const auto& key,const auto& value) {
+                for (std::size_t i=0;i<4;++i) if (key==keys[i]) sprites[i]=value;
+            });
+        } else if (tag=="diesprite" || tag=="castspellsprite") {
+            auto& sprite=tag=="diesprite"?result.die_sprite:result.cast_sprite;
+            ordered_attributes(child,[&](const auto& key,const auto& value) {if (key=="name") sprite=value;});
+        } else if (tag=="digsprites") {
+            ordered_attributes(child,[&](const auto& key,const auto& value) {
+                if (key=="upsprite") result.dig_up_sprite=value;
+                else if (key=="downsprite") result.dig_down_sprite=value;
+            });
         } else if (tag=="ai") {
             result.aggressiveness=integer(child,"aggressiveness",result.aggressiveness);
             result.span=integer(child,"span",result.span);
