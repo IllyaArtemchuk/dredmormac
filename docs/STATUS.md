@@ -1688,3 +1688,17 @@ Session sourcea77f057 also needs its Mac result checked. Full room script execut
 and verified tick-driver adoption are still pending; this does not complete puzzles
 or the game. Next connect live object bindings/actions/events and transactional
 prototype caches, save them and test a native scripted puzzle.
+
+Native ordinary levers sourcec080a20 passed all99 arm64 Mac checks, including
+native-script-levers-window and relocated packaged-app smoke (run45366626193).
+The combined room runtime now composes the recovered condition/action/trigger
+kernels with live callbacks and snapshot-owned TypeAt prototypes. Shared template
+instances reuse prototypes across rooms without mutating immutable definitions.
+A failed candidate action leaves committed cache/RNG untouched; retry reproduces
+its first constructor draw. Runtime snapshot XML preserves counts/events/cache
+and rejects duplicate/invalid references or changed content profiles. This is a
+port component payload, not original save compatibility or Session integration.
+All61 portable groups pass. Native CI is pending for runtime glue. Next bind this
+runtime to live Session entities, created records/spells, queued deletion/movement,
+cached floor/save ownership and a complete native scripted puzzle. Full gameplay,
+AI/effects/generation/UI/audio parity remains unfinished.

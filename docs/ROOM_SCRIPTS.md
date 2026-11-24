@@ -341,3 +341,30 @@ The --script-levers synthetic Mac fixture covers click, bump, history settling,
 save/restore, distant click and malformed-history rollback. Local portable checks
 and fixture generation pass; arm64 native validation is pending for this source.
 No original VFX/audio/UI or full script/tick integration claim is made.
+
+The composed RoomRuntime now runs the recovered level trigger pass with live
+object/player/action hooks. Conditions see current queued events and prior-room
+state; actions execute in source order through the owning world's request handler.
+Template IDs preserve prototype sharing across room instances. TypeAt conditions
+are copied for evaluation and populate a snapshot-owned cache; immutable shared
+definitions never acquire a prototype. A prototype constructed before a false
+condition remains cached in that candidate. Stable nonzero template IDs and
+consistent shared definition references are explicit profile guards.
+
+Runtime snapshot XML preserves previous-room state, success counters, queued
+events and prototype kind/subtype pairs. Loading validates every script/TypeAt
+reference, rejects duplicate entries and checks a deterministic profile hash of
+immutable room origins/identity/template mappings and typed conditions/actions.
+Current room fill/presence and owner world objects remain caller-owned. XML strings
+preserve escaped whitespace. This component format is not an original-game save.
+
+Composition tests cover activation/event visibility across scripts, per-room
+repeat counts, cross-room shared prototypes, false-condition cache retention,
+immutable source state, saved continuation, changed-profile rejection and an
+injected action failure followed by a retry with the same constructor RNG draw.
+All61 portable groups pass. This is composition/ownership verification of already
+compared kernels, not a new full original-world or Session integration oracle.
+The owner must transact world/runtime/RNG together and process safe teleport and
+destruction requests in their verified GameTick phases. Session/native script
+binding, created records, full scheduling and original save compatibility remain
+unfinished.

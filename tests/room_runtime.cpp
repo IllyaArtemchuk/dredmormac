@@ -1,0 +1,57 @@
+#include "dredmor/room_runtime.hpp"
+#include "dredmor/random.hpp"
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+#define check(v) do {if (!(v)) throw std::runtime_error("room runtime assertion at line "+std::to_string(__LINE__));} while(false)
+using namespace dredmor;
+int main() {
+    try {
+        RoomCondition condition;condition.kind=RoomConditionKind::type_at;condition.item_type="weapon";condition.item_subtype="specific";condition.point={1,2};
+        RoomAction ticker;ticker.kind=RoomActionKind::ticker;ticker.text="matched";
+        RoomScriptDefinition script;script.success_repeat=-1;script.conditions={condition};script.success={ticker};
+        const auto shared=std::make_shared<const std::vector<RoomScriptDefinition>>(std::vector<RoomScriptDefinition>{script});
+        std::vector<RoomRuntimeRoom> rooms={{{true,1,0,shared},{10,20},7},{{true,1,1,shared},{30,40},7}};
+        RoomRuntimeState original;RoomRuntimeHooks hooks;unsigned creates=0,tickers=0;bool occupied=false;
+        hooks.player_room=[] {return 0;};hooks.player_position=[] {return Position{0,0};};hooks.find_object=[](auto,auto) {return std::optional<ScriptObjectState>{};};
+        hooks.create_item=[&](auto type,auto subtype) {check(type=="weapon" && subtype=="specific");++creates;return ScriptItemType{3,9};};
+        hooks.tile_items=[&](Position p) {check((p.x==11 && p.y==22) || (p.x==31 && p.y==42));return occupied?std::vector<ScriptTileItem>{{true,{3,9}}}:std::vector<ScriptTileItem>{};};
+        hooks.perform=[&](const RoomActionRequest& request) {check(request.kind==RoomActionRequestKind::ticker && request.text=="matched");++tickers;};
+        auto candidate=original;run_room_scripts(rooms,candidate,hooks);
+        check(creates==1 && !tickers && candidate.prototypes.size()==1 && original.prototypes.empty() && !shared->at(0).conditions[0].cached_item);
+        occupied=true;run_room_scripts(rooms,candidate,hooks);check(creates==1 && tickers==2 && candidate.triggers.success_counts.at({0,0})==1 && candidate.triggers.success_counts.at({1,0})==1);
+        // Discarded snapshots do not populate another snapshot's shared template.
+        run_room_scripts(rooms,original,hooks);check(creates==2 && original.prototypes.size()==1 && !shared->at(0).conditions[0].cached_item);
+        set_room_event(candidate.triggers.events,-1,"id&\"\n", "name<\t");candidate.triggers.previous_room=-1;
+        std::ostringstream encoded;write_room_runtime_state(encoded,candidate,rooms);auto restored=read_room_runtime_state(parse_xml(encoded.str()),rooms);
+        std::ostringstream canonical;write_room_runtime_state(canonical,restored,rooms);check(encoded.str()==canonical.str());
+        check(room_event_is_set(restored.triggers.events,-1,"id&\"\n","name<\t"));
+        run_room_scripts(rooms,restored,hooks);check(creates==2 && restored.prototypes.size()==1 && restored.triggers.events.empty());
+        auto wrong=parse_xml(encoded.str());wrong.children={parse_xml("<prototype template='7' script='0' condition='9' kind='3' subtype='9'/>")};
+        bool invalid_reference=false;try {read_room_runtime_state(wrong,rooms);} catch(const std::runtime_error&) {invalid_reference=true;}check(invalid_reference);
+        auto duplicates=parse_xml(encoded.str());const auto counter=parse_xml("<counter room='0' script='0' count='0'/>");duplicates.children={counter,counter};
+        bool duplicate=false;try {read_room_runtime_state(duplicates,rooms);} catch(const std::runtime_error&) {duplicate=true;}check(duplicate);
+        auto changed=std::make_shared<std::vector<RoomScriptDefinition>>(*shared);changed->at(0).success[0].text="different content";
+        auto another_profile=rooms;for (auto& room:another_profile) room.trigger.scripts=changed;
+        bool wrong_profile=false;try {read_room_runtime_state(parse_xml(encoded.str()),another_profile);} catch(const std::runtime_error&) {wrong_profile=true;}check(wrong_profile);
+        struct Snapshot {RoomRuntimeState runtime;DarwinRandom random{7};};Snapshot committed;auto failed=committed;std::int32_t first_draw=0;
+        hooks.create_item=[&](auto,auto) {first_draw=failed.random.next();return ScriptItemType{3,9};};
+        hooks.perform=[](const RoomActionRequest&) {throw std::runtime_error("injected resource failure");};
+        bool failed_action=false;try {run_room_scripts(rooms,failed.runtime,hooks);} catch(const std::runtime_error&) {failed_action=true;}
+        check(failed_action && failed.runtime.prototypes.size()==1 && committed.runtime.prototypes.empty() && committed.random.state()==7 && !shared->at(0).conditions[0].cached_item);
+        auto retry=committed;std::int32_t retry_draw=0;hooks.create_item=[&](auto,auto) {retry_draw=retry.random.next();return ScriptItemType{3,9};};hooks.perform=[](const RoomActionRequest&) {};
+        run_room_scripts(rooms,retry.runtime,hooks);check(first_draw==retry_draw && retry.runtime.prototypes.size()==1 && retry.runtime.triggers.success_counts.size()==2);
+        RoomCondition activated;activated.kind=RoomConditionKind::activated;activated.object_id="switch";activated.wanted=1;
+        RoomCondition event;event.kind=RoomConditionKind::event;event.object_id="switch";event.event_name="fired";
+        RoomAction emit=ticker;emit.text="emit";RoomAction observe=ticker;observe.text="observe";
+        RoomScriptDefinition first;first.conditions={activated};first.success={emit};RoomScriptDefinition second;second.conditions={event};second.success={observe};
+        auto live=std::make_shared<const std::vector<RoomScriptDefinition>>(std::vector<RoomScriptDefinition>{first,second});
+        RoomRuntimeState state;std::vector<std::string> messages;hooks.find_object=[](auto scope,auto id) {check(scope==0 && id=="switch");ScriptObjectState object;object.activatable=true;object.activation.current=1;object.room_local_id="actual-switch";return std::optional<ScriptObjectState>{object};};
+        hooks.perform=[&](const RoomActionRequest& request) {messages.push_back(request.text);if (request.text=="emit") set_room_event(state.triggers.events,0,"actual-switch","fired");};
+        auto pass=run_room_scripts({{{true,1,0,live},{0,0},8}},state,hooks);
+        check(pass.successes.size()==2 && (messages==std::vector<std::string>{"emit","observe"}) && state.triggers.events.empty());
+        run_room_scripts({{{true,1,0,live},{0,0},8}},state,hooks);check(messages.size()==2);
+        bool collision=false;auto conflicting=rooms;conflicting[1].trigger.scripts=live;try {run_room_scripts(conflicting,state,hooks);} catch(const std::invalid_argument&) {collision=true;}check(collision);
+        std::cout<<"room runtime composes live activation/events, per-room repeats and source-order actions with template-shared prototypes isolated between snapshots\n";
+    } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
+}
