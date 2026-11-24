@@ -2,6 +2,7 @@
 #include "dredmor/random.hpp"
 #include "dredmor/room_placement.hpp"
 #include <functional>
+#include <iosfwd>
 
 namespace dredmor {
 struct TickPlayerState {
@@ -50,4 +51,9 @@ struct GameTickHooks {
 // incidental colour RNG, cooldowns and deferred end-of-tick teleports. The
 // owning Session must transact callbacks/state/RNG together on failure.
 void run_game_tick(GameTickState& state,GameRandom& random,const GameTickHooks& hooks);
+// Port snapshot of the driver only; the owner saves Session/RNG and all live
+// object/effect registries in the same transaction. Not an original save file.
+struct XmlNode;
+void write_game_tick_state(std::ostream& output,const GameTickState& state);
+GameTickState read_game_tick_state(const XmlNode& node);
 }

@@ -2364,3 +2364,12 @@ explicit input, not guessed to be an idle field; full Update/AI/native animation
 remain pending. Full Monster::Update private export now available at
 /workspace/work/analysis/monster-update-full.txt (0xe9b1a..0xeb420,6,426byte span
 includes trailing jump table). Shared-RNG1555371 Mac45417001620 running.
+
+GameTickState now has write/read_game_tick_state and SessionGameTickExecutor
+save/load combining driver+Session/RNG (separate owner-managed script registries
+are not included). Strict bounded port XML, preserves all fields including
+ordered duplicate effect memberships and old duration map entries. All77portable
+pass plus focused rerun after encoded-size guard;110tick save/continuation byte/
+trace identity through respawn/expiry/autosaves. Next combine room-script registry/
+runtime candidate ownership with live driver scheduling; native remains pending.
+Shared-RNG1555371 passed Mac45417001620/package. MonsterPost091e6f3 running45417450787.

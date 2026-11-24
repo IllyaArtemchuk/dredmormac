@@ -2107,3 +2107,17 @@ All76 portable groups pass. This is the full small PostGameTick body; selecting
 the cached handle during Monster::Update/AI and connecting actor animation to
 the native renderer remain unfinished. Full game is unfinished. Shared-RNG
 1555371 is running Mac45417001620; respawn0d9c749 queued45415969486.
+
+Shared-RNG1555371 passed arm64 Mac45417001620/package. GameTickState now has a
+strict version1 port snapshot retaining every driver field, ordered live object/
+tile-effect membership (including duplicates), duration map entries, colour text,
+cooldowns, pending teleports and unsigned autosave time. SessionGameTickExecutor
+can save/load Session/RNG and driver state in one wrapper, checking shared level
+geometry/player state. All77 portable groups pass; a110tick continuation reloads
+at turn40 and preserves complete Session/driver bytes and callback traces through
+expiry, respawn and autosaves. Invalid shapes/IDs/numbers, missing effect durations,
+size guards, invalid text and player/geometry mismatches reject before output.
+These are port formats, not original save compatibility. Independent room binding/
+runtime registries remain caller-owned; native scheduling/combined scripted tick
+ownership is next. Full game remains unfinished. PostGameTick091e6f3 running
+Mac45417450787; respawn0d9c749 still queued45415969486.

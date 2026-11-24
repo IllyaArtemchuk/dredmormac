@@ -11,6 +11,7 @@ struct SessionGameTickHooks {
     std::function<void(Session&,GameTickState&,const TickRequest&)> perform;
     std::function<std::uint32_t(Session&,GameTickState&)> ticks;
 };
+struct SessionGameTickSnapshot {Session session;GameTickState tick;};
 // Owns the transaction around the recovered outer driver. Callbacks and the
 // driver share the candidate Session's libc, MT and normal-cache state. Driver
 // state is caller-owned and must be persisted alongside Session by its owner.
@@ -18,5 +19,12 @@ struct SessionGameTickHooks {
 class SessionGameTickExecutor {
 public:
     static void run(Session& session,GameTickState& state,const SessionGameTickHooks& hooks);
+    // Atomic port snapshot of Session (including RNG) and driver state. Any
+    // separate room-binding/runtime/resource registries remain owner-managed.
+    static void save(std::ostream& output,const Session& session,const GameTickState& state);
+    static SessionGameTickSnapshot load(std::istream& input,
+        std::shared_ptr<const std::vector<ItemDefinition>> definitions={},
+        std::shared_ptr<const std::vector<AbilityDefinition>> abilities={},
+        std::shared_ptr<const std::vector<SpellDefinition>> spells={});
 };
 }
