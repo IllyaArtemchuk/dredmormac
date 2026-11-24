@@ -139,12 +139,23 @@ static std::vector<dredmor::StairPlacement> sceneStairs(id value) {
     }
     return stairs;
 }
+static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
+    std::vector<dredmor::SecretLever> levers;if (!value) return levers;
+    if (![value isKindOfClass:NSArray.class] || [value count]>4096) throw std::runtime_error("invalid secret lever array");
+    for (id node in value) {
+        if (![node isKindOfClass:NSDictionary.class] || !node[@"x"] || !node[@"y"] || !node[@"target_x"] || !node[@"target_y"]) throw std::runtime_error("invalid secret lever coordinates");
+        const auto active=sceneInteger(node,@"activated");if (active<0 || active>1) throw std::runtime_error("invalid secret lever state");
+        levers.push_back({{sceneInteger(node,@"x"),sceneInteger(node,@"y")},{sceneInteger(node,@"target_x"),sceneInteger(node,@"target_y")},active!=0});
+    }
+    return levers;
+}
 
 @interface RoomView : NSView<DredmorInventoryOwner> {
     std::unique_ptr<dredmor::Session> _session;
     dredmor::FloorRegistry _floors;
     BOOL _multiFloor;
     NSArray<SpriteImage*> *_stairImages;
+    NSArray<SpriteImage*> *_leverImages;
     std::unique_ptr<dredmor::GameContent> _content;
     std::filesystem::path _dataRoot;
     NSArray<NSString*> *_rows;
@@ -170,6 +181,7 @@ static std::vector<dredmor::StairPlacement> sceneStairs(id value) {
 - (NSDictionary*)preparePresentation:(const dredmor::Session&)session;
 - (void)applyPresentation:(NSDictionary*)presentation;
 - (BOOL)smokeFloors;
+- (BOOL)smokeSecretLevers;
 - (BOOL)smokeSaveLoad;
 - (void)saveDocument:(id)sender;
 - (void)openDocument:(id)sender;
@@ -369,6 +381,7 @@ static std::vector<dredmor::StairPlacement> sceneStairs(id value) {
                 {[value[@"x"] intValue],[value[@"y"] intValue]});
         }
         _session->floor_stairs(sceneStairs(scene[@"stairs"]),sceneInteger(scene,@"floor_branch"));
+        _session->floor_secret_levers(sceneSecretLevers(scene[@"secret_levers"]));
         _multiFloor=scene[@"floors"]!=nil;
         if (_multiFloor) {
             if (!_content || ![scene[@"floors"] isKindOfClass:NSArray.class]) throw std::runtime_error("prepared floors require an installation and array");
@@ -376,6 +389,7 @@ static std::vector<dredmor::StairPlacement> sceneStairs(id value) {
                 if (![node isKindOfClass:NSDictionary.class] || ![node[@"collision"] isKindOfClass:NSString.class] || !node[@"depth"]) throw std::runtime_error("invalid prepared floor");
                 std::istringstream floorMap([node[@"collision"] UTF8String]);dredmor::SessionFloor floor(dredmor::World::read(floorMap));
                 floor.depth.depth=sceneInteger(node,@"depth");floor.branch=sceneInteger(node,@"branch");floor.stairs=sceneStairs(node[@"stairs"]);
+                floor.secret_levers=sceneSecretLevers(node[@"secret_levers"]);
                 if (node[@"monsters"] && ![node[@"monsters"] isKindOfClass:NSArray.class]) throw std::runtime_error("invalid prepared monsters");
                 for (id monster in node[@"monsters"]) {
                     if (![monster isKindOfClass:NSDictionary.class] || ![monster[@"name"] isKindOfClass:NSString.class]) throw std::runtime_error("invalid prepared monster");
@@ -384,8 +398,8 @@ static std::vector<dredmor::StairPlacement> sceneStairs(id value) {
                 _floors.add_floor(*_session,std::move(floor));
             }
         }
-        _stairImages=@[];
-        if (_multiFloor || !_session->floor_stairs().empty()) {
+        _stairImages=@[];_leverImages=@[];
+        if (_multiFloor || !_session->floor_stairs().empty() || !_session->secret_levers().empty()) {
             _floors.for_each_floor(*_session,[&](const dredmor::Session& floor){@autoreleasepool {(void)[self preparePresentation:floor];}});
             [self applyPresentation:[self preparePresentation:*_session]];
         }
@@ -481,10 +495,16 @@ static std::vector<dredmor::StairPlacement> sceneStairs(id value) {
         loaded=std::make_unique<dredmor::Session>(dredmor::Session::load(input,definitions,abilities,spells));
         const auto& old=_session->world();const auto& world=loaded->world();
         if (old.width()!=world.width() || old.height()!=world.height()) throw std::runtime_error("open the save's prepared room before loading this file");
-        for (int y=0;y<old.height();++y) for (int x=0;x<old.width();++x) if (old.tile(x,y)!=world.tile(x,y)) throw std::runtime_error("save belongs to another room layout");
+        const auto& before=_session->secret_levers();const auto& after=loaded->secret_levers();
+        if (before.size()!=after.size()) throw std::runtime_error("save secret levers belong to another room");
+        for (std::size_t i=0;i<before.size();++i) if (before[i].position.x!=after[i].position.x || before[i].position.y!=after[i].position.y || before[i].target.x!=after[i].target.x || before[i].target.y!=after[i].target.y) throw std::runtime_error("save secret lever configuration differs");
+        for (int y=0;y<old.height();++y) for (int x=0;x<old.width();++x) if (old.tile(x,y)!=world.tile(x,y)) {
+            bool secret=false;for (const auto& lever:before) secret=secret || (lever.target.x==x && lever.target.y==y);
+            if (!secret) throw std::runtime_error("save belongs to another room layout");
+        }
     }
     NSDictionary *presentation=[self preparePresentation:*loaded];
-    if (!_multiFloor) {NSMutableDictionary *originalRows=[presentation mutableCopy];originalRows[@"rows"]=_rows;presentation=originalRows;}
+    if (!_multiFloor && loaded->secret_levers().empty()) {NSMutableDictionary *originalRows=[presentation mutableCopy];originalRows[@"rows"]=_rows;presentation=originalRows;}
     _session=std::move(loaded);_floors=std::move(registry);[self applyPresentation:presentation];
     [_inventoryController refresh];self.needsDisplay=YES;
 }
@@ -525,12 +545,19 @@ static std::vector<dredmor::StairPlacement> sceneStairs(id value) {
         SpriteImage *image=[[SpriteImage alloc] initWithPath:[NSString stringWithUTF8String:path.c_str()]];
         if (!image) throw std::runtime_error("cannot prepare stair sprite");[stairs addObject:image];
     }
+    NSMutableArray<SpriteImage*> *levers=[NSMutableArray array];
+    for (const auto& lever:session.secret_levers()) {
+        (void)lever;if (!_content) throw std::runtime_error("lever rendering requires an installation");
+        const auto path=roomResource(_dataRoot,"dungeon/lever1.spr");SpriteImage *image=[[SpriteImage alloc] initWithPath:[NSString stringWithUTF8String:path.c_str()]];
+        if (!image || [image frameCount]<2) throw std::runtime_error("secret lever requires two sprite frames");[levers addObject:image];
+    }
     NSMutableArray<NSString*> *rows=[NSMutableArray array];
     for (int y=0;y<session.world().height();++y) {std::string row;for (int x=0;x<session.world().width();++x) row+=session.world().tile(x,y);[rows addObject:[NSString stringWithUTF8String:row.c_str()]];}
-    return @{@"rows":rows,@"enemies":images,@"objects":objects,@"breakables":breakables,@"traps":traps,@"stairs":stairs};
+    return @{@"rows":rows,@"enemies":images,@"objects":objects,@"breakables":breakables,@"traps":traps,@"stairs":stairs,@"levers":levers};
 }
 - (void)applyPresentation:(NSDictionary*)presentation {
     _rows=presentation[@"rows"];_enemyImages=presentation[@"enemies"];_objectImages=presentation[@"objects"];_breakableImages=presentation[@"breakables"];_trapImages=presentation[@"traps"];_stairImages=presentation[@"stairs"];
+    _leverImages=presentation[@"levers"];
     _targetSpell.reset();[_breakAnimations removeAllObjects];
 }
 - (void)showFailure:(const std::exception&)error {
@@ -787,6 +814,28 @@ static std::vector<dredmor::StairPlacement> sceneStairs(id value) {
     bool rejected=false;try {[self loadFromURL:url];} catch(const std::exception&) {rejected=true;}[[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];
     std::ostringstream after;_floors.save(*_session,after);[self display];return rejected && before.str()==after.str();
 }
+- (BOOL)smokeSecretLevers {
+    if (_session->secret_levers().size()!=1 || _leverImages.count!=1 || [_leverImages[0] frameCount]<2) return NO;
+    const auto lever=_session->secret_levers()[0];
+    if (!lever.activated || !_session->world().passable(lever.target) || _session->passable(lever.position) || [_rows[lever.target.y] characterAtIndex:lever.target.x]!='.' || ![self smokeSaveLoad]) return NO;
+    // Load the same prepared room with the secret wall still closed.
+    auto initial=*_session;auto floor=initial.floor_state();auto text=floor.world.room_text();text[lever.target.y*(floor.world.width()+1)+lever.target.x]='#';
+    std::istringstream rows(text);floor.world=dredmor::World::restore(rows,floor.world.turn());floor.secret_levers[0].activated=false;initial.swap_floor(std::move(floor),initial.player().position);
+    std::ostringstream closed;initial.save(closed);
+    NSURL *url=[NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID.UUID.UUIDString stringByAppendingString:@".dredmor-save"]]];
+    auto write=[&](const std::string& value) {NSData *data=[NSData dataWithBytes:value.data() length:value.size()];return [data writeToURL:url options:NSDataWritingAtomic error:nullptr];};
+    if (!write(closed.str())) return NO;[self loadFromURL:url];
+    if (_session->secret_levers()[0].activated || _session->world().passable(lever.target) || [_rows[lever.target.y] characterAtIndex:lever.target.x]!='#') return NO;
+    const auto& world=_session->world();const CGFloat cell=MIN((self.bounds.size.width-40)/world.width(),(self.bounds.size.height-110)/world.height());
+    const NSPoint local=NSMakePoint(20+(lever.position.x+0.5)*cell,20+(lever.position.y+0.5)*cell),window=[self convertPoint:local toView:nil];
+    NSEvent *click=[NSEvent mouseEventWithType:NSEventTypeLeftMouseDown location:window modifierFlags:0 timestamp:0 windowNumber:self.window.windowNumber context:nil eventNumber:0 clickCount:1 pressure:1];
+    const auto turn=_session->world().turn();[self mouseDown:click];
+    if (!_session->secret_levers()[0].activated || !_session->world().passable(lever.target) || _session->world().turn()!=turn+1 || [_rows[lever.target.y] characterAtIndex:lever.target.x]!='.' || ![self smokeSaveLoad]) return NO;
+    [self mouseDown:click];if (_session->world().turn()!=turn+2 || !_session->world().passable(lever.target)) return NO;
+    std::ostringstream before;_session->save(before);auto invalid=before.str();const auto field=invalid.find("target-x=\"");if (field==std::string::npos) return NO;const auto start=field+10,end=invalid.find('"',start);invalid.replace(start,end-start,"5");
+    if (!write(invalid)) return NO;bool rejected=false;try {[self loadFromURL:url];} catch(const std::exception&) {rejected=true;}
+    [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];std::ostringstream after;_session->save(after);[self display];return rejected && before.str()==after.str();
+}
 - (BOOL)smokeFood {
     if (!_session->regeneration()) return NO;
     const auto hp=_session->player().health,mp=_session->player().mana;const auto turn=_session->world().turn();const auto primary=_session->player().primary[0];
@@ -856,7 +905,8 @@ static std::vector<dredmor::StairPlacement> sceneStairs(id value) {
     }
     try {
         auto session=*_session;auto registry=_floors;const auto outcome=registry.step(session,action);
-        NSDictionary *presentation=outcome==dredmor::FloorTravel::travelled?[self preparePresentation:session]:nil;
+        bool lever=false;for (const auto& event:session.events()) lever=lever || event.kind==dredmor::EventKind::lever_used;
+        NSDictionary *presentation=(outcome==dredmor::FloorTravel::travelled || lever)?[self preparePresentation:session]:nil;
         *_session=std::move(session);_floors=std::move(registry);if (presentation) [self applyPresentation:presentation];
         if (outcome==dredmor::FloorTravel::missing_floor || outcome==dredmor::FloorTravel::missing_arrival) NSBeep();
         [self recordBreakableAnimations];
@@ -913,11 +963,19 @@ static std::vector<dredmor::StairPlacement> sceneStairs(id value) {
     [_inventoryController refresh];self.needsDisplay=YES;
 }
 - (void)mouseDown:(NSEvent*)event {
-    if (!_targetSpell) {[super mouseDown:event];return;}
     const auto point=[self convertPoint:event.locationInWindow fromView:nil];const auto& world=_session->world();
     const CGFloat cell=MIN((self.bounds.size.width-40)/world.width(),(self.bounds.size.height-110)/world.height());
     if (cell<=0 || point.x<20 || point.y<20 || point.x>=20+cell*world.width() || point.y>=20+cell*world.height()) return;
-    [self castSelectedSpellAt:dredmor::Position{int((point.x-20)/cell),int((point.y-20)/cell)}];
+    const dredmor::Position target{int((point.x-20)/cell),int((point.y-20)/cell)};
+    if (_targetSpell) {[self castSelectedSpellAt:target];return;}
+    try {
+        for (std::size_t i=0;i<_session->secret_levers().size();++i) {
+            const auto p=_session->secret_levers()[i].position;if (p.x!=target.x || p.y!=target.y) continue;
+            auto next=*_session;if (!next.use_secret_lever(i)) return;NSDictionary *presentation=[self preparePresentation:next];
+            *_session=std::move(next);[self applyPresentation:presentation];[_inventoryController refresh];self.needsDisplay=YES;return;
+        }
+    } catch(const std::exception& error) {fprintf(stderr,"lever action failed: %s\n",error.what());}
+    [super mouseDown:event];
 }
 - (void)recordBreakableAnimations {
     for (const auto& event:_session->events()) if (event.kind==dredmor::EventKind::object_broken) {
@@ -950,6 +1008,7 @@ static std::vector<dredmor::StairPlacement> sceneStairs(id value) {
             fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1 respectFlipped:YES hints:nil];
     };
     for (std::size_t i=0;i<_session->floor_stairs().size();++i) drawObject(_session->floor_stairs()[i].position,[_stairImages[i] frameAt:animationTime]);
+    for (std::size_t i=0;i<_session->secret_levers().size();++i) drawObject(_session->secret_levers()[i].position,[_leverImages[i] frameAtIndex:(_session->secret_levers()[i].activated?1:0)]);
     for (std::size_t i=0;i<_session->custom_objects().size();++i) {
         const auto& object=_session->custom_objects()[i];
         drawObject(object.position,object.playing?[_objectImages[i] frameAt:animationTime]:[_objectImages[i] frameAtIndex:object.frame]);
@@ -1146,6 +1205,7 @@ int main(int argc,const char**argv) {
                     ([scene[@"smoke_artifact"] boolValue] && ![view smokeArtifact]) ||
                     ([scene[@"smoke_room_monsters"] boolValue] && ![view smokeRoomMonsters]) ||
                     ([scene[@"smoke_floors"] boolValue] && ![view smokeFloors]) ||
+                    ([scene[@"smoke_secret_levers"] boolValue] && ![view smokeSecretLevers]) ||
                     ([scene[@"smoke_food"] boolValue] && ![view smokeFood]) ||
                     ([scene[@"smoke_regeneration"] boolValue] && ![view smokeRegeneration]) ||
                     ([scene[@"smoke_casting"] boolValue] && ![view smokeCasting]) ||

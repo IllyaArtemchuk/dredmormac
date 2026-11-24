@@ -74,6 +74,27 @@ selectors. Existing simple/artifact factory regressions also pass3,124 cases.
 Fixtures keep gear targets within allocated original tables: undefined original
 upper-bucket reads are not treated as valid gameplay behavior.
 
+Secret lever activation is now integrated with session collision, save format18,
+cached floors and native prepared scenes. Its original type1 FlipLever opens only
+once; subsequent flips report stuck. The original tutorial path activates before
+dispatch and therefore reports stuck even on its first pull; this quirk is modeled
+by the low-level API. Click/bump requires exactly one cardinal tile of distance;
+the original clicked gate also rejects an item held on the mouse. Remote activation
+has no distance gate. `verify_levers.py` passes2,048 actual FlipLever/Clicked/
+RemoteActivation/PlayerTriesToMoveInto comparisons, including real Activatable and
+adjacency methods. Ticker/sound/tutorial/graphics calls are recorded boundaries;
+all cell fields, activation state, messages, sound and graphics rectangle match,
+and neither random stream is consumed.
+
+The native scene field `secret_levers` contains x/y/target_x/target_y and optional
+activated (0 or1). The lever blocks movement and uses the original lever1.spr
+frames0/1. Bump or click opens the target wall and prepares presentation before
+committing. Loading a prepared-room save permits wall differences at matching
+secret targets, while retaining room-layout/configuration checks. Session format18
+stores lever state; formats1..17 still load. Cached floors retain lever state and
+opened walls. The interaction uses the session's provisional action scheduler;
+it does not establish complete original GameTick, UI or audio parity.
+
 Native play still uses prepared floors. Complete room-content/decorations/shops/
-scripts, lever activation/world collision integration and later full population
-are needed before this forms a complete generated floor in the native game.
+scripts and later full population are needed before this forms a complete generated
+floor in the native game. Other lever types and room-script wiring remain pending.

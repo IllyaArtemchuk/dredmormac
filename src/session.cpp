@@ -60,10 +60,22 @@ Actor* Session::enemy_at(Position position,std::uint64_t excluding) {
 }
 bool Session::passable(Position position) const {
     if (!world_.passable(position)) return false;
+    for (const auto& lever:secret_levers_) if (same(lever.position,position)) return false;
     for (const auto& object:custom_objects_) if (object.blocks_movement && same(object.position,position)) return false;
     for (const auto& object:breakables_) if (object.object.blocks_movement && same(object.object.position,position)) return false;
     for (const auto& trap:traps_) if (trap.has_origin_object && same(trap.origin,position)) return false;
     return true;
+}
+void Session::use_secret_lever_impl(std::size_t index) {
+    const auto activation=flip_secret_lever(secret_levers_.at(index));
+    if (activation.revealed) world_.carve_floor(secret_levers_[index].target);
+    events_.push_back({EventKind::lever_used,player_.id,index+1,activation.revealed?1:0});
+}
+bool Session::use_secret_lever(std::size_t index) {
+    if (index>=secret_levers_.size()) throw std::out_of_range("invalid secret lever index");
+    if (!player_.alive() || !can_click_secret_lever(secret_levers_[index],player_.position)) return false;
+    if (world_.turn()==std::numeric_limits<std::uint64_t>::max()) throw std::overflow_error("turn counter exhausted");
+    auto next=*this;next.events_.clear();next.use_secret_lever_impl(index);next.world_.step(Action::wait);next.enemy_turns();*this=std::move(next);return true;
 }
 TrapSelection Session::select_trap_candidate(const std::vector<TrapCandidate>& pool,SpawnDepthContext depth,float deviation) {
     return select_trap(pool,random_,depth,deviation);
@@ -529,6 +541,9 @@ void Session::step_impl(Action action) {
     events_.clear();if (!player_.alive()) return;
     if (world_.turn()==std::numeric_limits<std::uint64_t>::max()) throw std::overflow_error("turn counter exhausted");
     const auto destination=target(player_.position,action);
+    if (action!=Action::wait) for (std::size_t index=0;index<secret_levers_.size();++index) if (same(secret_levers_[index].position,destination)) {
+        use_secret_lever_impl(index);world_.step(Action::wait);enemy_turns();return;
+    }
     if (action!=Action::wait && world_.passable(destination)) for (std::size_t index=0;index<breakables_.size();++index) {
         const auto& object=breakables_[index].object;
         if (object.blocks_movement && same(object.position,destination) && hit_breakable_impl(index)) {

@@ -1,4 +1,5 @@
 #pragma once
+#include "dredmor/levers.hpp"
 #include "dredmor/equipment.hpp"
 #include "dredmor/progression.hpp"
 #include "dredmor/random.hpp"
@@ -61,13 +62,14 @@ struct SessionFloor {
     SpawnDepthContext depth{};
     std::int32_t branch=0;
     std::vector<StairPlacement> stairs;
+    std::vector<SecretLever> secret_levers;
     std::vector<Actor> enemies;
     std::vector<GroundItem> ground;
     std::vector<CustomRoomObject> objects;
     std::vector<BreakableRoomObject> breakables;
     std::vector<TrapInstance> traps;
 };
-enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken,spell_damage,trap_click,trap_triggered,trap_spell_missing,spell_heal,spell_mana };
+enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken,spell_damage,trap_click,trap_triggered,trap_spell_missing,spell_heal,spell_mana,lever_used };
 struct TurnEvent {
     EventKind kind;
     std::uint64_t actor=0,target=0;
@@ -85,6 +87,9 @@ public:
     void floor_stairs(std::vector<StairPlacement> stairs,std::int32_t branch=0);
     const std::vector<StairPlacement>& floor_stairs() const {return stairs_;}
     std::int32_t floor_branch() const {return floor_branch_;}
+    void floor_secret_levers(std::vector<SecretLever> levers);
+    const std::vector<SecretLever>& secret_levers() const {return secret_levers_;}
+    bool use_secret_lever(std::size_t index);
     const Actor& player() const { return player_; }
     const std::vector<Actor>& enemies() const { return enemies_; }
     const std::vector<GroundItem>& ground_items() const { return ground_; }
@@ -166,6 +171,8 @@ private:
                              std::shared_ptr<const std::vector<AbilityDefinition>> abilities,
                              std::shared_ptr<const std::vector<SpellDefinition>> spells);
     std::vector<StairPlacement> stairs_;
+    std::vector<SecretLever> secret_levers_;
+    void use_secret_lever_impl(std::size_t index);
     std::int32_t floor_branch_=0;
     std::uint64_t item_floor_=1;
     int player_facing_=2;

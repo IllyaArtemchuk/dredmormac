@@ -1238,3 +1238,19 @@ shops/scripts, lever activation/world collision integration and later population
 remaining AI/effects/UI/audio/FOV and a full reference playthrough remain unfinished.
 Next work is lever activation and connecting these phases after actual room content;
 no approximate content pass should be substituted merely to show a generated map.
+
+
+Secret-lever integration now adds actual one-shot wall opening, cardinal click/
+bump gates, movement blocking, native lever1.spr static frame0/1 rendering,
+transactional presentation updates and cached-floor persistence. Save18 stores
+lever position/target/activation and opened World collision; versions1..17 remain
+readable. Native single-room loads allow differences only at matching secret
+wall targets and reject changed lever configuration. Low-level type1 FlipLever
+preserves the tutorial pre-activation quirk; port native scenes use normal mode.
+All42 local groups pass. Original secret-lever Flip/Clicked/RemoteActivation/
+PlayerTriesToMoveInto comparisons pass2,048 cases, including state, UI/audio/GFX
+requests, complete cells and no RNG consumption. A synthetic native fixture
+checks bump, actual mouse click, repeat/stuck behavior, wall rendering, opening/
+closing via save-load and configuration-mismatch rollback. NativeCI is pending.
+Other lever types, original room-script wiring and complete room-content passes
+remain unfinished. Activation uses the existing provisional session scheduler.

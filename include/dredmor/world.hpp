@@ -17,6 +17,8 @@ public:
     bool passable(Position p) const;
     // Level placement without taking a turn (stairs/loaded floor arrival).
     void place_player(Position p,std::uint64_t turn);
+    // Numeric secret-wall activation becomes ordinary passable ground.
+    void carve_floor(Position p);
     Position player() const { return player_; }
     std::uint64_t turn() const { return turn_; }
     int width() const { return rows_.empty()?0:static_cast<int>(rows_[0].size()); }

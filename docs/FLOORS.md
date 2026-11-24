@@ -20,7 +20,7 @@ unreadable level files remain outside this integration. Pending enemy-cast playe
 
 `registry.save` / `FloorRegistry::load` handle complete prepared runs (format1).
 Session format17 adds floor metadata and the global minimum fresh item identity.
-Earlier session save versions still load. Cached sessions' duplicate character
+Session format18 adds secret-lever state and opened-world collision. Earlier session save versions still load. Cached sessions' duplicate character
 payloads are ignored; only the active session supplies global character state.
 Readers enforce unique floor depths, global actor/item identities and reserved
 identity bounds, plus the existing session checks. The native loader validates
@@ -56,3 +56,6 @@ reports stay outside git. The cached-arrival comparison also executes the actual
 OnDemandLoadLevelWithRegen wrapper and resident OnDemandLoadLevel fast path. Disk
 loading/unreadable-file recovery, new-floor arrival fallback and complete GameTick
 behavior remain outside these comparisons.
+
+Prepared scene floors may also supply `secret_levers` (x/y/target_x/target_y and
+optional activated). These persist with each floor; see [SECRET_DOORS.md](SECRET_DOORS.md).

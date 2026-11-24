@@ -38,6 +38,10 @@ void World::place_player(Position p,std::uint64_t turn) {
     if (!passable(p)) throw std::invalid_argument("player placement must be on passable ground");
     player_=p;turn_=turn;
 }
+void World::carve_floor(Position p) {
+    if (p.x<0 || p.y<0 || p.x>=width() || p.y>=height()) throw std::invalid_argument("floor carving outside world");
+    rows_[std::size_t(p.y)][std::size_t(p.x)]='.';
+}
 std::string World::room_text() const {
     auto rows=rows_;rows.at(player_.y).at(player_.x)='@';
     std::string output;
