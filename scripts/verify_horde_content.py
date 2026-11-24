@@ -108,7 +108,15 @@ def verify(binary,port,source,count):
     if len(actual)!=len(expected):raise AssertionError('content horde output count differs')
     for i,(a,b) in enumerate(zip(actual,expected)):
         if a!=b:raise AssertionError(f'content horde{i}, input{lines[i]}, lengths{len(a)}/{len(b)}, differences{[(j,x,y) for j,(x,y) in enumerate(zip(a,b)) if x!=y][:20]}')
-    return dict(binary_sha256=hashlib.sha256(oracle.original.data).hexdigest(),cases=count,members=members,mismatches=0,scope='Actual complete SpawnHorde with actual Level::NewMonster/Monster/Hittable/GameObj constructors, RebuildAttributes, RebuildSprites, TintSprites, CanSpawnMonster, names, bounded locations and RNG. Compare GameContent adapter final actors/HP/MP/stats/colour/group links/queued positions/searches/full libc+MT state/next8. Shared and distinct argument/current owners have independent constructor depths. Definition tables/data, sprite resource cache/IO/frame counts, tweaks, named lookup, queue and library boundaries supplied. Unplaced coordinates are not compared: original GameObj constructor leaves those bytes uninitialized; the port uses (-1,-1) until queued placement. Actor installation, Session/save/native horde group adoption excluded.')
+    from verify_dungeon import GeometryOracle,fixture as geometry_fixture
+    geometry=GeometryOracle(binary);bounds_count=0
+    for seed in range(16):
+        geometry.run(*geometry_fixture(seed));first,last=geometry.read(0x73000000+0x20,2)
+        for room in geometry.read(first,(last-first)//4):
+            x,y,mx,my,template=geometry.read(room+0x1c,5);width,height=geometry.read(template,2)
+            if mx!=x+width or my!=y+height:raise AssertionError('original RoomInfo bounds differ from origin + dimensions')
+            bounds_count+=1
+    return dict(binary_sha256=hashlib.sha256(oracle.original.data).hexdigest(),cases=count,members=members,geometry_bound_cases=16,geometry_room_bounds=bounds_count,mismatches=0,scope='Actual complete SpawnHorde with actual Level::NewMonster/Monster/Hittable/GameObj constructors, RebuildAttributes, RebuildSprites, TintSprites, CanSpawnMonster, names, bounded locations and RNG. Compare GameContent adapter final actors/HP/MP/stats/colour/group links/queued positions/searches/full libc+MT state/next8. Shared and distinct argument/current owners have independent constructor depths. Definition tables/data, sprite resource cache/IO/frame counts, tweaks, named lookup, queue and library boundaries supplied. RoomInfo maximum bounds also separately verified as origin+template dimensions over16 actual geometry runs. Unplaced coordinates are not compared: original GameObj constructor leaves those bytes uninitialized; the port uses (-1,-1) until queued placement. Actor installation, Session/save/native horde group adoption excluded.')
 
 
 if __name__=='__main__':

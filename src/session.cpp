@@ -143,10 +143,11 @@ bool Session::strike_breakable(std::size_t index) {
     next.world_.step(Action::wait);next.enemy_turns();*this=std::move(next);return true;
 }
 std::uint64_t Session::spawn_enemy(Actor enemy) {
+    if (enemy.horde) throw std::invalid_argument("spawn horde members through queued group construction");
     if (!enemy.buffs.empty()) throw std::invalid_argument("spawn buffs through spell application");
     if (!passable(enemy.position) || same(enemy.position,player_.position) || enemy_at(enemy.position) ||
         !enemy.alive() || enemy.health>enemy.secondary[0]) throw std::invalid_argument("invalid enemy spawn");
-    if (enemies_.size()>=512) throw std::runtime_error("session enemy limit exceeded");
+    if (enemies_.size()+queued_horde_members()>=512) throw std::runtime_error("session enemy limit exceeded");
     if (enemy.id==std::numeric_limits<std::uint64_t>::max() || next_actor_==std::numeric_limits<std::uint64_t>::max())
         throw std::overflow_error("actor ID sequence exhausted");
     if (!enemy.id) enemy.id=next_actor_++;
@@ -154,6 +155,8 @@ std::uint64_t Session::spawn_enemy(Actor enemy) {
         if (enemy.id==player_.id || std::any_of(enemies_.begin(),enemies_.end(),[&](const Actor& a){return a.id==enemy.id;}))
             throw std::invalid_argument("duplicate actor ID");
         for (const auto& shop:shops_) if (shop.keeper.id==enemy.id) throw std::invalid_argument("actor ID is owned by a shop keeper");
+        for (const auto& group:pending_hordes_) for (const auto& actor:group.actors)
+            if (actor.id==enemy.id) throw std::invalid_argument("actor ID is reserved by a pending horde");
         next_actor_=std::max(next_actor_,enemy.id+1);
     }
     enemies_.push_back(std::move(enemy));return enemies_.back().id;

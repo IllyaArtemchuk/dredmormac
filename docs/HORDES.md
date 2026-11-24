@@ -184,3 +184,33 @@ fail without consuming committed RNG. All67 portable groups pass. Actor installa
 deferred queue ownership, group persistence and native horde adoption remain next.
 See scripts/verify_horde_content.py. Native appearance2dd848a passed arm64 Mac
 run45383593304, including bitmap colours, save/load rollback and packaged-app smoke.
+
+## Session batches and native room records
+
+Session now queues RoomHordeRecord constructor results without registering actors
+or reserving destinations. IDs are reserved at construction; later ordinary
+spawns cannot reuse them. place_queued_hordes applies the whole batch afterwards,
+allowing duplicate destinations and fixed leaders on occupied/non-floor squares.
+Failed constructors or malformed group links roll back counts/IDs/RNG. Pending
+batches cannot be saved or cached; native room initialization flushes after its
+supported record/decor/shop constructors. This is initialization integration,
+not adoption of the original GameTick/RoomDeferred world scheduler.
+
+Actor retains horde moniker/platoon, leader/quest IDs and ordered followers.
+Session save24 preserves those references, colours and promoted stat profiles
+through continuation and cached floors. Saves1..23 remain readable. Duplicate,
+missing/self/cross-group links and unsupported player/keeper memberships fail
+validation. Source-valid group overlap with players, walls or shop occupants is
+retained. RoomHordeRecord::CreateInLevel0x1a331c does not call _FinalizeInLevel;
+its common room ID/can-push fields are intentionally not copied onto members.
+
+Native room record creation now uses constructor-backed hordes and prepares their
+SPR colours. A synthetic native fixture creates two groups, checks leaders,
+followers, profiles/colours, save/load and malformed-reference/resource rollback.
+Portable tests also cover two pending groups selecting the same point, occupied
+leader sites, wall origins, reserved IDs, failure retries and cached group saves.
+All68 portable groups pass. Mac validation is pending for these changes. Original
+constructor-backed comparisons rerun on this build still match2,048 hordes/6,210
+actors, with333 room bound extents checked over16 real geometry runs. Source room
+bounds are origin+declared template dimensions. Group AI, death/destructor updates,
+full tile/registry/tick ownership, quests and native scripts remain unfinished.

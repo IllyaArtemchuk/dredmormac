@@ -8,7 +8,7 @@ add_library(dredmor_core src/world.cpp src/random.cpp src/xml.cpp src/catalog.cp
 target_link_libraries(dredmor_core PUBLIC EXPAT::EXPAT)
 target_sources(dredmor_core PRIVATE src/spells.cpp src/buffs.cpp src/locations.cpp src/session_shops.cpp src/session_buffs.cpp src/session_casting.cpp src/regeneration.cpp src/floors.cpp src/secret_doors.cpp src/levers.cpp src/decorations.cpp)
 target_include_directories(dredmor_core PUBLIC include)
-target_sources(dredmor_core PRIVATE src/doors.cpp src/session_doors.cpp src/session_levers.cpp)
+target_sources(dredmor_core PRIVATE src/doors.cpp src/session_doors.cpp src/session_levers.cpp src/session_hordes.cpp)
 target_sources(dredmor_core PRIVATE src/clocks.cpp)
 target_sources(dredmor_core PRIVATE src/room_scripts.cpp src/room_runtime.cpp src/room_runtime_save.cpp)
 target_sources(dredmor_core PRIVATE src/room_scopes.cpp
@@ -337,6 +337,10 @@ if(BUILD_TESTING)
   add_executable(generation-tests tests/generation.cpp)
   target_link_libraries(generation-tests PRIVATE dredmor_core)
   add_test(NAME room-placement COMMAND generation-tests)
+  add_executable(session-horde-tests tests/session_hordes.cpp)
+  target_link_libraries(session-horde-tests PRIVATE dredmor_core)
+  add_test(NAME session-hordes COMMAND session-horde-tests ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root)
+
   add_executable(horde-content-tests tests/horde_content.cpp)
   target_link_libraries(horde-content-tests PRIVATE dredmor_core)
   add_test(NAME horde-content COMMAND horde-content-tests ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root)
@@ -434,6 +438,13 @@ if(APPLE)
     add_test(NAME native-objects-window COMMAND $<TARGET_FILE:DredmorMac>
       ${CMAKE_BINARY_DIR}/native-objects/scene.json --smoke-test)
     set_tests_properties(native-objects-window PROPERTIES FIXTURES_REQUIRED native-objects TIMEOUT 15)
+    add_test(NAME native-hordes-fixture COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-hordes
+      --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --hordes)
+    set_tests_properties(native-hordes-fixture PROPERTIES FIXTURES_SETUP native-hordes)
+    add_test(NAME native-hordes-window COMMAND $<TARGET_FILE:DredmorMac>
+      ${CMAKE_BINARY_DIR}/native-hordes/scene.json --smoke-test)
+    set_tests_properties(native-hordes-window PROPERTIES FIXTURES_REQUIRED native-hordes TIMEOUT 20)
     add_test(NAME native-monsters-fixture COMMAND ${Python3_EXECUTABLE}
       ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-monsters
       --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --monsters)

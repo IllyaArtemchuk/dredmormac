@@ -1821,3 +1821,16 @@ and existing per-floor Session payloads persist them without a format change.
 Tests spawn different monsters on two floors, return, then reload the full cache;
 each counter map stays with its floor. All67 portable groups pass. Native horde
 batch placement/group save adoption remains next; full gameplay still incomplete.
+
+Constructor-backed horde36d60a0 passed Mac run45385580412; floor-counter49c75d5
+passed45386367078, both with packaged-app smoke. Session now queues horde batches,
+reserves IDs, leaves pending destinations unoccupied and applies placements after
+supported native room constructors. Actor group links/names/quest IDs/colours/
+profiles persist in save24 and cached floors; old1..23 stay readable. Invalid links
+and pending saves fail; failed constructors preserve committed RNG/IDs/state.
+Native room Horde records now instantiate groups; new native fixture checks two
+groups/rendering/save/resource+reference rollback. All68 portable groups pass.
+Original composed horde comparisons still match2,048 cases/6,210 actors;333 room
+bound extents from16 geometry runs also match origin+dimensions. Latest source
+awaits Mac CI. Full group AI/death/lifetime/tile ownership, quest handling, native
+room-script/GameTick integration, population/effects/UI/audio/full game unfinished.

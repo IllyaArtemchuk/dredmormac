@@ -232,6 +232,7 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
 - (void)pickUpItems:(id)sender;
 - (BOOL)smokeInventory;
 - (BOOL)smokeRoomMonsters;
+- (BOOL)smokeHordes;
 - (BOOL)smokeArtifact;
 - (BOOL)smokeSkillSelection;
 - (BOOL)smokeCustomObjects;
@@ -298,6 +299,10 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
             const auto& room=_content->room([scene[@"room_objects"] UTF8String]);
             const auto numeric=room.numeric_template();dredmor::TrapMap trapMap{numeric.width,numeric.height,{}};
             for (const auto& cell:numeric.cells) trapMap.tiles.push_back(cell.kind);
+            std::vector<dredmor::DungeonCell> hordeCells(numeric.cells.size());
+            for (std::size_t i=0;i<hordeCells.size();++i) hordeCells[i].kind=numeric.cells[i].kind;
+            dredmor::DungeonLayout hordeLayout(numeric.width,numeric.height,std::move(hordeCells));
+            const std::vector<dredmor::HordeRoomBounds> hordeRooms={{{0,0},{numeric.width,numeric.height}}};
             // Preview builds supported objects/loot in relative source order.
             // Other constructors/RNG and full population still belong to level generation.
             for (const auto& record:room.records()) std::visit([&](const auto& definition) {
@@ -310,6 +315,13 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
                 else if constexpr (std::is_same_v<T,dredmor::RoomMonsterRecord>) {
                     _session->create_room_monster(definition,[&](const auto& plan,auto& random,auto& state) {
                         return _content->create_room_monster(plan,{_session->depth_context()},dredmor::Difficulty::medium,random,state);
+                    });
+                }
+                else if constexpr (std::is_same_v<T,dredmor::RoomHordeRecord>) {
+                    _session->queue_room_horde(definition,hordeLayout,hordeRooms,[&](const auto& plan,const auto& world,const auto& counts,auto& random,auto first) {
+                        dredmor::HordeOptions options;options.position=plan.position;options.minimum=plan.minimum;options.additional=plan.additional;
+                        options.depth=_session->depth_context().depth;if (!plan.name.empty()) options.named=plan.name;
+                        return _content->create_horde(options,world,dredmor::Difficulty::medium,_session->depth_context().depth,counts,random,first);
                     });
                 }
                 else if constexpr (std::is_same_v<T,dredmor::RoomTrapRecord>)
@@ -339,6 +351,7 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
                 });
                 _session->update_shop_presence();
             }
+            _session->place_queued_hordes();
         }
         else if (scene[@"room_subject"]) throw std::runtime_error("room decoration subject requires a content room");
         _breakableImages=breakables;_breakAnimations=[NSMutableArray array];
@@ -856,6 +869,30 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     return expired.buffs.empty() && expired.primary==initial.primary && expired.secondary==initial.secondary && expired.damage==initial.damage &&
         expired.resistance==initial.resistance && expired.health==initial.health && expired.mana==initial.mana && expired.triggers.empty();
     } catch(const std::exception& error) {fprintf(stderr,"native monster buffs: %s\n",error.what());return NO;}
+}
+- (BOOL)smokeHordes {
+    try {
+        if (_session->queued_horde_members() || _session->enemies().size()!=4 || _enemyImages.count!=4 || !_session->monster_spawn_state().counts.empty()) return NO;
+        std::size_t leaders=0,followers=0;
+        for (const auto& actor:_session->enemies()) {
+            if (!actor.horde || !actor.stat_profile || !actor.sprite_palette.empty() || ![_enemyImages[@(actor.id)] frameCount]) return NO;
+            if (!actor.horde->leader) {
+                ++leaders;
+                if (actor.horde->followers.size()!=1 || actor.horde->moniker.empty() || actor.horde->platoon.find("Lord Dredmor's ")!=0 ||
+                    actor.sprite_tint<0 || actor.sprite_tint>=360 || actor.stat_profile->primary_percent[0]!=120 || actor.stat_profile->primary_percent[1]!=110) return NO;
+            } else {
+                ++followers;if (!actor.horde->followers.empty() || actor.sprite_tint!=120 || actor.stat_profile->primary_percent[0]!=100) return NO;
+            }
+        }
+        if (leaders!=2 || followers!=2 || ![self smokeSaveLoad]) return NO;
+        std::ostringstream before;_session->save(before);auto bad=before.str();
+        const auto field=bad.find("leader=\"2\"");if (field==std::string::npos) return NO;bad.replace(field,10,"leader=\"999\"");
+        NSURL *url=[NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID.UUID.UUIDString stringByAppendingString:@".dredmor-save"]]];
+        NSData *data=[NSData dataWithBytes:bad.data() length:bad.size()];if (![data writeToURL:url options:NSDataWritingAtomic error:nullptr]) return NO;
+        auto oldImages=_enemyImages;bool rejected=false;try {[self loadFromURL:url];} catch(const std::exception&) {rejected=true;}
+        [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];std::ostringstream after;_session->save(after);
+        return rejected && oldImages==_enemyImages && after.str()==before.str();
+    } catch(const std::exception& error) {fprintf(stderr,"native hordes: %s\n",error.what());return NO;}
 }
 - (BOOL)smokeTraps {
     NSURL *url=[NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:
@@ -1582,6 +1619,7 @@ int main(int argc,const char**argv) {
                     ([scene[@"smoke_inventory"] boolValue] && ![view smokeInventory]) ||
                     ([scene[@"smoke_artifact"] boolValue] && ![view smokeArtifact]) ||
                     ([scene[@"smoke_room_monsters"] boolValue] && ![view smokeRoomMonsters]) ||
+                    ([scene[@"smoke_hordes"] boolValue] && ![view smokeHordes]) ||
                     ([scene[@"smoke_floors"] boolValue] && ![view smokeFloors]) ||
                     ([scene[@"smoke_secret_levers"] boolValue] && ![view smokeSecretLevers]) ||
                     ([scene[@"smoke_script_levers"] boolValue] && ![view smokeScriptLevers]) ||

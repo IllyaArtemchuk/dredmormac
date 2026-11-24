@@ -16,10 +16,17 @@
 #include "dredmor/regeneration.hpp"
 #include "dredmor/dungeon.hpp"
 #include "dredmor/doors.hpp"
+#include "dredmor/hordes.hpp"
 #include <memory>
 #include <map>
 
 namespace dredmor {
+struct HordePopulation;
+struct HordeMembership {
+    std::string moniker,platoon;
+    std::uint64_t leader=0,quest=0;
+    std::vector<std::uint64_t> followers;
+};
 struct ScheduledSpell {
     std::int32_t remaining=0,percent=100;
     bool repeat=false;
@@ -55,6 +62,7 @@ struct Actor {
     std::optional<MonsterStatInput> stat_profile;
     std::vector<ActiveBuff> buffs;
     bool corpse=false;
+    std::optional<HordeMembership> horde;
     bool alive() const { return health>0 && !corpse; }
 };
 struct GroundItem { InventoryItem item;Position position; };
@@ -183,6 +191,14 @@ public:
         const ItemFactoryContext& context,Position origin={0,0});
     std::optional<std::uint64_t> create_room_monster(const RoomMonsterRecord& record,
         const std::function<Actor(const RoomPopulationPlan&,GameRandom&,MonsterSpawnState&)>& constructor,Position origin={0,0});
+    // Horde destinations stay unoccupied until the caller finishes the room's
+    // placement batch. This preserves duplicate locations across queued groups.
+    std::optional<HordeResult> queue_room_horde(const RoomHordeRecord& record,const DungeonLayout& layout,
+        const std::vector<HordeRoomBounds>& rooms,
+        const std::function<HordePopulation(const RoomPopulationPlan&,const HordeWorld&,const MonsterSpawnState&,GameRandom&,std::uint64_t)>& constructor,
+        Position origin={0,0});
+    std::size_t queued_horde_members() const;
+    std::vector<std::uint64_t> place_queued_hordes();
     const MonsterSpawnState& monster_spawn_state() const {return monster_state_;}
     RoomTrapCreation create_room_trap(const RoomTrapRecord& record,const ItemFactoryTables& tables,
         const ItemFactoryContext& context,const TrapMap& map,Position origin={0,0});
@@ -249,6 +265,8 @@ private:
     World world_;
     Actor player_;
     std::vector<Actor> enemies_;
+    struct PendingHorde {std::vector<Actor> actors;std::vector<RoomTeleport> teleports;};
+    std::vector<PendingHorde> pending_hordes_;
     std::vector<GroundItem> ground_;
     std::vector<CustomRoomObject> custom_objects_;
     std::vector<BreakableRoomObject> breakables_;
@@ -282,6 +300,7 @@ private:
     void update_shop_presence_impl();
     void refresh_shop_guards_impl();
     void validate_shop(const SessionShop& shop) const;
+    void validate_hordes() const;
     void pickup_currency();
     bool hit_breakable_impl(std::size_t index);
     std::optional<std::uint64_t> create_ground_loot_impl(const ItemFactoryTables& tables,const ItemFactoryContext& context,
