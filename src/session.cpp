@@ -60,6 +60,8 @@ Actor* Session::enemy_at(Position position,std::uint64_t excluding) {
 }
 bool Session::passable(Position position) const {
     if (!world_.passable(position)) return false;
+    if (doors_) for (const auto& door:doors_->doors) if (!door.destroyed && !door.assembly.open)
+        for (auto part:door.assembly.parts) if (same(part,position)) return false;
     for (const auto& lever:secret_levers_) if (same(lever.position,position)) return false;
     for (const auto& shop:shops_) {
         if (shop.keeper.alive() && same(shop.keeper.position,position)) return false;
@@ -557,9 +559,17 @@ void Session::enemy_turns() {
     }
 }
 void Session::step_impl(Action action) {
-    events_.clear();if (!player_.alive()) return;
+    events_.clear();last_door_click_.reset();if (!player_.alive()) return;
     if (world_.turn()==std::numeric_limits<std::uint64_t>::max()) throw std::overflow_error("turn counter exhausted");
     const auto destination=target(player_.position,action);
+    if (action!=Action::wait && doors_) for (std::size_t index=0;index<doors_->doors.size();++index) {
+        const auto& door=doors_->doors[index];if (door.destroyed || door.assembly.open) continue;
+        for (std::size_t part=0;part<3;++part) if (same(door.assembly.parts[part],destination)) {
+            const auto result=use_door_impl(index,part);
+            if (result.handled) {world_.step(Action::wait);enemy_turns();}
+            return;
+        }
+    }
     if (action!=Action::wait) for (std::size_t index=0;index<secret_levers_.size();++index) if (same(secret_levers_[index].position,destination)) {
         use_secret_lever_impl(index);world_.step(Action::wait);enemy_turns();return;
     }

@@ -28,7 +28,7 @@ void validate_global_ids(const Session& session,const std::vector<SessionFloor>&
 }
 SessionFloor Session::floor_state() const {
     SessionFloor floor(world_);floor.depth=depth_context_;floor.branch=floor_branch_;floor.stairs=stairs_;floor.secret_levers=secret_levers_;
-    floor.enemies=enemies_;floor.ground=ground_;floor.objects=custom_objects_;floor.breakables=breakables_;floor.traps=traps_;floor.shops=shops_;floor.shop_presence=shop_presence_;return floor;
+    floor.enemies=enemies_;floor.ground=ground_;floor.objects=custom_objects_;floor.breakables=breakables_;floor.traps=traps_;floor.shops=shops_;floor.shop_presence=shop_presence_;floor.doors=doors_;return floor;
 }
 void Session::floor_secret_levers(std::vector<SecretLever> levers) {
     if (levers.size()>4096) throw std::invalid_argument("too many secret levers");
@@ -38,6 +38,7 @@ void Session::floor_secret_levers(std::vector<SecretLever> levers) {
             lever.target.x<0 || lever.target.y<0 || lever.target.x>=world_.width() || lever.target.y>=world_.height() ||
             !positions.emplace(lever.position.x,lever.position.y).second) throw std::invalid_argument("invalid or duplicate secret lever");
         for (const auto& stair:stairs_) if (stair.position.x==lever.position.x && stair.position.y==lever.position.y) throw std::invalid_argument("secret lever overlaps stairs");
+        if (doors_) for (const auto& door:doors_->doors) for (auto part:door.assembly.parts) if (part.x==lever.position.x && part.y==lever.position.y) throw std::invalid_argument("secret lever overlaps door");
     }
     secret_levers_=std::move(levers);
 }
@@ -47,6 +48,7 @@ void Session::floor_stairs(std::vector<StairPlacement> stairs,std::int32_t branc
     for (const auto& stair:stairs) if (!world_.passable(stair.position) || !positions.emplace(stair.position.x,stair.position.y).second)
         throw std::invalid_argument("invalid or duplicate stair position");
     for (const auto& stair:stairs) for (const auto& lever:secret_levers_) if (stair.position.x==lever.position.x && stair.position.y==lever.position.y) throw std::invalid_argument("stairs overlap a secret lever");
+    if (doors_) for (const auto& stair:stairs) for (const auto& door:doors_->doors) for (auto part:door.assembly.parts) if (part.x==stair.position.x && part.y==stair.position.y) throw std::invalid_argument("stairs overlap door");
     stairs_=std::move(stairs);floor_branch_=branch;
 }
 SessionFloor Session::swap_floor(SessionFloor floor,Position arrival) {
@@ -55,7 +57,8 @@ SessionFloor Session::swap_floor(SessionFloor floor,Position arrival) {
     auto next=*this;auto previous=floor_state();const auto turn=world_.turn();
     next.item_floor_=next_item_instance();
     floor.world.place_player(arrival,turn);next.world_=std::move(floor.world);next.player_.position=arrival;
-    next.depth_context_=floor.depth;next.secret_levers_.clear();next.floor_stairs(std::move(floor.stairs),floor.branch);next.floor_secret_levers(std::move(floor.secret_levers));
+    next.depth_context_=floor.depth;next.doors_.reset();next.last_door_click_.reset();next.secret_levers_.clear();next.floor_stairs(std::move(floor.stairs),floor.branch);next.floor_secret_levers(std::move(floor.secret_levers));
+    if (floor.doors) next.floor_doors(std::move(*floor.doors));
     next.enemies_=std::move(floor.enemies);next.ground_=std::move(floor.ground);next.custom_objects_=std::move(floor.objects);
     next.breakables_=std::move(floor.breakables);next.traps_=std::move(floor.traps);next.shops_=std::move(floor.shops);next.shop_presence_=floor.shop_presence;next.events_.clear();
     // Reuse the save validator for actor/item/trigger identities, positions,

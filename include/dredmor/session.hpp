@@ -15,6 +15,7 @@
 #include "dredmor/spells.hpp"
 #include "dredmor/regeneration.hpp"
 #include "dredmor/dungeon.hpp"
+#include "dredmor/doors.hpp"
 #include <memory>
 #include <map>
 
@@ -67,6 +68,17 @@ struct SessionShop {
 struct RoomLootCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
 struct RoomTrapCreation {bool accepted=false;std::optional<std::uint64_t> instance;};
 enum class SpellUse { cast,unknown,cooling_down,equipment_required,invalid_target,insufficient_gold,insufficient_mana,muted,dead };
+struct SessionDoors {
+    explicit SessionDoors(DungeonLayout grid):layout(std::move(grid)) {}
+    DungeonLayout layout;
+    std::vector<DoorState> doors;
+    std::vector<std::uint8_t> frames;
+    // Resolved character/tweak inputs. Full Player::TakeDamage and original
+    // scheduling remain separate from the integration session's HP/turn model.
+    bool burglary=false,female=false;
+    std::int32_t lockpick_xp=0;
+    std::string attack_sound;
+};
 struct SessionFloor {
     explicit SessionFloor(World map):world(std::move(map)) {}
     World world;
@@ -74,6 +86,7 @@ struct SessionFloor {
     std::int32_t branch=0;
     std::vector<StairPlacement> stairs;
     std::vector<SecretLever> secret_levers;
+    std::optional<SessionDoors> doors;
     std::vector<Actor> enemies;
     std::vector<GroundItem> ground;
     std::vector<CustomRoomObject> objects;
@@ -82,7 +95,7 @@ struct SessionFloor {
     std::vector<SessionShop> shops;
     ShopPresenceState shop_presence{};
 };
-enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken,spell_damage,trap_click,trap_triggered,trap_spell_missing,spell_heal,spell_mana,lever_used,shop_purchase,shop_theft,shop_insufficient_funds,shop_presence };
+enum class EventKind { moved,blocked,attack,dodge,counter,death,level_up,pickup,inventory_full,currency_given,currency_taken,object_hit,object_broken,spell_damage,trap_click,trap_triggered,trap_spell_missing,spell_heal,spell_mana,lever_used,shop_purchase,shop_theft,shop_insufficient_funds,shop_presence,door_used };
 struct TurnEvent {
     EventKind kind;
     std::uint64_t actor=0,target=0;
@@ -103,6 +116,10 @@ public:
     void floor_secret_levers(std::vector<SecretLever> levers);
     const std::vector<SecretLever>& secret_levers() const {return secret_levers_;}
     bool use_secret_lever(std::size_t index);
+    void floor_doors(SessionDoors doors);
+    const std::optional<SessionDoors>& doors() const {return doors_;}
+    const std::optional<DoorClickResult>& last_door_click() const {return last_door_click_;}
+    DoorClickResult use_door(std::size_t index,std::size_t selected);
     std::vector<std::size_t> create_room_decorations(const RoomStamp& room,Position origin,
         std::string_view subject,const std::vector<RoomDecorationDefinition>& table);
     const Actor& player() const { return player_; }
@@ -203,6 +220,9 @@ private:
     std::vector<StairPlacement> stairs_;
     std::vector<SecretLever> secret_levers_;
     void use_secret_lever_impl(std::size_t index);
+    std::optional<SessionDoors> doors_;
+    std::optional<DoorClickResult> last_door_click_;
+    DoorClickResult use_door_impl(std::size_t index,std::size_t selected);
     std::int32_t floor_branch_=0;
     std::uint64_t item_floor_=1;
     int player_facing_=2;

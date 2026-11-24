@@ -41,3 +41,21 @@ attack-sound lookup and occupancy are controlled inputs. Downstream damage/death
 XP, animation playback, sound, ticker and deferred destruction are recording
 boundaries. Frame/z-order fields, complete original scheduling and Session/native
 integration are separate work; this does not establish complete gameplay parity.
+
+Session integration now owns the numeric door grid, assemblies, per-part kicks
+and explicit sprite frames, including Build's initial open-frame value. Closed
+parts block movement; installing a door opens the base center tile, preserves
+wall end tiles, and shattering carves all three. Player bump and explicit click
+call the verified kernel. Lockpick consumption retains remaining stack metadata;
+XP and damage requests use the existing provisional Session progression/HP model.
+This HP application is not recovered Player::TakeDamage parity. The full numeric
+grid preserves zoo tile kinds for noise, and listeners include keepers. Original
+object occupancy and complete actor scheduling remain integration boundaries.
+
+Save21 preserves grid kinds/door bits, open/lock/destroyed state, kick counters,
+frames and resolved interaction inputs. Versions1..20 remain supported; saves
+without door state retain their prior format. Cached floors preserve independent
+door grids/state. Focused tests cover bump/click, occupied closing, wall ends,
+Burglary/no-draw consumption, unpaid stack metadata, XP, shattering, invalid-state
+rollback, save round trips and cached-floor travel. All52 portable groups pass.
+Native rendering/input and full generated-level population remain separate work.

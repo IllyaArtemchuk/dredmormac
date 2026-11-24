@@ -2331,3 +2331,13 @@ XP/damage/death/audio/render/destruction boundaries remain. See docs/DOORS.md.
 The free-pick helper has static XML mapping evidence and focused unit coverage.
 Session/native door integration, full generated-floor content/population, AI and
 remaining effects/UI/audio/reference playthrough are still unfinished.
+
+
+Door-kernel source dfb58aa passed arm64 Mac run45347896591 plus packaged-app
+smoke. Session now owns doors and their numeric grid: bump/click, pick consumption,
+wake flags, occupied closing, preserved wall ends, shattering and sprite frames.
+Save21 and cached-floor travel preserve independent door/lock/kick/grid state;
+older save formats stay unchanged without doors. All52 portable groups pass.
+Downstream XP/HP uses the existing provisional Session model, not full original
+Player::TakeDamage/death/scheduling parity. Native door presentation/input is next;
+complete generated floors/content/AI/effects/original UI/audio remain unfinished.
