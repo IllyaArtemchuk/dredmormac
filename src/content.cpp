@@ -315,6 +315,44 @@ Actor GameContent::create_room_monster(const RoomPopulationPlan& plan,MonsterSpa
     actor.monster_flags=finish_random_monster_spawn(definition,next,candidate.mt);
     random=std::move(candidate);state=std::move(next);return actor;
 }
+HordePopulation GameContent::create_horde(HordeOptions options,const HordeWorld& world,Difficulty difficulty,
+    std::int32_t constructor_depth,const MonsterSpawnState& counts,GameRandom& random,std::uint64_t first_identity) const {
+    auto candidate=random;HordePopulation population;std::map<std::uint64_t,std::size_t> actors;
+    auto next_identity=first_identity;
+    auto actor_for=[&](const HordeMember& member)->Actor& {return population.actors.at(actors.at(member.identity));};
+    HordeHooks hooks;
+    hooks.tweak=[&](auto key) {return tweaks_.integer(difficulty,key);};
+    hooks.can_spawn=[&](auto index,auto depth,bool horde) {return can_spawn_monster(monsters_.at(index),depth,counts,horde);};
+    hooks.find_named=[&](auto name) {
+        const auto index=find_registered_monster(monster_tables(),monsters_,name);
+        if (!index) throw std::invalid_argument("registered horde monster not found: "+std::string(name));
+        return *index;
+    };
+    hooks.construct=[&](auto index,auto depth,GameRandom& rng) {
+        if (!next_identity || next_identity==std::numeric_limits<std::uint64_t>::max() || population.actors.size()>=512) throw std::runtime_error("horde actor identity/count budget exhausted");
+        const auto& definition=monsters_.at(index);
+        auto input=tweaks_.monster_input(definition,difficulty,&world.argument_level==&world.current_level?depth:constructor_depth);
+        input.ranks=monster_creation_ranks(input.ranks,tweaks_.integer(difficulty,"monster level adder"),rng.libc);
+        auto actor=monster_actor(definition,{-1,-1},input);actor.id=next_identity++;
+        monster_appearance(actor,definition,rng.libc);
+        HordeMember member;member.identity=actor.id;member.primary_percent=input.primary_percent;
+        actors.emplace(actor.id,population.actors.size());population.actors.push_back(std::move(actor));return member;
+    };
+    hooks.monster_name=[&](auto& rng) {return generate_monster_name(artifact_words_,rng);};
+    hooks.platoon_name=[&](auto& rng) {return generate_platoon_name(artifact_words_,rng);};
+    hooks.tint=[&](auto& member,auto angle,auto& rng) {
+        auto& actor=actor_for(member);MonsterSpriteState sprites;
+        actor.sprite_tint=tint_monster_sprites(monsters_.at(member.definition),sprites,angle,rng.libc,
+            [](const auto&,auto) {return MonsterSpriteHandle(1);});actor.sprite_palette.clear();
+    };
+    hooks.rebuild=[&](auto& member,auto&) {
+        auto& actor=actor_for(member);actor.stat_profile->primary_percent=member.primary_percent;
+        const auto stats=derive_monster(*actor.stat_profile);actor.primary=stats.primary;actor.secondary=stats.secondary;
+        // RebuildAttributes changes maxima, preserving constructor HP/MP.
+    };
+    population.result=spawn_horde(monster_tables(),monsters_,std::move(options),world,candidate,hooks);
+    random=std::move(candidate);return population;
+}
 ClassRanks GameContent::starting_ranks(const std::vector<int>& skill_ids) const {
     if (skill_ids.size()!=7 || std::set<int>(skill_ids.begin(),skill_ids.end()).size()!=7) throw std::invalid_argument("select exactly seven distinct skills");
     ClassRanks ranks{};

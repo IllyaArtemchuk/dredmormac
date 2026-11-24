@@ -2592,3 +2592,14 @@ one tint, actual bitmap RGB before/after save and bad-palette resource rollback.
 All66 portable groups pass. Native source awaits Mac CI; prior core1d85845 passed
 Mac run45382346496 and packaged-app smoke. Native animation/AI/full horde group
 ownership/scripts/tick/generation/effects/UI/audio/full gameplay remain unfinished.
+
+Native actor appearance2dd848a passed arm64 Mac run45383593304 and packaged-app
+smoke. GameContent::create_horde now returns fully constructed but unplaced actors
+with verified group metadata/teleports, preserving constructor HP/MP during leader
+promotion and committing RNG only on success.2,048 complete original hordes with
+real constructors/sprite rebuilding/eligibility/names match6,210 actors, full stats/
+colours/groups/queues/searches and both RNG streams. Global constructor depth is
+independent unless argument/current levels alias. Unplaced source coordinates are
+uninitialized; port uses(-1,-1) as a policy, excluded from comparison. All67 portable
+groups pass. Next add Session deferred horde batches/group save and native room
+record creation; full scripting/tick/AI/effects/generation/UI/audio/game unfinished.

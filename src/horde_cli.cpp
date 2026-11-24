@@ -2,12 +2,48 @@
 #include "dredmor/names.hpp"
 #include "dredmor/artifact.hpp"
 #include "dredmor/monster_sprites.hpp"
+#include "dredmor/content.hpp"
 #include <iomanip>
 #include <iostream>
 #include <stdexcept>
 using namespace dredmor;
 int main(int argc,char** argv) {
     try {
+        if (argc==3 && std::string(argv[1])=="--content") {
+            const auto content=GameContent::load(argv[2]);std::uint32_t seed;
+            while (std::cin>>seed) {
+                HordeOptions options;std::int32_t constructor_depth;unsigned difficulty;bool same,named,quest;
+                if (!(std::cin>>options.depth>>constructor_depth>>difficulty>>same>>named>>quest>>options.minimum>>options.additional>>options.position.x>>options.position.y>>options.expansion) || difficulty>2)
+                    throw std::invalid_argument("invalid content horde fixture");
+                if (named) options.named="D0_2";if (quest) options.quest=HordeQuest{13,"Quest"};
+                std::vector<DungeonCell> cells(25);for (auto& cell:cells) cell.kind=1;
+                DungeonLayout argument(5,5,cells),current(5,5,cells);std::vector<bool> occupied(25,false);
+                std::vector<HordeRoomBounds> rooms={{{0,0},{5,5}}};
+                HordeWorld world{argument,same?argument:current,occupied,occupied,rooms};GameRandom random;random.seed(seed);
+                const auto population=content.create_horde(options,world,static_cast<Difficulty>(difficulty),constructor_depth,{},random);
+                const auto& result=population.result;
+                std::cout<<result.accepted<<' '<<result.depth<<' '<<result.table_level<<' '<<result.selected<<' '
+                    <<result.quest_count.has_value()<<' '<<result.quest_count.value_or(0)<<' '<<random.libc.state();
+                const auto mt=random.mt.state();std::cout<<' '<<mt.index;for (auto value:mt.words) std::cout<<' '<<value;
+                for (unsigned i=0;i<8;++i) std::cout<<' '<<random.mt.u32();std::cout<<' '<<population.actors.size();
+                for (std::size_t i=0;i<population.actors.size();++i) {
+                    const auto& actor=population.actors[i];const auto& member=result.members.at(i);
+                    std::cout<<' '<<actor.id<<' '<<member.definition<<' '<<member.leader<<' '<<member.quest<<' '<<member.horde;
+                    for (auto value:member.primary_percent) std::cout<<' '<<value;
+                    std::cout<<' '<<std::quoted(member.moniker)<<' '<<std::quoted(member.platoon)<<' '<<member.followers.size();
+                    for (auto follower:member.followers) std::cout<<' '<<follower;
+                    std::cout<<' '<<actor.health<<' '<<actor.mana;
+                    for (auto value:actor.stat_profile->ranks) std::cout<<' '<<value;
+                    for (auto value:actor.primary) std::cout<<' '<<value;
+                    for (auto value:actor.secondary) std::cout<<' '<<value;
+                    std::cout<<' '<<actor.sprite_tint<<' '<<std::quoted(actor.sprite_palette);
+                }
+                std::cout<<' '<<result.teleports.size();for (const auto& t:result.teleports) std::cout<<' '<<t.object<<' '<<t.level<<' '<<t.position.x<<' '<<t.position.y;
+                std::cout<<' '<<result.searches.size();for (const auto& s:result.searches) std::cout<<' '<<s.seed.x<<' '<<s.seed.y<<' '<<s.position.x<<' '<<s.position.y<<' '<<s.found<<' '<<s.accepted;
+                std::cout<<'\n';
+            }
+            return 0;
+        }
         const bool real_tint=argc==2 && std::string(argv[1])=="--names-tint";
         const bool real_names=real_tint || (argc==2 && std::string(argv[1])=="--names");
         ArtifactWords name_words;std::size_t label=0;

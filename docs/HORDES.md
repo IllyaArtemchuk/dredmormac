@@ -161,3 +161,26 @@ one tint, actual bitmap RGB before/after save and bad-palette resource rollback.
 All66 portable groups pass. Native source awaits Mac CI; prior core1d85845 passed
 Mac run45382346496 and packaged-app smoke. Native animation/AI/full horde group
 ownership/scripts/tick/generation/effects/UI/audio/full gameplay remain unfinished.
+
+## Constructor-backed content adapter
+
+GameContent::create_horde now composes actual content definitions/tweaks/text,
+verified eligibility and names, full constructor rank/stat/appearance behavior,
+leader tint/promotion and queued placements. It returns actors in construction
+order and the complete HordeResult, committing RNG only on success. It does not
+increment regular-spawn counters or reserve queued destinations. Leader promotion
+updates derived maxima while preserving constructor HP/MP. Argument/current layout
+aliasing controls whether surviving depth reduction also changes constructor
+scaling; distinct current-level depth remains independent.
+
+2,048 complete original SpawnHorde executions with actual NewMonster, complete
+Monster/Hittable/GameObj constructors, RebuildAttributes, RebuildSprites/TintSprites,
+CanSpawnMonster, names and bounded locations match6,210 GameContent actors. Compared
+all final HP/MP/ranks/stats/colours/group links, queued positions, searches and full
+libc/MT state+next8. Resource I/O/frame counts/tweaks/named lookup/library are supplied.
+Unplaced coordinates are excluded: source constructors do not initialize them;
+the port uses(-1,-1) until queued placement. Empty names/unregistered overrides
+fail without consuming committed RNG. All67 portable groups pass. Actor installation,
+deferred queue ownership, group persistence and native horde adoption remain next.
+See scripts/verify_horde_content.py. Native appearance2dd848a passed arm64 Mac
+run45383593304, including bitmap colours, save/load rollback and packaged-app smoke.

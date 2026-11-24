@@ -9,6 +9,7 @@
 #include "dredmor/artifact.hpp"
 #include "dredmor/spells.hpp"
 #include "dredmor/decorations.hpp"
+#include "dredmor/hordes.hpp"
 
 namespace dredmor {
 struct SkillLoadout { std::string type,subtype;int amount=1;bool always=false; };
@@ -17,6 +18,12 @@ struct SkillDefinition { int id;std::string name;int category;XmlNode source;std
 struct RoomScriptProgram {
     std::vector<RoomScriptDefinition> scripts;
     std::vector<RoomRecord> created_records;
+};
+struct HordePopulation {
+    HordeResult result;
+    // Constructor order. Actors remain unplaced until their queued teleports
+    // are committed by the owning level/session; no spawn counts are added.
+    std::vector<Actor> actors;
 };
 struct RoomDefinition {
     std::string name,layer;
@@ -62,6 +69,12 @@ public:
     Actor create_monster(std::string_view name,Position position,Difficulty difficulty,int dungeon_level,DarwinRandom& random) const;
     Actor create_room_monster(const RoomPopulationPlan& plan,MonsterSpawnContext context,Difficulty difficulty,
         GameRandom& random,MonsterSpawnState& state) const;
+    // The original constructor reads global current-level depth. If argument
+    // and current layout references alias, a horde's depth reduction affects
+    // construction too; otherwise constructor_depth remains independent.
+    HordePopulation create_horde(HordeOptions options,const HordeWorld& world,Difficulty difficulty,
+        std::int32_t constructor_depth,const MonsterSpawnState& counts,GameRandom& random,
+        std::uint64_t first_identity=1) const;
     ClassRanks starting_ranks(const std::vector<int>& skill_ids) const;
     std::vector<StartingLoadout> starting_loadout(const std::vector<int>& skill_ids) const;
 private:

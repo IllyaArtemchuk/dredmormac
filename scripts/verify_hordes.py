@@ -18,7 +18,7 @@ class Hordes(Placement):
         from unicorn import UC_HOOK_CODE
         super().__init__(binary);self.real_names=real_names;self.real_tint=real_tint;self.construct=self.original.sentinel+0x400;self.can_spawn=self.original.sentinel+0x420;self.rebuild=self.original.sentinel+0x440
         self.addresses=[self.construct,self.can_spawn,self.rebuild,0xdc570,0xc8b80,0xd2cb0,0xefebc,0x29990,0x64a40,0x64dec,0x64df1,0x85fc0,0xefd20,0x60876]
-        for address in self.addresses:self.machine.hook_add(UC_HOOK_CODE,self.boundary,begin=address,end=address)
+        self.horde_hooks={address:self.machine.hook_add(UC_HOOK_CODE,self.boundary,begin=address,end=address) for address in self.addresses}
 
     def draw(self,count):
         for _ in range(count):self.state=(self.state or 123459876)*16807%2147483647
