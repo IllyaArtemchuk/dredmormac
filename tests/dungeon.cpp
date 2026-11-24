@@ -16,6 +16,7 @@ std::vector<dredmor::RoomStamp> pool(int size) {
             room.cells.push_back({kind,std::uint8_t(kind==6 && (y==0 || y==size-1)),std::uint8_t(i==7 && kind==2?4:0)});
         }
         if (i==0 || i==2) room.fixed_name="Fixed";
+        room.shop_markers={ {1,2},{3,4},{{2,2},{4,2}} };
         room.shop=i==2;room.zoo=i==3;room.rules.quest=i==0;room.rules.unique=i==4;room.rules.diggle_god=i==5;
         if (i==8) room.rules.minimum_level=25;
     }
@@ -40,6 +41,10 @@ int main() {
         std::size_t edges=0;unsigned unique=0,zoo=0,god=0;
         for (std::size_t i=0;i<result.rooms.size();++i) {
             const auto& room=result.rooms[i];edges+=room.neighbors.size();
+            if (room.shop) {
+                check(room.template_index==2 && i!=0 && room.shop->guard.x==room.origin.x+1 && room.shop->guard.y==room.origin.y+2);
+                check(room.shop->home.x==room.origin.x+3 && room.shop->home.y==room.origin.y+4 && room.shop->pedestals.size()==2 && room.shop->pedestals[1].x==room.origin.x+4);
+            }
             unique+=room.template_index==4;zoo+=room.template_index==3;god+=room.template_index==5;
             check(room.template_index!=8 && (i==0 || room.template_index!=0));
             for (auto neighbor:room.neighbors) {

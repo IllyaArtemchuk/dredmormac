@@ -1,5 +1,6 @@
 #pragma once
 #include "dredmor/currency.hpp"
+#include "dredmor/shop_layout.hpp"
 
 namespace dredmor {
 // Original virtual Item/Weapon/Armour::GetShopCost. A missing definition uses

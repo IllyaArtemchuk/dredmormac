@@ -3,8 +3,10 @@
 #include <iostream>
 #include <stdexcept>
 
-int main() {
+int main(int argc,char** argv) {
     try {
+        const bool shops=argc==2 && std::string(argv[1])=="--shops";
+        if (argc!=1 && !shops) throw std::invalid_argument("expected --shops or no arguments");
         std::uint32_t seed;
         while (std::cin>>seed) {
             dredmor::GeometryOptions options;std::size_t count,starter_count;
@@ -16,6 +18,11 @@ int main() {
                 std::cin>>room.width>>room.height>>room.rules.minimum_level>>room.rules.maximum_level>>room.shop>>room.zoo
                     >>room.rules.quest>>room.rules.unique>>room.rules.diggle_god>>std::quoted(room.fixed_name);
                 if (!std::cin || room.width<1 || room.height<1 || room.width>512 || room.height>512) throw std::invalid_argument("invalid template");
+                if (shops) {
+                    std::size_t size;std::cin>>room.shop_markers.home.x>>room.shop_markers.home.y>>room.shop_markers.guard.x>>room.shop_markers.guard.y>>size;
+                    if (!std::cin || size>10000) throw std::invalid_argument("invalid shop fixture markers");
+                    room.shop_markers.pedestals.resize(size);for (auto& point:room.shop_markers.pedestals) std::cin>>point.x>>point.y;
+                }
                 room.cells.resize(std::size_t(room.width)*room.height);
                 for (auto& cell:room.cells) {
                     unsigned kind,orientation,marker;std::cin>>kind>>orientation>>marker;
@@ -39,6 +46,10 @@ int main() {
             for (const auto& room:result.rooms) {
                 std::cout<<' '<<room.template_index<<' '<<room.origin.x<<' '<<room.origin.y<<' '<<std::quoted(room.name.display)<<' '<<room.neighbors.size();
                 for (auto neighbor:room.neighbors) std::cout<<' '<<neighbor;
+            }
+            if (shops) for (const auto& room:result.rooms) {
+                std::cout<<' '<<bool(room.shop);
+                if (room.shop) {const auto& shop=*room.shop;std::cout<<' '<<shop.guard.x<<' '<<shop.guard.y<<' '<<shop.home.x<<' '<<shop.home.y;}
             }
             std::cout<<'\n';
         }

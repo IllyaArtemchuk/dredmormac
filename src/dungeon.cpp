@@ -128,6 +128,12 @@ GeometryAttempt attempt(const std::vector<RoomStamp>& pool,const RoomNameWords& 
                 const auto parent=std::size_t(result.layout.at(door.x,door.y).room_id),child=result.rooms.size();
                 if (parent>=child) throw std::runtime_error("invalid generated room adjacency");
                 write(index,next);result.rooms[parent].neighbors.push_back(child);result.rooms[child].neighbors.push_back(parent);
+                if (room.shop) {
+                    auto shop=room.shop_markers;
+                    shop.guard.x+=next.x;shop.guard.y+=next.y;shop.home.x+=next.x;shop.home.y+=next.y;
+                    for (auto& point:shop.pedestals) {point.x+=next.x;point.y+=next.y;}
+                    result.rooms[child].shop=std::move(shop);
+                }
                 spawned[index]=true;if (room.zoo) zoo=true;if (rules.diggle_god) god=true;placed=true;
             }
             ++eligible_attempts;

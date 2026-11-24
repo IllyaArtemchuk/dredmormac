@@ -76,6 +76,7 @@ RoomStamp RoomDefinition::numeric_template() const {
     if (!width || !height || *width<1 || *height<1 || *width>512 || *height>512 || rows.size()>std::size_t(*height))
         throw std::runtime_error("invalid declared room dimensions: "+name);
     RoomStamp result;result.width=*width;result.height=*height;
+    result.shop_markers=read_shop_markers(rows,*width,*height);
     for (const auto& attribute:source.attributes) if (ascii_lower(attribute.first)=="usefixedname") result.fixed_name=attribute.second;
     for (const auto& node:source.children) if (ascii_lower(node.tag)=="flags") {
         auto flag=[&](std::string_view name,bool& target){if (const auto value=legacy_attribute(node,name)) target=*value!=0;};

@@ -19,6 +19,7 @@ struct GeneratedRoom {
     Position origin{};
     RoomName name{};
     std::vector<std::size_t> neighbors{};
+    std::optional<ShopRoomMarkers> shop{}; // Absolute points; attached shops only.
 };
 struct GeometryAttempt {
     DungeonLayout layout;

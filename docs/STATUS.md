@@ -1330,3 +1330,17 @@ funds, paid versus unpaid for-sale state and asymmetric handled results.
 All46 local groups pass. This source awaits arm64 CI. Session/native shop entity
 ownership, modal UI/purchase/sale/theft/AI and the complete room-content pipeline
 remain unfinished; these measured kernels are prerequisites, not full shops.
+
+
+Shop pricing/actions sourceae64238 passed actual arm64 macos-15 run45338651110,
+job138256680301: all79 tests plus relocated packaged-app smoke.
+RoomStamp now retains shop S/s/i metadata; attached GeneratedRoom shops retain
+absolute guard/home/pedestal points. Initial rooms do not activate shop RoomInfo.
+Comparison passes128 original synthetic geometries /137 shops and32 base-content
+geometries /36 shops with existing cells/graph/names/spawn/RNG plus shop fields.
+Original XML row callbacks pass1,024 cases. Keeper guard/home transitions pass
+1,024 actual ForceShopkeeperMove executions with stolen-goods/teleport boundaries.
+The integer parameter is unused: inShop plus carried unpaid goods selects guard
+mode; only flag transitions teleport, for all keepers in original list order.
+Shop ownership/persistence and native purchase/theft integration remain next;
+this source does not yet connect a complete generated floor or full shop gameplay.

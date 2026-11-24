@@ -3,6 +3,7 @@
 #include <vector>
 #include "dredmor/random.hpp"
 #include "dredmor/world.hpp"
+#include "dredmor/shop_layout.hpp"
 
 namespace dredmor {
 // Numeric room cells, before collision/rendering: 0 void, 2 wall, 6 door.
@@ -31,6 +32,7 @@ struct RoomStamp {
     bool shop=false,zoo=false;
     RoomPlacementRules rules{};
     std::string fixed_name;
+    ShopRoomMarkers shop_markers{};
 };
 struct DungeonCell {
     std::uint8_t kind=0,room_id=0,door_flags=0;

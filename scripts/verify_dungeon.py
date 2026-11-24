@@ -105,6 +105,7 @@ class GeometryOracle:
             self.write(entries+index*4,template)
             self.write(template,room['w'],room['h'],room['min'],room['max'])
             self.string(template+0x10,'T'+str(index));self.string(template+0x14,room['name'])
+            self.write(template+0x24,*room.get('shop_points',[0,0,0,0]))
             for component,offset in enumerate([0x18,0x1c,0x20]):
                 data=bytes(cell[component] for cell in room['cells']);pointer=self.allocate(len(data))
                 self.machine.mem_write(pointer,data);self.write(template+offset,pointer)

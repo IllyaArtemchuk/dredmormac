@@ -1,7 +1,9 @@
 #include "dredmor/shops.hpp"
 #include <cmath>
+#include <algorithm>
 #include <cstring>
 #include <limits>
+#include <stdexcept>
 
 namespace dredmor {
 namespace {
@@ -44,4 +46,25 @@ ShopPedestalAction resolve_shop_pedestal(bool has_item,std::int32_t shop_cost,bo
     result.payment=transfer_currency(balance,result.total_cost,CurrencyOperation::take);result.balance=result.payment->balance;
     result.transfer_item=true;result.item_for_sale=false;return result;
 }
+ShopRoomMarkers read_shop_markers(const std::vector<std::string>& rows,int width,int height) {
+    if (width<1 || height<1 || width>512 || height>512 || rows.size()>std::size_t(height)) throw std::invalid_argument("invalid shop room dimensions");
+    ShopRoomMarkers result;
+    for (std::size_t y=0;y<rows.size();++y) for (std::size_t x=0;x<std::min(rows[y].size(),std::size_t(width));++x) {
+        const Position point{int(x),int(y)};
+        switch (rows[y][x]) {
+        case 's':result.guard=point;break;
+        case 'S':result.home=point;break;
+        case 'i':result.pedestals.push_back(point);break;
+        }
+    }
+    return result;
+}
+std::vector<std::size_t> move_shop_keepers(std::vector<ShopKeeperPosition>& keepers,bool in_shop,bool stolen_goods) {
+    std::vector<std::size_t> moved;const bool guard=in_shop && stolen_goods;
+    for (std::size_t i=0;i<keepers.size();++i) if (keepers[i].guarding!=guard) {
+        auto& keeper=keepers[i];keeper.position=guard?keeper.guard:keeper.home;keeper.guarding=guard;moved.push_back(i);
+    }
+    return moved;
+}
+
 }

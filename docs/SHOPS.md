@@ -80,3 +80,35 @@ checks full pricing, handled/transfer/for-sale/guard/funds flags, balance/paymen
 requests and no RNG draws. Tests include negative modifiers, integer extremes,
 float rounding, missing definition fallback, stack quantities and all dialog
 branches. This does not implement complete shops or original inventory/theft AI.
+
+Room numeric ingestion now retains shop metadata as well as floor cells:
+uppercase S assigns home, lowercase s the guard location, and each i appends a
+pedestal in source row order. Repeated S/s markers use the last occurrence;
+missing markers retain0,0. Rows truncate to declared width. Actual row callback
+stores these at template+0x24/+0x28 and+0x2c/+0x30, and appends pedestal points
+to+0x48..+0x4c (0x19b293..0x19b34b).
+
+Generated attached shop rooms now retain absolute guard/home/pedestal positions.
+The initial room has no activated shop RoomInfo even if its template shop flag
+is set. Connected placements set the RoomInfo shop flag and absolute coordinates
+at0x19681c..0x19692f. No extra RNG draws are introduced. Comparison includes
+128 full synthetic geometries /137 placed shops and32 supplied-base geometries /
+36 shops alongside existing cells, graph, names, spawn and RNG checks.
+
+`move_shop_keepers` implements ForceShopkeeperMove0x717f6. Its int argument is
+unused; the routine checks global inShop and PlayerHasStolenGoods. Both true move
+all non-guarding keepers to their guard positions and mark guarding. Otherwise
+all guarding keepers return home and clear that flag. Already matching flags do
+not teleport or correct current coordinates. This affects all keepers on the
+level in original list order, not just one shop. Sprite/path/AI behavior and the
+inventory stolen-goods query are separate from this positioning kernel.
+
+    .venv/bin/python scripts/verify_shop_layout.py ORIGINAL build/dredmor-shop --cases 1024 --out PRIVATE.json
+    .venv/bin/python scripts/verify_shop_geometry.py ORIGINAL build/dredmor-dungeon --cases 128 --out PRIVATE.json
+    .venv/bin/python scripts/verify_shop_geometry.py ORIGINAL build/dredmor-dungeon --cases 32 --content PRIVATE_INSTALLATION --out PRIVATE.json
+
+The row callback executes on controlled preallocated template/vector storage
+with string boundaries. The real keeper movement function executes with supplied
+stolen-goods and teleport boundaries. All1,024 row parses and1,024 guard transitions
+match, including marker defaults/order/truncation, ignored int arguments, ordered
+teleports, final fields and unchanged random state for movement.
