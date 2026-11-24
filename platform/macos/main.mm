@@ -29,19 +29,26 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
     uint64_t _seriesDelay;
 }
 - (instancetype)initWithPath:(NSString*)path;
+- (instancetype)initWithPath:(NSString*)path palette:(NSString*)palette tint:(int32_t)tint;
 - (instancetype)initWithRoomSprite:(const dredmor::RoomSprite&)sprite root:(const std::filesystem::path&)root;
 - (NSImage*)frameAt:(uint64_t)milliseconds;
 - (NSImage*)frameAtIndex:(uint32_t)index;
 - (NSUInteger)frameCount;
+- (uint32_t)firstPixelRGB;
 - (uint64_t)duration;
 - (void)setSingleFrameDelay:(uint16_t)delay;
 @end
 @implementation SpriteImage
 - (instancetype)initWithPath:(NSString*)path {
+    return [self initWithPath:path palette:nil tint:-1];
+}
+- (instancetype)initWithPath:(NSString*)path palette:(NSString*)palette tint:(int32_t)tint {
     self=[super init];
     if (self) {
         if ([[path.pathExtension lowercaseString] isEqualToString:@"spr"]) {
-            _sprite=dredmor::Sprite::read(path.UTF8String);
+            std::optional<dredmor::SpritePalette> colours;
+            if (palette) colours=dredmor::read_sprite_palette(palette.UTF8String);
+            _sprite=dredmor::Sprite::read(path.UTF8String,tint,colours?&*colours:nullptr);
             NSMutableArray<NSImage*> *images=[NSMutableArray array];
             for (auto& frame:_sprite.frames) {
                 NSBitmapImageRep *bitmap=[[NSBitmapImageRep alloc] initWithBitmapDataPlanes:nullptr
@@ -56,6 +63,7 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
             }
             _images=images;
         } else {
+            if (palette || tint!=-1) throw std::runtime_error("monster colour conversion requires SPR resources");
             NSImage *image=[[NSImage alloc] initWithContentsOfFile:path];
             if (!image) throw std::runtime_error("cannot load scene image");
             _images=@[image];
@@ -90,6 +98,12 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
 }
 - (NSImage*)frameAtIndex:(uint32_t)index { return _images[MIN(NSUInteger(index),_images.count-1)]; }
 - (NSUInteger)frameCount { return _images.count; }
+- (uint32_t)firstPixelRGB {
+    if (!_images.count || !_sprite.width) throw std::runtime_error("sprite pixel inspection requires an SPR image");
+    NSBitmapImageRep *bitmap=(NSBitmapImageRep*)_images[0].representations[0];
+    const auto* rgba=bitmap.bitmapData;
+    return (uint32_t(rgba[0])<<16)|(uint32_t(rgba[1])<<8)|rgba[2];
+}
 - (uint64_t)duration {
     if (_sprite.frames.empty()) return MAX(uint64_t(1),_seriesDelay)*_images.count;
     uint64_t result=0;for (const auto& frame:_sprite.frames) result+=MAX(uint64_t(1),uint64_t(frame.delay_ms));return result;
@@ -99,6 +113,15 @@ static std::filesystem::path roomResource(const std::filesystem::path& root,cons
     if (_sprite.frames.empty()) _seriesDelay=delay;else _sprite.frames[0].delay_ms=delay;
 }
 @end
+
+static SpriteImage *actorSprite(const dredmor::Actor& actor,const std::filesystem::path& root) {
+    const auto path=roomResource(root,actor.sprite);
+    NSString *palette=nil;
+    if (!actor.sprite_palette.empty()) {
+        const auto colours=roomResource(root,actor.sprite_palette);palette=[NSString stringWithUTF8String:colours.c_str()];
+    }
+    return [[SpriteImage alloc] initWithPath:[NSString stringWithUTF8String:path.c_str()] palette:palette tint:actor.sprite_tint];
+}
 
 static NSArray<SpriteImage*> *breakableSprites(const dredmor::RoomSprite& intact,const dredmor::RoomSprite& breaking,
     const dredmor::RoomSprite& broken,const std::filesystem::path& root) {
@@ -350,8 +373,7 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
         }
         _enemyImages=[NSMutableDictionary dictionary];
         for (const auto& enemy:_session->enemies()) {
-            const auto path=roomResource(_dataRoot,enemy.sprite);
-            SpriteImage *image=[[SpriteImage alloc] initWithPath:[NSString stringWithUTF8String:path.c_str()]];
+            SpriteImage *image=actorSprite(enemy,_dataRoot);
             if (!image) throw std::runtime_error("cannot prepare room monster sprite");_enemyImages[@(enemy.id)]=image;
         }
         if (scene[@"enemies"] && ![scene[@"enemies"] isKindOfClass:NSArray.class]) return nil;
@@ -366,9 +388,12 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
                 enemy.name=[value[@"name"] UTF8String];enemy.position=position;
                 enemy.health=enemy.secondary[0]=1;enemy.secondary[2]=1;
             }
+            const auto palette=enemy.sprite_palette;const auto tint=enemy.sprite_tint;
             const auto identifier=_session->spawn_enemy(std::move(enemy));
             NSString *spritePath=[value[@"animation"] isKindOfClass:NSString.class]?value[@"animation"]:value[@"image"];
-            SpriteImage *sprite=[[SpriteImage alloc] initWithPath:spritePath];
+            NSString *palettePath=nil;
+            if (!palette.empty()) {const auto path=roomResource(_dataRoot,palette);palettePath=[NSString stringWithUTF8String:path.c_str()];}
+            SpriteImage *sprite=[[SpriteImage alloc] initWithPath:spritePath palette:palettePath tint:tint];
             if (!sprite) return nil;
             _enemyImages[@(identifier)]=sprite;
         }
@@ -582,10 +607,9 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     NSMutableDictionary<NSNumber*,SpriteImage*> *images=[NSMutableDictionary dictionary];
     for (const auto& enemy:session.enemies()) {
         if (_content) {
-            const auto definition=_content->make_monster(enemy.name,enemy.position,dredmor::Difficulty::medium);
-            if (definition.sprite.empty()) throw std::runtime_error("saved monster has no idle sprite");
-            const auto path=roomResource(_dataRoot,definition.sprite);
-            images[@(enemy.id)]=[[SpriteImage alloc] initWithPath:[NSString stringWithUTF8String:path.c_str()]];
+            const auto& definition=_content->monster(enemy.name);
+            if (enemy.sprite.empty() || definition.idle_sprites[3]!=enemy.sprite) throw std::runtime_error("saved monster idle sprite does not match content");
+            images[@(enemy.id)]=actorSprite(enemy,_dataRoot);
         } else {
             SpriteImage *image=_enemyImages[@(enemy.id)];
             if (!image) throw std::runtime_error("saved actor image is unavailable in this scene");
@@ -629,12 +653,12 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     NSMutableArray<NSDictionary*> *shops=[NSMutableArray array];
     for (const auto& shop:session.shops()) {
         if (!_content) throw std::runtime_error("shop rendering needs installation content");
-        const auto& definition=_content->monster(shop.keeper.name);
+        (void)_content->monster(shop.keeper.name);
         auto prepare=[&](const std::string& resource) {
             const auto path=roomResource(_dataRoot,resource);SpriteImage *sprite=[[SpriteImage alloc] initWithPath:[NSString stringWithUTF8String:path.c_str()]];
             if (!sprite) throw std::runtime_error("cannot prepare shop sprite");return sprite;
         };
-        SpriteImage *keeper=prepare(definition.idle_sprites[3]),*pedestal=prepare("dungeon/store_pedestal.png");NSMutableArray *stock=[NSMutableArray array];
+        SpriteImage *keeper=actorSprite(shop.keeper,_dataRoot),*pedestal=prepare("dungeon/store_pedestal.png");NSMutableArray *stock=[NSMutableArray array];
         for (const auto& object:shop.pedestals) [stock addObject:object.item?(id)prepare(_content->items().at(object.item->definition).icon):(id)NSNull.null];
         [shops addObject:@{@"keeper":keeper,@"pedestal":pedestal,@"stock":stock}];
     }
@@ -687,6 +711,17 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
         [self saveToURL:url];_session->step(dredmor::Action::wait);[self loadFromURL:url];
         std::ostringstream after;_session->save(after);
         if (before.str()!=after.str()) throw std::runtime_error("native save/load changed session state");
+        const auto colour=before.str().find("<sprite-colour");
+        if (colour!=std::string::npos) {
+            auto bad=before.str();const auto start=bad.find("palette=\"",colour)+9,end=bad.find('"',start);
+            if (start<9 || end==std::string::npos) throw std::runtime_error("actor colour save lacks palette");
+            bad.replace(start,end-start,"../unavailable-monster.pal");
+            NSData *badData=[NSData dataWithBytes:bad.data() length:bad.size()];
+            if (![badData writeToURL:url options:NSDataWritingAtomic error:nullptr]) throw std::runtime_error("cannot write palette rejection fixture");
+            auto oldImages=_enemyImages;bool rejected=false;try {[self loadFromURL:url];} catch(const std::exception&) {rejected=true;}
+            std::ostringstream unchanged;_session->save(unchanged);
+            if (!rejected || unchanged.str()!=before.str() || oldImages!=_enemyImages) throw std::runtime_error("invalid actor palette was not rejected atomically");
+        }
         if (!_session->custom_objects().empty()) {
             auto bad=before.str();const auto object=bad.find("<object "),start=bad.find(" image=\"",object);
             if (start==std::string::npos) throw std::runtime_error("object save lacks image field");
@@ -800,6 +835,10 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
         random.room_spawned && random.room_local_id=="fixture-random" && random.can_push==255 && !random.sprite.empty() &&
         !(random.monster_flags&~10U) && count!=_session->monster_spawn_state().counts.end() && count->second==1)) return NO;
     const auto initial=named;const auto mana=_session->player().mana;
+    if (named.sprite_palette!="dungeon/fixture.pal" || named.sprite_tint!=-1 ||
+        !random.sprite_palette.empty() || random.sprite_tint!=120 ||
+        [_enemyImages[@(named.id)] firstPixelRGB]!=0x1e3c5a ||
+        [_enemyImages[@(random.id)] firstPixelRGB]!=0x9527b4) return NO;
     auto cast=[&](const std::string& name) {
         const auto* spell=_content->find_spell(name);return spell && _session->cast_spell(*spell,_session->player().position,_session->enemies()[0].position);
     };
@@ -809,6 +848,9 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     if (!cast("Fixture owned condition")) return NO;
     _session->update_triggers(initial.id);_session->update_buffs(initial.id);
     if (_session->player().mana!=mana-1 || _session->enemies()[0].buffs[0].remaining!=0 || ![self smokeSaveLoad]) return NO;
+    if (_session->enemies()[0].sprite_palette!="dungeon/fixture.pal" || _session->enemies()[1].sprite_tint!=120 ||
+        [_enemyImages[@(_session->enemies()[0].id)] firstPixelRGB]!=0x1e3c5a ||
+        [_enemyImages[@(_session->enemies()[1].id)] firstPixelRGB]!=0x9527b4) return NO;
     _session->update_buffs(initial.id);
     const auto& expired=_session->enemies()[0];
     return expired.buffs.empty() && expired.primary==initial.primary && expired.secondary==initial.secondary && expired.damage==initial.damage &&

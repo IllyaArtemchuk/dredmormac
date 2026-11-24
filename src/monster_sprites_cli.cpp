@@ -1,4 +1,5 @@
 #include "dredmor/monster_sprites.hpp"
+#include "dredmor/content.hpp"
 #include <iomanip>
 #include <iostream>
 #include <stdexcept>
@@ -16,6 +17,21 @@ template<class F> void handles(dredmor::MonsterSpriteState& s,F function) {
 }
 int main(int argc,char** argv) {
     try {
+        if (argc==3 && std::string(argv[1])=="--construction-content") {
+            const auto content=dredmor::GameContent::load(argv[2]);
+            std::uint32_t seed;unsigned difficulty;std::int32_t depth;std::string name;
+            while (std::cin>>seed>>difficulty>>depth>>std::quoted(name)) {
+                if (difficulty>2) throw std::invalid_argument("invalid constructor difficulty");
+                dredmor::DarwinRandom random(seed);
+                const auto actor=content.create_monster(name,{-1,-1},static_cast<dredmor::Difficulty>(difficulty),depth,random);
+                std::cout<<actor.health<<' '<<actor.mana<<' '<<actor.sprite_tint<<' '<<std::quoted(actor.sprite_palette)<<' '<<random.state();
+                for (auto value:actor.stat_profile->ranks) std::cout<<' '<<value;
+                for (auto value:actor.primary) std::cout<<' '<<value;
+                for (auto value:actor.secondary) std::cout<<' '<<value;
+                std::cout<<'\n';
+            }
+            return 0;
+        }
         if (argc==2 && std::string(argv[1])=="--horde-metadata") {
             std::string xml;
             while (std::cin>>std::quoted(xml)) {

@@ -2060,3 +2060,18 @@ external .pal replaces embedded colours after hue conversion. All65 portable
 groups pass. Native actor palette/tint/save adoption is next; horde construction/
 group persistence, native scripts/tick, AI/effects/generation/UI/audio and complete
 gameplay remain unfinished. See HORDES.md and verification scripts.
+
+Native monster appearance now retains external palette or resolved tint on Actor.
+GameContent constructors resolve random tint after rank adjustment, and fixed/
+absent tint consumes no additional libc. Actual Level::NewMonster + complete
+Monster/Hittable/GameObj construction + RebuildAttributes + real RebuildSprites/
+TintSprites match2,048 GameContent cases (HP/MP/ranks/stats/colours/libc, unchanged
+MT). Resource I/O/frame counts/tweaks/library are supplied, not full process IO.
+Session save23 preserves appearance through saves and cached floors; old versions
+1..22 remain readable. Malformed/duplicate/out-of-budget colours are rejected.
+Native room/scene enemies, restored actors and shop keepers prepare coloured SPR
+frames transactionally. Native monster fixture now checks one external palette,
+one tint, actual bitmap RGB before/after save and bad-palette resource rollback.
+All66 portable groups pass. Native source awaits Mac CI; prior core1d85845 passed
+Mac run45382346496 and packaged-app smoke. Native animation/AI/full horde group
+ownership/scripts/tick/generation/effects/UI/audio/full gameplay remain unfinished.

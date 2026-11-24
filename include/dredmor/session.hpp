@@ -39,6 +39,8 @@ struct ActiveBuff {
 struct Actor {
     std::uint64_t id=0;
     std::string name,sprite;
+    std::string sprite_palette;
+    std::int32_t sprite_tint=-1; // resolved angle; -1 means embedded/external palette without tint
     Position position{};
     PrimaryStats primary{};
     SecondaryStats secondary{};

@@ -193,10 +193,13 @@ if __name__=='__main__':
         if args.monsters:
             (root/'game/rooms.xml').write_text('''<roomdb><room name="Starting Room" width="5" height="4">
 <row text="#####"/><row text="#...#"/><row text="#.21#"/><row text="#####"/>
-<monster at="1" name="Fixture variant" id="fixture-monster" can_push="0"/>
+<monster at="1" name="Fixture monster" id="fixture-monster" can_push="0"/>
 <monster at="2" id="fixture-random" can_push="255"/></room></roomdb>''')
             monsters=ET.parse(root/'game/monDB.xml');monsters.getroot()[0].insert(0,ET.Element('idleSprite',{'down':'dungeon/fixture.spr'}))
-            monsters.getroot()[0].find('monster').set('level','1')
+            base=monsters.getroot()[0];variant=base.find('monster');variant.set('level','1')
+            base.insert(0,ET.Element('palette',{'name':'dungeon/fixture.pal'}))
+            ET.SubElement(variant,'palette',{'tint':'120'})
+            (root/'dungeon/fixture.pal').write_bytes(bytes([0,0,0,30,60,90])+bytes(762))
             monsters.write(root/'game/monDB.xml',encoding='unicode')
             spells=ET.parse(root/'game/spellDB.xml')
             spells.getroot().append(ET.fromstring('''<spell name="Fixture owned buff" type="target"><buff time="1" self="0" allowstacking="0" manaUpkeep="1" icon="dungeon/fixture.spr"><primarybuff id="0" amount="1"/><secondarybuff id="0" amount="2"/><damagebuff slashing="2"/><resistbuff toxic="3"/></buff></spell>'''))

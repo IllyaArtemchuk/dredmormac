@@ -1,4 +1,5 @@
 #include "dredmor/content.hpp"
+#include "dredmor/monster_sprites.hpp"
 #include "dredmor/selection.hpp"
 #include "dredmor/legacy_number.hpp"
 #include "dredmor/room_records.hpp"
@@ -24,6 +25,12 @@ Actor monster_actor(const MonsterDefinition& definition,Position position,const 
     Actor actor;actor.name=definition.name;actor.position=position;actor.primary=stats.primary;actor.secondary=stats.secondary;
     actor.health=stats.secondary[0];actor.mana=stats.secondary[1];actor.damage=definition.damage;actor.resistance=definition.resistance;
     actor.experience_reward=definition.experience;actor.sprite=definition.idle_sprites[3];actor.monster_terrain=definition.terrain;actor.stat_profile=input;return actor;
+}
+void monster_appearance(Actor& actor,const MonsterDefinition& definition,DarwinRandom& random) {
+    if (!definition.palette_tint) {actor.sprite_palette=definition.palette;return;}
+    MonsterSpriteState sprites;
+    actor.sprite_tint=tint_monster_sprites(definition,sprites,definition.palette_tint,random,
+        [](const auto&,auto) {return MonsterSpriteHandle(1);});
 }
 }
 std::vector<RoomElementDefinition> RoomDefinition::elements() const {
@@ -284,14 +291,16 @@ const MonsterDefinition& GameContent::monster(std::string_view name) const {
 }
 Actor GameContent::make_monster(std::string_view name,Position position,Difficulty difficulty,int dungeon_level) const {
     const auto& definition=monster(name);
-    return monster_actor(definition,position,tweaks_.monster_input(definition,difficulty,dungeon_level));
+    if (definition.palette_tint==-1) throw std::invalid_argument("random monster tint requires create_monster and an RNG");
+    auto actor=monster_actor(definition,position,tweaks_.monster_input(definition,difficulty,dungeon_level));
+    DarwinRandom unused;monster_appearance(actor,definition,unused);return actor;
 }
 Actor GameContent::create_monster(std::string_view name,Position position,Difficulty difficulty,int dungeon_level,DarwinRandom& random) const {
     const auto index=find_registered_monster(monster_tables(),monsters_,name);
     if (!index) throw std::invalid_argument("registered monster not found: "+std::string(name));
     const auto& definition=monsters_.at(*index);auto input=tweaks_.monster_input(definition,difficulty,dungeon_level);
     input.ranks=monster_creation_ranks(input.ranks,tweaks_.integer(difficulty,"monster level adder"),random);
-    return monster_actor(definition,position,input);
+    auto actor=monster_actor(definition,position,input);monster_appearance(actor,definition,random);return actor;
 }
 Actor GameContent::create_room_monster(const RoomPopulationPlan& plan,MonsterSpawnContext context,Difficulty difficulty,
     GameRandom& random,MonsterSpawnState& state) const {
@@ -302,7 +311,8 @@ Actor GameContent::create_room_monster(const RoomPopulationPlan& plan,MonsterSpa
     if (!index) throw std::runtime_error("room monster level has no registered candidates");
     const auto& definition=monsters_.at(*index);auto input=tweaks_.monster_input(definition,difficulty,context.depth.depth);
     input.ranks=monster_creation_ranks(input.ranks,tweaks_.integer(difficulty,"monster level adder"),candidate.libc);
-    auto actor=monster_actor(definition,plan.position,input);actor.monster_flags=finish_random_monster_spawn(definition,next,candidate.mt);
+    auto actor=monster_actor(definition,plan.position,input);monster_appearance(actor,definition,candidate.libc);
+    actor.monster_flags=finish_random_monster_spawn(definition,next,candidate.mt);
     random=std::move(candidate);state=std::move(next);return actor;
 }
 ClassRanks GameContent::starting_ranks(const std::vector<int>& skill_ids) const {
