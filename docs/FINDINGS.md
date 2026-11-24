@@ -2143,3 +2143,17 @@ Original comparisons pass1,024 actual controlled shop content-writer executions,
 Armour automatic tail/CreateArtifact. Keeper/pedestal/base initialization and
 placement are boundaries; shop entities, pricing/purchase/theft/AI and the complete
 ordered room-content pass remain unfinished. New shop source awaits arm64 CI.
+
+
+Shop stock source606d76b passed actual arm64 macos-15 run45338092559,
+job138254853780: all78 checks plus relocated packaged-app smoke.
+Shop cost and raw pedestal decisions are now implemented (shops.hpp/SHOPS.md).
+Original comparisons pass4,096 full Item/Weapon/Armour GetShopCost executions
+and4,096 actual ShopPedestal::Clicked executions. Price functions have no import
+boundaries; click UI/payment/pickup/telemetry/guard calls are controlled boundaries.
+Preserved signed armour versus absolute weapon modifiers, Float32 ordering,
+wrapping costs, the original second stack-quantity multiplication, insufficient
+funds, paid versus unpaid for-sale state and asymmetric handled results.
+All46 local groups pass. This source awaits arm64 CI. Session/native shop entity
+ownership, modal UI/purchase/sale/theft/AI and the complete room-content pipeline
+remain unfinished; these measured kernels are prerequisites, not full shops.
