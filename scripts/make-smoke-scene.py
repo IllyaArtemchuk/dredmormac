@@ -43,6 +43,7 @@ if __name__=='__main__':
     p.add_argument('--secret-levers',action='store_true',help='Bump/click secret lever, wall opening and save/reload')
     p.add_argument('--decorations',action='store_true',help='Ordered conditional paintings/statues/floor engravings')
     p.add_argument('--script-levers',action='store_true',help='Ordinary lever record, click/bump/history and saved activation')
+    p.add_argument('--room-scripts',action='store_true',help='Live scripted lever puzzle, deferred gate removal/create/move and saved counters')
     p.add_argument('--doors',action='store_true',help='Ordinary door picking, clicks, bumps, shattering and saves')
     p.add_argument('--shops',action='store_true',help='Keeper, stock, native buying/theft and saved shop state')
     p.add_argument('--automatic-armour',action='store_true',help='Automatic neck-armour enchantment, inventory and save/load')
@@ -75,12 +76,30 @@ if __name__=='__main__':
     if args.script_levers and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers,args.decorations,args.shops,args.automatic_armour,args.doors])):p.error('--script-levers requires --content-source and excludes other fixture types')
     if args.doors and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers,args.decorations,args.shops,args.automatic_armour])):p.error('--doors requires --content-source and excludes other fixture types')
     if args.hordes and (not args.content_source or any([args.inventory,args.artifact,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers,args.decorations,args.shops,args.automatic_armour,args.doors,args.script_levers])):p.error('--hordes requires --content-source and excludes other fixture types')
+    if args.room_scripts and (not args.content_source or any([args.inventory,args.artifact,args.combat,args.objects,args.breakables,args.hordes,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers,args.decorations,args.shops,args.automatic_armour,args.doors,args.script_levers])):p.error('--room-scripts requires --content-source and excludes other fixture types')
     if args.content_source:
         root=out/'installation';shutil.copytree(args.content_source,root,dirs_exist_ok=True)
         (root/'tilesets').mkdir(exist_ok=True);(root/'sprites/hero').mkdir(parents=True,exist_ok=True)
         (root/'tilesets/basic.png').write_bytes(png(384,640,(70,80,95,255)))
         (root/'sprites/hero/hero_idle_d.spr').write_bytes(sprite())
         (root/'dungeon').mkdir(exist_ok=True);(root/'dungeon/fixture.spr').write_bytes(sprite())
+        if args.room_scripts:
+            (root/'dungeon/lever1.spr').write_bytes(sprite());(root/'dungeon/replacement.spr').write_bytes(sprite())
+            rows=['#######','#@....#','#.....#','#.....#','#######'];template=['#######','#..12.#','#..3..#','#.....#','#######']
+            database=ET.Element('roomdb');room=ET.SubElement(database,'room',{'name':'Starting Room','width':'7','height':'5'})
+            for row in template:ET.SubElement(room,'row',{'text':row})
+            ET.SubElement(room,'element',{'type':'lever','at':'1','id':'switch'})
+            ET.SubElement(room,'customblocker',{'at':'2','png':'dungeon/fixture.spr','id':'gate'})
+            script=ET.SubElement(room,'script');ET.SubElement(script,'condition',{'condition_type':'activated_changed','id':'switch','activated':'1'})
+            for attributes in [dict(action_type='remove',id='gate'),dict(action_type='create',create_type='customblocker',at='3',png='dungeon/replacement.spr',id='replacement'),dict(action_type='move',id='player',at='2'),dict(action_type='ticker',text='switch fired')]:
+                ET.SubElement(script,'action',dict(on='success',**attributes))
+            script=ET.SubElement(room,'script');ET.SubElement(script,'condition',{'condition_type':'at','id':'gate','at':'2'})
+            ET.SubElement(script,'condition',{'condition_type':'activated_changed','id':'switch','activated':'1'})
+            ET.SubElement(script,'action',{'on':'success','action_type':'ticker','text':'gate visible until clear'})
+            script=ET.SubElement(room,'script');ET.SubElement(script,'condition',{'condition_type':'at','id':'gate','at':'2','not':'1'})
+            ET.SubElement(script,'action',{'on':'success','action_type':'ticker','text':'gate gone'})
+            ET.ElementTree(database).write(root/'game/rooms.xml',encoding='unicode')
+            scene.update(data_root=str(root),room_objects='Starting Room',room_scripts=True,rows=[row.replace('@','.') for row in rows],collision='\n'.join(rows)+'\n',smoke_room_scripts=True,smoke_expected='{"turn":2,"x":2,"y":1}')
         if args.script_levers:
             (root/'dungeon/lever1.spr').write_bytes(sprite())
             rows=['#######','#@....#','#.....#','#.....#','#######']

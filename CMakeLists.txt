@@ -13,6 +13,7 @@ target_sources(dredmor_core PRIVATE src/clocks.cpp)
 target_sources(dredmor_core PRIVATE src/room_scripts.cpp src/room_runtime.cpp src/room_runtime_save.cpp)
 target_sources(dredmor_core PRIVATE src/session_room_objects.cpp)
 target_sources(dredmor_core PRIVATE src/session_room_scripts.cpp)
+target_sources(dredmor_core PRIVATE src/session_room_script_save.cpp)
 target_sources(dredmor_core PRIVATE src/room_scopes.cpp
     src/room_placement.cpp src/room_deferred.cpp src/game_tick.cpp src/hordes.cpp)
 add_executable(dredmor-horde src/horde_cli.cpp)
@@ -488,6 +489,13 @@ if(APPLE)
     add_test(NAME native-script-levers-window COMMAND $<TARGET_FILE:DredmorMac>
       ${CMAKE_BINARY_DIR}/native-script-levers/scene.json --smoke-test)
     set_tests_properties(native-script-levers-window PROPERTIES FIXTURES_REQUIRED native-script-levers TIMEOUT 20)
+    add_test(NAME native-room-scripts-fixture COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-room-scripts
+      --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --room-scripts)
+    set_tests_properties(native-room-scripts-fixture PROPERTIES FIXTURES_SETUP native-room-scripts)
+    add_test(NAME native-room-scripts-window COMMAND $<TARGET_FILE:DredmorMac>
+      ${CMAKE_BINARY_DIR}/native-room-scripts/scene.json --smoke-test)
+    set_tests_properties(native-room-scripts-window PROPERTIES FIXTURES_REQUIRED native-room-scripts TIMEOUT 25)
     add_test(NAME native-doors-fixture COMMAND ${Python3_EXECUTABLE}
       ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-doors
       --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --doors)

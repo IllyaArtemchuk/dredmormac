@@ -38,6 +38,7 @@ int main() {
         std::vector<DungeonCell> cells(45);for (std::size_t i=0;i<cells.size();++i) {cells[i].kind=1;cells[i].room_id=i%9>=6?1:0;}
         SessionRoomScriptProfile profile(DungeonLayout(9,5,cells));
         profile.programs={program,entry};
+        profile.sources={definition.source,parse_xml("<room><script><condition condition_type='entered'/><action on='success' action_type='ticker' text='entered second room'/></script></room>")};
         profile.rooms={{{true,1,0,std::shared_ptr<const std::vector<RoomScriptDefinition>>(program,&program->scripts)},{0,0},1},
                        {{true,1,1,std::shared_ptr<const std::vector<RoomScriptDefinition>>(entry,&entry->scripts)},{0,0},2}};
         std::istringstream rows("#########\n#.......#\n#.@.....#\n#.......#\n#########\n");
@@ -71,6 +72,18 @@ int main() {
         std::istringstream input(encoded_session);auto restored=Session::load(input);
         auto restored_objects=SessionRoomObjects::load(parse_xml(encoded_objects),restored);
         auto restored_runtime=read_room_runtime_state(parse_xml(encoded_runtime),profile.rooms);
+        std::ostringstream combined;SessionRoomScriptExecutor::save(combined,session,profile,objects,runtime);
+        std::istringstream combined_input(combined.str());auto snapshot=SessionRoomScriptExecutor::load(combined_input,profile);
+        check(saved(snapshot.session)==encoded_session && saved(snapshot.objects,snapshot.session)==encoded_objects && saved(snapshot.runtime,profile.rooms)==encoded_runtime);
+        // A changed Create body previously escaped runtime action hashing:
+        // its local record handle stays the same. Authoritative source protects
+        // the combined snapshot even for an unused Create or another room.
+        auto changed_profile=profile;changed_profile.sources[0].children[0].children[4].attributes["png"]="different.spr";
+        check(rejects([&]{std::istringstream wrong(combined.str());SessionRoomScriptExecutor::load(wrong,changed_profile);}));
+        auto changed_grid=profile;changed_grid.layout.at(1,1).room_id=1;
+        check(rejects([&]{std::istringstream wrong(combined.str());SessionRoomScriptExecutor::load(wrong,changed_grid);}));
+        auto malformed=combined.str();const auto sequence=malformed.find("<room-bindings");malformed.replace(sequence,14,"<bad-bindings");
+        check(rejects([&]{std::istringstream wrong(malformed);SessionRoomScriptExecutor::load(wrong,profile);}));
         auto next=SessionRoomScriptExecutor::run(session,profile,objects,runtime);
         auto next_restored=SessionRoomScriptExecutor::run(restored,profile,restored_objects,restored_runtime);
         check(next.presentation.size()==2 && next.presentation[0].text=="gate gone" && next.presentation[1].text=="entered second room");

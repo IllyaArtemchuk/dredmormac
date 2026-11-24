@@ -1,5 +1,6 @@
 #pragma once
 #include "dredmor/session_room_objects.hpp"
+#include "dredmor/session.hpp"
 
 namespace dredmor {
 struct SessionRoomScriptProfile {
@@ -9,6 +10,15 @@ struct SessionRoomScriptProfile {
     // Room index -> program. Runtime script vectors must alias these immutable
     // programs, retaining the one-based local Create record handles.
     std::vector<std::shared_ptr<const RoomScriptProgram>> programs;
+    // Authoritative source nodes, including Create record bodies. Each program
+    // is linked from its corresponding source; do not edit linked definitions
+    // independently. Sources contribute to the saved profile signature.
+    std::vector<XmlNode> sources;
+};
+struct SessionRoomScriptSnapshot {
+    Session session;
+    SessionRoomObjects objects;
+    RoomRuntimeState runtime;
 };
 struct SessionRoomScriptHooks {
     // Optional constructor boundary for NPCs, loot, traps and other single
@@ -37,5 +47,11 @@ class SessionRoomScriptExecutor {
 public:
     static SessionRoomScriptPass run(Session& session,const SessionRoomScriptProfile& profile,
         SessionRoomObjects& objects,RoomRuntimeState& runtime,const SessionRoomScriptHooks& hooks={});
+    static void save(std::ostream& output,const Session& session,const SessionRoomScriptProfile& profile,
+        const SessionRoomObjects& objects,const RoomRuntimeState& runtime);
+    static SessionRoomScriptSnapshot load(std::istream& input,const SessionRoomScriptProfile& profile,
+        std::shared_ptr<const std::vector<ItemDefinition>> definitions={},
+        std::shared_ptr<const std::vector<AbilityDefinition>> abilities={},
+        std::shared_ptr<const std::vector<SpellDefinition>> spells={});
 };
 }

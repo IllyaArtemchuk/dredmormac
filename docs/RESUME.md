@@ -2164,3 +2164,26 @@ scheduled by the native/provisional Session turn loop, and component saves are
 still caller-owned. Next add authoritative profile/save and native puzzle wiring.
 Mac source2da1b85 passed run45396650040; catalogue75bf473 passed45396105118.
 Full outer GameTick, native scripts, effects/AI/generation/UI/audio/game unfinished.
+
+Prepared native rooms can now opt into room_scripts. Source-order registration
+binds supported placed records, then player; keyboard movement/wait and ordinary
+lever mouse/bump interactions run the transactional Session script phase and
+preflight all changed sprites before committing Session/bindings/runtime together.
+Ticker requests appear in the room HUD. New combined scripted-room save wrapper
+persists Session, bindings and runtime and validates immutable XML sources,
+linked scripts/actions and numeric room geometry. Changed Create bodies (whose
+local record handles do not change) are covered by the authoritative source hash.
+Core save versions remain unchanged; ordinary sessions keep their prior format.
+Native scripted-room load permits saved script-driven lever changes and rejects
+bad resources before replacing live state. The new synthetic native puzzle tests
+mouse/bump equivalence, same-pass pending gate visibility, Create/player teleport,
+initial/solved reload, following-pass destruction visibility, failed-constructor
+sprite preparation rollback and malformed saved sprite rollback.
+All70 portable groups pass. The synthetic native fixture generates successfully
+outside git; Mac build/window validation pending this commit. Previous executor
+11519f2 passed Mac run45397687724. Prepared scripting remains opt-in and single
+floor; native action scheduling still uses provisional Session turns (including
+its existing cooldown phase), not the full verified GameTick driver. Other action
+sources, carried-object ownership, breakable events, clocks, all constructors,
+horde/trap/keeper lifetime, visibility body, full AI/generation/effects/UI/audio
+and the complete game remain unfinished.
