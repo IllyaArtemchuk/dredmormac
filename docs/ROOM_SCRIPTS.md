@@ -554,3 +554,24 @@ bytes/RNG, counter maps, labels, object bindings and saved continuation. All70
 portable groups pass; extended native constructor fixture awaits Mac CI. Live
 trap geometry still comes from caller-supplied grid, and all earlier outer-tick,
 carried-object/lifetime, clock, effect/AI/generation/UI/audio/full-game limits apply.
+
+Scripted NPC/loot/trap constructorb74e9d6 passed Mac45399766758; breakable events
+4ea9fe5 passed45399067523. SessionRoomObjects now retains carried item identities
+outside the ordered floor registry. Action owners synchronize before/after
+snapshots: pickup captures last coordinates/scope/label, drops append retained
+identities without re-finalizing their room, and consumed/merged-away/sold items
+retire their bindings. Bag, belt and equipped ownership are recognized. Scripted
+room save2 persists validated carried references; original save1 remains readable
+without the new payload. Tests cover pickup, saved carried references, invalid
+ownership, drop into another room retaining scope/ID, removal and legacy guards.
+Native input now uses one candidate commit path for keyboard, lever/door/secret
+clicks, consumables, player spells, pickup and inventory sales, so script state
+and sprite preparation fail before committed Session changes. The scripted Mac
+fixture also picks up its generated reward and reloads the carried binding; its
+guardian starts away from the pickup route to avoid provisional AI collisions.
+All70 portable groups pass; extended native source awaits Mac CI. Original
+Item::Clicked detachment slice0x5bf8a..0x5bfb6 removes square/owning level and clears
++0x60/+0x64 while retaining assigned room/name/coordinates (static source evidence;
+not yet a new whole-function comparison). Shared collection/world ownership,
+all creation logs, floor travel, full original Item::Clicked/input phases and all
+previous scheduling/clock/AI/effect/generation/UI/audio/full-game limits remain.

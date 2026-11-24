@@ -1,5 +1,6 @@
 #include "dredmor/session_room_objects.hpp"
 #include "dredmor/session.hpp"
+#include "dredmor/session_room_scripts.hpp"
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -70,8 +71,34 @@ int main() {
         check(objects.find(session,-1,"")->monster && !objects.find(session,8,"not finalized"));
         InventoryItem item;item.instance=77;item.kind=ItemKind::misc;item.room_local_id="loot";session.drop(item,session.player().position);
         auto ground=objects.bind(session,{SessionRoomObjectKind::item,77},layout);
-        session.pickup();check(!objects.object(session,ground.object.identity));
-        check(rejects([&]{saved(objects,session);}));check(objects.unregister(ground.object.identity));
+        const auto before_pickup=session;session.pickup();check(!objects.object(session,ground.object.identity));
+        check(rejects([&]{saved(objects,session);}));
+        objects.synchronize_items(before_pickup,session);
+        check(!objects.find(session,3,"loot") && objects.carried().size()==1);
+        check(objects.carried()[0].object.identity==ground.object.identity && objects.carried()[0].object.level==0 && objects.carried()[0].object.position.y==3);
+        const auto carried_bindings=saved(objects,session);std::ostringstream carried_session;session.save(carried_session);
+        std::istringstream carried_input(carried_session.str());auto carried_restored=Session::load(carried_input);
+        auto carried_objects=SessionRoomObjects::load(parse_xml(carried_bindings),carried_restored);
+        check(saved(carried_objects,carried_restored)==carried_bindings && carried_objects.carried().size()==1);
+        SessionRoomScriptProfile carried_profile(layout);carried_profile.rooms.resize(9);carried_profile.programs.resize(9);carried_profile.sources.resize(9,parse_xml("<room/>"));
+        for (std::size_t i=0;i<carried_profile.rooms.size();++i) carried_profile.rooms[i].trigger.identity=std::int32_t(i);
+        std::ostringstream combined_carried;SessionRoomScriptExecutor::save(combined_carried,carried_restored,carried_profile,carried_objects,RoomRuntimeState{});
+        std::istringstream combined_input(combined_carried.str());auto combined_snapshot=SessionRoomScriptExecutor::load(combined_input,carried_profile);
+        check(combined_snapshot.objects.carried().size()==1 && combined_snapshot.objects.carried()[0].object.identity==ground.object.identity);
+        auto unsupported_legacy=combined_carried.str();const auto legacy_version=unsupported_legacy.find("version=\"2\"");check(legacy_version!=std::string::npos);
+        unsupported_legacy.replace(legacy_version,11,"version=\"1\"");
+        check(rejects([&]{std::istringstream legacy(unsupported_legacy);SessionRoomScriptExecutor::load(legacy,carried_profile);}));
+        auto invalid_carried=parse_xml(carried_bindings);invalid_carried.children.back().attributes["subject"]="78";
+        check(rejects([&]{SessionRoomObjects::load(invalid_carried,carried_restored);}));
+        const auto before_drop=carried_restored;auto dropped=carried_restored.inventory().remove(77);check(dropped);
+        carried_restored.drop(*dropped,{7,3});carried_objects.synchronize_items(before_drop,carried_restored);
+        check(carried_objects.carried().empty() && carried_objects.bindings().back().object.identity==ground.object.identity);
+        check(carried_objects.find(carried_restored,3,"loot")->position.x==7 && !carried_objects.find(carried_restored,8,"loot"));
+        // Consuming/removing an owned instance retires its binding rather than
+        // changing it to the identity of a stack or a future factory item.
+        auto after_consumed=session;check(after_consumed.inventory().remove(77));
+        objects.synchronize_items(session,after_consumed);check(objects.carried().empty());
+        check(!objects.unregister(ground.object.identity));
         auto malformed=parse_xml(encoded);malformed.children.push_back(malformed.children.front());
         check(rejects([&]{SessionRoomObjects::load(malformed,restored_session);}));
         malformed=parse_xml(encoded);malformed.children[0].attributes["subject"]="99";

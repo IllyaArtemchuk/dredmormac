@@ -22,6 +22,7 @@ class SessionRoomObjects {
 public:
     explicit SessionRoomObjects(std::uint64_t level=1);
     const std::vector<SessionRoomObjectBinding>& bindings() const {return bindings_;}
+    const std::vector<SessionRoomObjectBinding>& carried() const {return carried_;}
     // Finalization captures the owning tile's room byte. Hordes bypass their
     // record finalizer and must pass false. Duplicate labels are reported just
     // as SetRoomID reports its diagnostic boundary; the new label is retained.
@@ -37,11 +38,16 @@ public:
     std::optional<ScriptObjectState> find(const Session& session,std::int32_t room,std::string_view id) const;
     std::optional<std::uint64_t> player() const;
     bool set_event(const Session& session,RoomEventQueue& events,SessionRoomObjectRef reference,std::string_view name) const;
+    // The integration action owner calls this with its before/after snapshots.
+    // Picked-up items leave registration order but retain identity, scope/name
+    // and last coordinates while carried. Dropping appends them on re-entry.
+    void synchronize_items(const Session& before,const Session& after);
     void save(std::ostream& output,const Session& session) const;
     static SessionRoomObjects load(const XmlNode& node,const Session& session);
 private:
     std::uint64_t level_=1,next_=1;
     std::vector<SessionRoomObjectBinding> bindings_;
+    std::vector<SessionRoomObjectBinding> carried_;
     std::vector<RoomObjectIdentity> registered(const Session& session) const;
 };
 }

@@ -75,6 +75,8 @@ int main(int argc,char** argv) {
         std::ostringstream combined;SessionRoomScriptExecutor::save(combined,session,profile,objects,runtime);
         std::istringstream combined_input(combined.str());auto snapshot=SessionRoomScriptExecutor::load(combined_input,profile);
         check(saved(snapshot.session)==encoded_session && saved(snapshot.objects,snapshot.session)==encoded_objects && saved(snapshot.runtime,profile.rooms)==encoded_runtime);
+        auto legacy=combined.str();const auto version=legacy.find("version=\"2\"");check(version!=std::string::npos);legacy.replace(version,11,"version=\"1\"");
+        std::istringstream legacy_input(legacy);check(saved(SessionRoomScriptExecutor::load(legacy_input,profile).session)==encoded_session);
         // A changed Create body previously escaped runtime action hashing:
         // its local record handle stays the same. Authoritative source protects
         // the combined snapshot even for an unused Create or another room.

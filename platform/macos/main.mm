@@ -214,6 +214,7 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
 - (NSDictionary*)preparePresentation:(const dredmor::Session&)session;
 - (void)applyPresentation:(NSDictionary*)presentation;
 - (NSDictionary*)prepareRoomScripts:(dredmor::Session&)session objects:(dredmor::SessionRoomObjects&)objects runtime:(dredmor::RoomRuntimeState&)runtime;
+- (void)commitCandidate:(dredmor::Session&)candidate refresh:(BOOL)refresh;
 - (BOOL)smokeRoomScripts;
 - (BOOL)smokeFloors;
 - (BOOL)smokeSecretLevers;
@@ -751,6 +752,14 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
         [messages addObject:[NSString stringWithUTF8String:request.text.c_str()]];
     prepared[@"script-messages"]=messages;return prepared;
 }
+- (void)commitCandidate:(dredmor::Session&)candidate refresh:(BOOL)refresh {
+    auto objects=_roomScriptObjects;auto runtime=_roomScriptRuntime;
+    if (objects) objects->synchronize_items(*_session,candidate);
+    NSDictionary *prepared=(_roomScripts && candidate.world().turn()!=_session->world().turn())?
+        [self prepareRoomScripts:candidate objects:*objects runtime:runtime]:refresh?[self preparePresentation:candidate]:nil;
+    *_session=std::move(candidate);_roomScriptObjects=std::move(objects);_roomScriptRuntime=std::move(runtime);
+    if (prepared) [self applyPresentation:prepared];
+}
 - (void)showFailure:(const std::exception&)error {
     NSAlert *alert=[NSAlert new];alert.messageText=@"Cannot complete action";
     alert.informativeText=[NSString stringWithUTF8String:error.what()];[alert runModal];
@@ -850,6 +859,14 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
         NSData *badData=[NSData dataWithBytes:bad.data() length:bad.size()];[badData writeToURL:url options:NSDataWritingAtomic error:nullptr];
         oldImages=_objectImages;bool rejected=false;try {[self loadFromURL:url];} catch(const std::exception&) {rejected=true;}
         if (!rejected || snapshot()!=solved || oldImages!=_objectImages) throw std::runtime_error("scripted load resource rollback failed");
+        NSEvent *south=[NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:0 timestamp:0
+            windowNumber:self.window.windowNumber context:nil characters:@"\uf701" charactersIgnoringModifiers:@"\uf701" isARepeat:NO keyCode:125];
+        [self keyDown:south];[self keyDown:south];[self pickUpItems:nil];
+        if (_session->player().position.x!=4 || _session->player().position.y!=3 || !_session->ground_items().empty() ||
+            _roomScriptObjects->carried().size()!=1 || _roomScriptObjects->find(*_session,0,"reward"))
+            throw std::runtime_error("scripted reward did not detach into carried storage");
+        const auto carried=snapshot();[self saveToURL:url];[self loadFromURL:url];
+        if (snapshot()!=carried || _roomScriptObjects->carried().size()!=1) throw std::runtime_error("scripted carried reward reload differs");
         [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];return YES;
     } catch(const std::exception& error) {
         fprintf(stderr,"native room scripts failed: %s\n",error.what());
@@ -891,12 +908,13 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     [_inventoryController refresh];[_inventoryController showWindow:nil];
 }
 - (BOOL)useInventoryConsumable:(uint64_t)instance {
-    try {const bool result=_session->eat_food(instance) || _session->drink_potion(instance);if (result) [self recordBreakableAnimations];self.needsDisplay=YES;return result;}
+    try {auto next=*_session;const bool result=next.eat_food(instance) || next.drink_potion(instance);if (result) {[self commitCandidate:next refresh:NO];[self recordBreakableAnimations];}self.needsDisplay=YES;return result;}
     catch (const std::exception& error) {fprintf(stderr,"consumable failed: %s\n",error.what());return NO;}
 }
 - (BOOL)quickSellInventoryInstance:(uint64_t)instance {
     try {
-        if (!_content) return NO;const auto action=_session->quick_sell_inventory_item(instance,_content->tweaks().real(dredmor::Difficulty::medium,"store sell price scaler"));
+        if (!_content) return NO;auto next=*_session;const auto action=next.quick_sell_inventory_item(instance,_content->tweaks().real(dredmor::Difficulty::medium,"store sell price scaler"));
+        [self commitCandidate:next refresh:NO];
         self.needsDisplay=YES;return action.handled;
     } catch(const std::exception& error) {[self showFailure:error];return NO;}
 }
@@ -916,11 +934,11 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
             alert.messageText=[NSString stringWithFormat:@"I'll give you %d zorkmids for it.",offer.quote];alert.informativeText=[NSString stringWithFormat:@"%@ × %d",[NSString stringWithUTF8String:(item->artifact?item->artifact->name:definition.name).c_str()],item->quantity];
             [alert addButtonWithTitle:@"Don't Sell"];[alert addButtonWithTitle:@"Sell"];choice=[alert runModal]==NSAlertSecondButtonReturn?1:0;
         }
-        const auto action=_session->sell_inventory_item(index,instance,choice,scaler);self.needsDisplay=YES;return action.handled;
+        auto next=*_session;const auto action=next.sell_inventory_item(index,instance,choice,scaler);[self commitCandidate:next refresh:NO];self.needsDisplay=YES;return action.handled;
     } catch(const std::exception& error) {[self showFailure:error];return NO;}
 }
 - (void)pickUpItems:(id)sender {
-    try { _session->pickup();[_inventoryController refresh];self.needsDisplay=YES; }
+    try {auto next=*_session;next.pickup();[self commitCandidate:next refresh:NO];[_inventoryController refresh];self.needsDisplay=YES; }
     catch (const std::exception& error) { [self showFailure:error]; }
 }
 - (BOOL)smokeInventory {
@@ -1354,13 +1372,9 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
             else { [super keyDown:event]; return; }
     }
     try {
-        auto session=*_session;auto registry=_floors;const auto turn=session.world().turn();const auto outcome=registry.step(session,action);
-        auto scriptObjects=_roomScriptObjects;auto scriptRuntime=_roomScriptRuntime;
+        auto session=*_session;auto registry=_floors;const auto outcome=registry.step(session,action);
         bool lever=false;for (const auto& event:session.events()) lever=lever || event.kind==dredmor::EventKind::lever_used || event.kind==dredmor::EventKind::door_used;
-        NSDictionary *presentation=(_roomScripts && session.world().turn()!=turn)?[self prepareRoomScripts:session objects:*scriptObjects runtime:scriptRuntime]:
-            (outcome==dredmor::FloorTravel::travelled || lever)?[self preparePresentation:session]:nil;
-        *_session=std::move(session);_floors=std::move(registry);if (presentation) [self applyPresentation:presentation];
-        _roomScriptObjects=std::move(scriptObjects);_roomScriptRuntime=std::move(scriptRuntime);
+        [self commitCandidate:session refresh:(outcome==dredmor::FloorTravel::travelled || lever)];_floors=std::move(registry);
         if (outcome==dredmor::FloorTravel::missing_floor || outcome==dredmor::FloorTravel::missing_arrival) NSBeep();
         [self recordBreakableAnimations];[self presentShopNotices];
     }
@@ -1396,8 +1410,8 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
 - (void)castSelectedSpellAt:(dredmor::Position)target {
     if (!_targetSpell) return;
     try {
-        const auto result=_session->use_spell(*_targetSpell,target);
-        if (result==dredmor::SpellUse::cast) {_targetSpell.reset();[self recordBreakableAnimations];}
+        auto next=*_session;const auto result=next.use_spell(*_targetSpell,target);
+        if (result==dredmor::SpellUse::cast) {[self commitCandidate:next refresh:NO];_targetSpell.reset();[self recordBreakableAnimations];}
         else {
             NSString *message=@"That spell cannot be used here.";
             switch (result) {
@@ -1454,8 +1468,8 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
         if (_session->doors()) for (std::size_t i=0;i<_session->doors()->doors.size();++i) {
             const auto& door=_session->doors()->doors[i];if (door.destroyed) continue;
             for (std::size_t part=0;part<3;++part) if (door.assembly.parts[part].x==target.x && door.assembly.parts[part].y==target.y) {
-                auto next=*_session;next.use_door(i,part);NSDictionary *presentation=[self preparePresentation:next];
-                *_session=std::move(next);[self applyPresentation:presentation];[_inventoryController refresh];self.needsDisplay=YES;return;
+                auto next=*_session;next.use_door(i,part);[self commitCandidate:next refresh:YES];
+                [_inventoryController refresh];self.needsDisplay=YES;return;
             }
         }
         for (std::size_t i=0;i<_session->shops().size();++i) {
@@ -1469,15 +1483,12 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
         for (std::size_t i=0;i<_session->script_levers().size();++i) {
             const auto p=_session->script_levers()[i].object.position;if (p.x!=target.x || p.y!=target.y) continue;
             auto next=*_session;if (!next.use_script_lever(i)) return;
-            auto scriptObjects=_roomScriptObjects;auto scriptRuntime=_roomScriptRuntime;
-            NSDictionary *presentation=_roomScripts?[self prepareRoomScripts:next objects:*scriptObjects runtime:scriptRuntime]:[self preparePresentation:next];
-            *_session=std::move(next);_roomScriptObjects=std::move(scriptObjects);_roomScriptRuntime=std::move(scriptRuntime);
-            [self applyPresentation:presentation];[_inventoryController refresh];self.needsDisplay=YES;return;
+            [self commitCandidate:next refresh:YES];[_inventoryController refresh];self.needsDisplay=YES;return;
         }
         for (std::size_t i=0;i<_session->secret_levers().size();++i) {
             const auto p=_session->secret_levers()[i].position;if (p.x!=target.x || p.y!=target.y) continue;
-            auto next=*_session;if (!next.use_secret_lever(i)) return;NSDictionary *presentation=[self preparePresentation:next];
-            *_session=std::move(next);[self applyPresentation:presentation];[_inventoryController refresh];self.needsDisplay=YES;return;
+            auto next=*_session;if (!next.use_secret_lever(i)) return;[self commitCandidate:next refresh:YES];
+            [_inventoryController refresh];self.needsDisplay=YES;return;
         }
     } catch(const std::exception& error) {fprintf(stderr,"interaction failed: %s\n",error.what());}
     [super mouseDown:event];
