@@ -135,3 +135,20 @@ empty strings and point/template effects, with zero mismatches. Controlled maps,
 string/formatting/ASCII number helpers and erase boundaries are supplied; full
 outer room XML callbacks and duplicate case-alias insertion are separate. All55
 portable groups pass. This reader is not yet wired into Session scripts.
+
+`read_room_action` now handles all six factory action schemas after the owning
+script removes its on routing. Move/remove/set require id; move requires a point;
+ticker requires text; set requires set_type and an integer value. Spell requires
+casts, with optional source/target-prefixed points defaulting independently to
+(-1,-1). Spell identity/cast sound come from an explicit resolver after property
+reading. Create requires create_type, then delegates the remaining canonical
+record node to a record reader which owns its schema and point/template effects.
+Action type values are case sensitive; attribute keys are case insensitive.
+
+`verify_room_action_metadata.py` compares2,048 actual factories/property readers,
+including specialized SpellAction/CreateAction attribute readers, with zero
+mismatches. Actual map cloning, point/property flow and all template cells are
+compared using supplied standard-library map/string/number boundaries. Spell
+lookup and created-record factory/body reading are explicit recording boundaries;
+record-body schema/effects and outer on routing are not included. All55 portable
+groups pass. Script repetition/level event lifecycle and Session wiring remain.

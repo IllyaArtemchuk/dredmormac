@@ -4,8 +4,24 @@
 #include <iostream>
 #include <stdexcept>
 using namespace dredmor;
-int main() {
+int main(int argc,char** argv) {
     try {
+        if (argc==2 && std::string(argv[1])=="--metadata") {
+            std::string xml;
+            while (std::cin>>std::quoted(xml)) {
+                RoomStamp room;room.width=room.height=7;room.cells.resize(49);std::string spell_name,record_type;RoomAttributes record_attributes;
+                RoomActionReaders readers;
+                readers.spell=[&](std::string_view name){spell_name=name;return ScriptSpellBinding{17,"cast"};};
+                readers.record=[&](const XmlNode& record,const RoomMarkers&,RoomStamp&) {record_type=record.tag;record_attributes=record.attributes;return std::uint64_t(23);};
+                const auto action=read_room_action(parse_xml(xml),{{'3',{2,4}}},room,readers);
+                auto emit=[](auto value){std::cout<<value<<' ';};
+                emit(int(action.kind));emit(std::quoted(action.object_id));emit(std::quoted(action.text));emit(std::quoted(action.property));emit(action.value);emit(action.point.x);emit(action.point.y);
+                emit(action.spell_origin.x);emit(action.spell_origin.y);emit(action.spell_target.x);emit(action.spell_target.y);emit(action.spell);emit(action.record);emit(std::quoted(action.cast_sound));emit(std::quoted(spell_name));emit(std::quoted(record_type));
+                emit(record_attributes.size());for (const auto& attribute:record_attributes) {emit(std::quoted(attribute.first));emit(std::quoted(attribute.second));}
+                for (auto cell:room.cells) emit(unsigned(cell.kind));std::cout<<'\n';
+            }
+            return 0;
+        }
         RoomActionContext context;Position player;ScriptObjectState object;int blocking,player_blocking=0;bool failure;
         while (std::cin>>context.room>>context.origin.x>>context.origin.y>>player.x>>player.y>>object.position.x>>object.position.y
             >>object.timer.duration>>object.timer.remaining>>object.timer.step>>blocking>>failure) {

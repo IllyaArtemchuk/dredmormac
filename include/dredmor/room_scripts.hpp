@@ -60,6 +60,15 @@ struct RoomAction {
     std::uint64_t record=0,spell=0;
     Position point{},spell_origin{-1,-1},spell_target{-1,-1};
 };
+struct ScriptSpellBinding {std::uint64_t identity=0;std::string cast_sound;};
+struct RoomActionReaders {
+    std::function<ScriptSpellBinding(std::string_view)> spell;
+    // Receives a canonical record node after action_type/create_type removal.
+    // The record reader owns its remaining schema and point/template effects.
+    std::function<std::uint64_t(const XmlNode&,const RoomMarkers&,RoomStamp&)> record;
+};
+// The owning script consumes action routing ('on') before calling this reader.
+RoomAction read_room_action(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room,const RoomActionReaders& readers={});
 enum class RoomActionRequestKind {create,teleport,destroy,ticker,set_blocking,clock_start,clock_stop,player_idle,player_action_flag,player_detach_effects,sound,cast_spell,unknown_property,clock_required};
 struct RoomActionRequest {
     RoomActionRequestKind kind;

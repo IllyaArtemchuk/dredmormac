@@ -93,6 +93,50 @@ RoomScriptEvaluation all_room_conditions_positive(const std::vector<RoomConditio
     }
     return result;
 }
+RoomAction read_room_action(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room,const RoomActionReaders& readers) {
+    auto lower=[](std::string text) {for (auto& c:text) if (c>='A' && c<='Z') c=char(c-'A'+'a');return text;};
+    if (lower(node.tag)!="action" || !node.children.empty()) throw std::invalid_argument("expected room action attributes");
+    RoomAttributes attributes;
+    auto assign=[&](const std::string& key) {const auto found=node.attributes.find(key);if (found!=node.attributes.end()) attributes[lower(key)]=found->second;};
+    for (const auto& key:node.attribute_order) assign(key);
+    for (const auto& entry:node.attributes) if (std::find(node.attribute_order.begin(),node.attribute_order.end(),entry.first)==node.attribute_order.end()) assign(entry.first);
+    auto take=[&](const char* name,bool required=true) {
+        const auto found=attributes.find(name);
+        if (found==attributes.end()) {if (required) throw std::invalid_argument(std::string("room action requires ")+name);return std::string{};}
+        auto value=found->second;attributes.erase(found);return value;
+    };
+    const auto type=take("action_type");RoomAction result;auto candidate=room;
+    if (type=="create") {
+        result.kind=RoomActionKind::create;const auto record_type=take("create_type");
+        if (!readers.record) throw std::invalid_argument("create action requires record reader");
+        XmlNode record;record.tag=record_type;record.attributes=std::move(attributes);
+        result.record=readers.record(record,markers,candidate);room=std::move(candidate);return result;
+    }
+    if (type=="move") result.kind=RoomActionKind::move;
+    else if (type=="remove") result.kind=RoomActionKind::remove;
+    else if (type=="ticker") result.kind=RoomActionKind::ticker;
+    else if (type=="set") result.kind=RoomActionKind::set_property;
+    else if (type=="spell") result.kind=RoomActionKind::spell;
+    else throw std::invalid_argument("unknown room action type");
+    if (result.kind==RoomActionKind::move || result.kind==RoomActionKind::remove || result.kind==RoomActionKind::set_property) result.object_id=take("id");
+    if (result.kind==RoomActionKind::move) {
+        const auto point=take_room_point(attributes,"",markers,candidate);if (!point) throw std::invalid_argument("move action requires point");result.point=*point;
+    }
+    if (result.kind==RoomActionKind::ticker) result.text=take("text");
+    if (result.kind==RoomActionKind::set_property) {result.property=take("set_type");result.value=legacy_integer(take("value"));}
+    std::string spell;
+    if (result.kind==RoomActionKind::spell) {
+        spell=take("casts");
+        if (const auto point=take_room_point(attributes,"source",markers,candidate)) result.spell_origin=*point;
+        if (const auto point=take_room_point(attributes,"target",markers,candidate)) result.spell_target=*point;
+    }
+    if (!attributes.empty()) throw std::invalid_argument("unsupported room action field");
+    if (result.kind==RoomActionKind::spell) {
+        if (!readers.spell) throw std::invalid_argument("spell action requires spell resolver");
+        const auto binding=readers.spell(spell);result.spell=binding.identity;result.cast_sound=binding.cast_sound;
+    }
+    room=std::move(candidate);return result;
+}
 std::vector<RoomActionRequest> perform_room_action(const RoomAction& action,const RoomActionContext& context) {
     std::vector<RoomActionRequest> result;
     auto emit=[&](RoomActionRequest request) {result.push_back(request);if (context.perform) context.perform(request);};

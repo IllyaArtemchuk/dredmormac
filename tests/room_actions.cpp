@@ -5,6 +5,15 @@
 using namespace dredmor;
 int main() {
     try {
+        RoomStamp room;room.width=room.height=7;room.cells.resize(49);RoomMarkers markers{{'3',{2,4}}};
+        const auto moved=read_room_action(parse_xml("<action action_type='move' id='player' at='3'/>"),markers,room);
+        check(moved.kind==RoomActionKind::move && moved.point.x==2 && moved.point.y==4 && room.cells[30].kind==1);
+        const auto set=read_room_action(parse_xml("<action action_type='set' id='clock' set_type='started' value=' -2tail'/>"),markers,room);check(set.value==-2 && set.property=="started");
+        RoomActionReaders readers;readers.spell=[](std::string_view name) {check(name=="Spell");return ScriptSpellBinding{4,"sound"};};
+        const auto cast=read_room_action(parse_xml("<action action_type='spell' casts='Spell' targetat='3'/>"),markers,room,readers);check(cast.spell==4 && cast.spell_origin.x==-1 && cast.spell_target.x==2 && cast.spell_target.y==4 && cast.cast_sound=="sound");
+        readers.record=[](const XmlNode& node,const RoomMarkers&,RoomStamp&) {check(node.tag=="monster" && node.attribute("name")=="Monster" && !node.attributes.count("create_type"));return std::uint64_t(7);};
+        check(read_room_action(parse_xml("<action action_type='create' create_type='monster' name='Monster' at='3'/>"),markers,room,readers).record==7);
+        bool rejected=false;try {read_room_action(parse_xml("<action action_type='move' id='player' x='1'/>"),markers,room);} catch(const std::invalid_argument&) {rejected=true;}check(rejected);
         RoomActionContext context;context.room=3;context.origin={10,20};Position player{1,2};std::vector<RoomActionRequest> seen;
         context.player_position=[&]{return player;};context.find_object=[](auto,std::string_view name)->std::optional<ScriptObjectState>{if (name=="missing") return std::nullopt;ScriptObjectState object;object.identity=1;object.clock=true;return object;};
         context.perform=[&](const RoomActionRequest& request){seen.push_back(request);if (request.kind==RoomActionRequestKind::teleport) player=request.target;};

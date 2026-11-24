@@ -1591,3 +1591,14 @@ groups pass. See docs/ROOM_SCRIPTS.md for boundaries. Action metadata, full oute
 script XML/repetition/event queue/scheduler and Session/native script entities
 remain next; complete generated-floor/gameplay/AI/damage/UI/audio parity is still
 unfinished. New condition XML reader awaits Mac CI.
+
+
+Condition XML source043df24 passed arm64 Mac run45354476452 and packaged-app
+smoke. All six action XML schemas now have a typed reader with required/default
+fields, move/source/target points and resolver/delegated-record boundaries. Actual
+factory/property/specialized reader executions match2,048 fixtures, including
+map cloning and numeric template effects. All55 portable groups pass. Source
+awaits Mac CI. Recovered next: Level::DoRoomTriggerLogic0x61bd4 and repeat gate
+0x61ac6; repeat defaults1 in outer script XML, only eligible success actions run,
+previous-room identity updates after actions and events clear at end. Implement
+and compare the lifecycle next; full generated game remains incomplete.
