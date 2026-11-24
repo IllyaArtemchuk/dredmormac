@@ -1702,3 +1702,14 @@ All61 portable groups pass. Native CI is pending for runtime glue. Next bind thi
 runtime to live Session entities, created records/spells, queued deletion/movement,
 cached floor/save ownership and a complete native scripted puzzle. Full gameplay,
 AI/effects/generation/UI/audio parity remains unfinished.
+
+Composed runtime07f536b passed arm64 Mac run45367795135 and packaged-app smoke.
+Deferred teleport/destruction and base object lifetime now match8,192 complete
+original fixtures (11232 deleting destructors,3918 teleports,1565 detachments).
+Compared queue/dedup/order, all inventory references, object state, every level/
+monster/tile list and no libc/MT consumption. All62 portable groups pass.
+Strings/allocation/list helpers, Bob/resource destruction/storage release and
+IsMonster are boundaries; subclass destructors/teleports remain external hooks.
+The null-level detach sentinel and current-level-vs-owner distinction are retained.
+New source awaits Mac CI. Session/native room script/tick integration, constructors,
+full population/AI/effects/UI/audio and complete gameplay remain unfinished.

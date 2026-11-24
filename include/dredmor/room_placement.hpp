@@ -19,6 +19,11 @@ struct RoomPlacementObject {
     RoomObjectIdentity room;
     bool monster=false;
     std::optional<RoomSquareIdentity> square;
+    bool destroyed=false;
+};
+struct RoomTeleport {
+    std::uint64_t object=0,level=0;
+    Position position{};
 };
 struct RoomPlacementWorld {
     std::map<std::uint64_t,RoomLevelRegistry> levels;

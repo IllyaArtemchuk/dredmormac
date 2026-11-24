@@ -15,7 +15,7 @@ void unregister_room_object(RoomLevelRegistry& level,std::uint64_t identity,bool
     erase_first(level.objects,identity);
 }
 void teleport_room_object(RoomPlacementObject& object,RoomPlacementWorld& world,Position destination,std::uint64_t level) {
-    if (!level || !world.levels.count(level) || (object.room.level && !world.levels.count(object.room.level)))
+    if (object.destroyed || !level || !world.levels.count(level) || (object.room.level && !world.levels.count(object.room.level)))
         throw std::invalid_argument("room teleport requires registered owning levels");
     auto& target=world.levels.at(level);
     if (object.square) {

@@ -15,10 +15,7 @@ struct TickLevelState {
     std::vector<std::uint64_t> objects;
     std::vector<std::vector<std::uint64_t>> tile_effects;
 };
-struct TickTeleport {
-    std::uint64_t object=0,level=0;
-    Position position{};
-};
+using TickTeleport=RoomTeleport;
 struct GameTickState {
     bool announced_full_inventory=false;
     std::int32_t slow_time_counter=0,tutorial=0;

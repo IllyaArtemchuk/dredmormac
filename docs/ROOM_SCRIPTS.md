@@ -368,3 +368,37 @@ The owner must transact world/runtime/RNG together and process safe teleport and
 destruction requests in their verified GameTick phases. Session/native script
 binding, created records, full scheduling and original save compatibility remain
 unfinished.
+
+Deferred object lifetime now follows SafeTeleport0x29990,
+RemoveFromSafeTeleportList0x299f0, AddToDestructionList0x2ba60,
+ClearDestructionList0x29a50 and FixSafeTeleports0x29bc0. SafeTeleport preserves
+ordered duplicate requests. Explicit removal deletes all matching requests.
+Destruction enqueue clears a matching picked item even for a duplicate enqueue,
+but adds each object only once. Clearing first removes one pending teleport,
+removes square membership, calls Level::RemoveObject on the global current level,
+clears all9 belt/48 bag references plus active/picked pointers, then invokes the
+virtual deleting destructor. The live destruction vector can grow during callbacks.
+
+The base deleting GameObj destructor0x37510 removes every remaining pending
+teleport, clears its square pointer, erases only the first main-registry entry
+from its own owning level, and clears that owner. It does not remove a monster
+vector entry in this base phase. Bob/resource destruction and storage release
+remain boundaries; subclass lifetime is an explicit replaceable hook.
+
+FixSafeTeleports clears destruction first. It skips null object requests, invokes
+nonnull-level TeleportTo with final flag1, or detaches for a null destination
+level. A null-level request skips detachment when either requested coordinate is-1
+and either existing coordinate is-1. Otherwise it removes square membership and
+owning-level registration and clears square/owner while retaining coordinates.
+The queue clears after all requests, including callback-appended entries. Dangling
+objects and invalid null attachment contracts use explicit port guards.
+
+verify_room_deferred.py executes all those complete original routines, actual
+base deleting destructor, Square removal, Level registration helpers, base
+TeleportTo and picked-item accessors on8,192 fixtures. It compares11232 destructor,
+3918 teleport and1565 detach traces, every queue/inventory/object/registry/tile state,
+and no libc/MT use. Duplicate registrations/memberships and mismatched current vs
+owner levels are included. Allocation/list/string helpers, IsMonster, Bob/resource
+destruction and base storage release are supplied. Callback-appended work is also
+covered by focused portable tests. All62 portable groups pass. Full subclass,
+Session/native script/tick and save integration remain unfinished.

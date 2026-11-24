@@ -2495,3 +2495,13 @@ Constructor constants0x7c00e/0x7c0e8 and Draw0x7b74e justify ordinary Session
 lever presentation, but no full resource-constructor oracle claim. Session save22
 is this port's state format, not original save compatibility. See ROOM_SCRIPTS.md.
 Binary SHA256`a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.
+
+Deferred lifetime0x29990/0x299f0/0x2ba60/0x29a50/0x29bc0 and deleting base GameObj
+destructor0x37510 now match8,192 complete original fixtures with full queue,
+inventory, object, registry/monster/tile state and no RNG consumption. High
+confidence within valid live-pointer fixtures; Bob/resource destruction, storage
+release, IsMonster and library helpers are boundaries. Source subclass callbacks
+remain separate. Current-level removal precedes base owning-level cleanup; null
+teleport sentinel preserves coordinates. See ROOM_SCRIPTS.md and
+verify_room_deferred.py. Binary SHA256
+`a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.
