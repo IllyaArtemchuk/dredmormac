@@ -22,7 +22,7 @@ class SceneTests(unittest.TestCase):
             data=json.loads((output/'scene.json').read_text());root=Path(data['data_root']);self.assertTrue(data['smoke_shops'])
             self.assertEqual(data['collision'].count('@'),1);self.assertEqual(len(data['rows']),6)
             room=ET.parse(root/'game/rooms.xml').getroot().find('room');rows=[node.get('text') for node in room.findall('row')]
-            self.assertEqual(room.find('flags').get('shop'),'1');self.assertEqual(rows[1][5],'s');self.assertEqual(rows[2][6],'S');self.assertEqual(rows[3][6:8],'ii')
+            self.assertEqual(room.find('flags').get('shop'),'1');self.assertEqual(rows[1][5],'s');self.assertEqual(rows[1][6],'i');self.assertEqual(rows[2][6],'S');self.assertEqual(rows[3][6:8],'ii')
             for resource in ['dungeon/store_pedestal.png','dungeon/shop_item.png','dungeon/keeper.spr']:self.assertTrue((root/resource).is_file())
             items=ET.parse(root/'game/itemDB.xml').getroot();self.assertEqual(len(items),4);self.assertTrue(all((root/item.get('iconFile')).is_file() for item in items if item.get('special')!='1'))
             self.assertEqual(ET.parse(root/'game/monDB.xml').getroot().find('monster').get('name'),'Brax')

@@ -188,6 +188,7 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
 - (BOOL)smokeShops;
 - (void)showShopPedestal:(NSUInteger)shop index:(NSUInteger)pedestal;
 - (void)presentShopNotices;
+- (void)showShopKeeper:(NSUInteger)index;
 - (BOOL)smokeSaveLoad;
 - (void)saveDocument:(id)sender;
 - (void)openDocument:(id)sender;
@@ -888,7 +889,7 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
 }
 - (BOOL)smokeShops {
     auto fail=[&](const char* stage) {fprintf(stderr,"native shop smoke failed at %s\n",stage);return NO;};
-    if (_session->shops().size()!=1 || _shopImages.count!=1 || _session->shops()[0].pedestals.size()!=2 || _session->player().zorkmids!=100) return fail("initial ownership");
+    if (_session->shops().size()!=1 || _shopImages.count!=1 || _session->shops()[0].pedestals.size()!=3 || _session->player().zorkmids!=100) return fail("initial ownership");
     {
         std::ostringstream encoded;_session->save(encoded);const auto before=encoded.str();NSArray *images=_shopImages;
         auto wrong_layout=before;const auto guard=wrong_layout.find("guard-x=\"5\"");if (guard==std::string::npos) return fail("layout mutation fixture");wrong_layout.replace(guard,11,"guard-x=\"4\"");
@@ -925,13 +926,17 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
         NSEvent *event=[NSEvent mouseEventWithType:NSEventTypeLeftMouseDown location:point modifierFlags:0 timestamp:0 windowNumber:self.window.windowNumber context:nil eventNumber:0 clickCount:1 pressure:1];[self mouseDown:event];const BOOL clicked=!timer.valid;[timer invalidate];return clicked;
     };
     move(124,@"\uf703");move(124,@"\uf703");move(125,@"\uf701");move(125,@"\uf701");move(124,@"\uf703");
-    if (!_session->shop_presence().in_shop || !choose({6,3},@"Don't Buy") || !_session->shops()[0].pedestals[0].item) return fail("decline dialog");
-    if (!choose({6,3},@"Buy") || _session->player().zorkmids!=90 || _session->shops()[0].pedestals[0].item || _shopImages[0][@"stock"][0]!=NSNull.null || ![self smokeSaveLoad]) return fail("purchase save");
+    if (!_session->shop_presence().in_shop || !choose({6,3},@"Don't Buy") || !_session->shops()[0].pedestals[1].item) return fail("decline dialog");
+    if (!choose({6,3},@"Buy") || _session->player().zorkmids!=90 || _session->shops()[0].pedestals[1].item || _shopImages[0][@"stock"][1]!=NSNull.null || ![self smokeSaveLoad]) return fail("purchase save");
     move(125,@"\uf701");move(124,@"\uf703");move(124,@"\uf703");
     if (!choose({7,3},@"Take unpaid") || !_session->has_unpaid_goods() || !_session->shops()[0].guarding || _session->shops()[0].keeper.position.x!=5 || ![self smokeSaveLoad]) return fail("taking and guard save");
     bool labelled=false;for (NSDictionary *row in [self inventoryRows]) if ([row[@"for_sale"] boolValue] && [row[@"location"] hasPrefix:@"Unpaid"]) labelled=true;if (!labelled) return fail("unpaid inventory label");
-    move(123,@"\uf702");move(123,@"\uf702");move(123,@"\uf702");move(126,@"\uf700");move(126,@"\uf700");move(126,@"\uf700");
-    NSTimer *notice=prepareChoice(@"OK");move(123,@"\uf702");const BOOL dismissed=!notice.valid;[notice invalidate];if (!dismissed) return fail("theft notice dialog");
+    move(123,@"\uf702");move(123,@"\uf702");move(126,@"\uf700");move(126,@"\uf700");
+    if (!choose({5,1},@"Don't Buy") || !_session->has_unpaid_goods() || _session->player().zorkmids!=90) return fail("declined debt");
+    if (!choose({5,1},@"Buy") || _session->has_unpaid_goods() || _session->player().zorkmids!=80 || _session->shops()[0].guarding || _session->shops()[0].keeper.position.x!=6 || ![self smokeSaveLoad]) return fail("settled debt save");
+    move(126,@"\uf700");
+    if (!choose({6,1},@"Take unpaid") || !_session->has_unpaid_goods() || !_session->shops()[0].guarding || ![self smokeSaveLoad]) return fail("second unpaid taking");
+    move(123,@"\uf702");NSTimer *notice=prepareChoice(@"OK");move(123,@"\uf702");const BOOL dismissed=!notice.valid;[notice invalidate];if (!dismissed) return fail("theft notice dialog");
     if (_session->shop_presence().in_shop || !_session->shop_presence().level_angry || !_session->shops()[0].angry || _session->has_unpaid_goods() || ![self smokeSaveLoad]) return fail("theft exit save");
     [self display];return YES;
 }
@@ -1079,6 +1084,17 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
         NSAlert *alert=[NSAlert new];alert.messageText=@"You have stolen merchandise from a shop! You're in trouble now...";[alert addButtonWithTitle:@"OK"];[alert runModal];
     }
 }
+- (void)showShopKeeper:(NSUInteger)index {
+    const auto& shop=_session->shops().at(index);if (shop.angry || !shop.keeper.alive() || !_session->player().alive()) return;
+    const float scaler=_content->tweaks().real(dredmor::Difficulty::medium,"store buy price scaler");int choice=0;
+    if (_session->has_unpaid_goods()) {
+        NSAlert *alert=[NSAlert new];alert.messageText=[NSString stringWithFormat:@"That'll be %d zorkmids. You have %d zorkmids. You want it or don'tcha?",_session->shop_debt(scaler),_session->player().zorkmids];
+        [alert addButtonWithTitle:@"Don't Buy"];[alert addButtonWithTitle:@"Buy"];choice=[alert runModal]==NSAlertSecondButtonReturn?1:0;
+    }
+    auto next=*_session;const auto action=next.settle_shop_debt(index,choice,scaler);NSDictionary *presentation=[self preparePresentation:next];*_session=std::move(next);[self applyPresentation:presentation];[_inventoryController refresh];self.needsDisplay=YES;
+    if (action.insufficient_funds) {NSAlert *alert=[NSAlert new];alert.messageText=@"You don't have the money, punk!";[alert addButtonWithTitle:@"OK"];[alert runModal];}
+    else if (!action.debt_dialog) {NSAlert *alert=[NSAlert new];alert.messageText=@"You have no unpaid items.";[alert addButtonWithTitle:@"OK"];[alert runModal];}
+}
 - (void)showShopPedestal:(NSUInteger)shopIndex index:(NSUInteger)pedestalIndex {
     const auto& pedestal=_session->shops().at(shopIndex).pedestals.at(pedestalIndex);if (!pedestal.item) return;
     const auto& item=*pedestal.item;const auto& definition=_content->items().at(item.definition);
@@ -1099,6 +1115,10 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     const dredmor::Position target{int((point.x-20)/cell),int((point.y-20)/cell)};
     if (_targetSpell) {[self castSelectedSpellAt:target];return;}
     try {
+        for (std::size_t i=0;i<_session->shops().size();++i) {
+            const auto point=_session->shops()[i].keeper.position;
+            if (point.x==target.x && point.y==target.y && std::abs(point.x-_session->player().position.x)+std::abs(point.y-_session->player().position.y)==1) {[self showShopKeeper:i];return;}
+        }
         for (std::size_t i=0;i<_session->shops().size();++i) for (std::size_t j=0;j<_session->shops()[i].pedestals.size();++j) {
             const auto point=_session->shops()[i].pedestals[j].position;
             if (point.x==target.x && point.y==target.y && std::abs(point.x-_session->player().position.x)+std::abs(point.y-_session->player().position.y)==1) {[self showShopPedestal:i index:j];return;}

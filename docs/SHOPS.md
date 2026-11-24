@@ -244,3 +244,11 @@ branches, payment/clear/guard requests, idle line selection/wrapping counter,
 cleared fields and unchanged RNG. Local Session tests verify unpaid settlement,
 keeper return, insufficient funds and saved chat continuation. Native keeper debt
 UI and original dialogue text remain next; selling items is a different path.
+
+Native adjacent keeper clicks now expose the measured debt quote and Don't Buy/
+Buy response order, connect successful payment to clearing/keeper return, and
+retain insufficient-funds behavior. The synthetic shop has three ordered pedestals
+so it can test direct purchase, taking/declining debt/paying debt, then another
+unpaid taking and theft exit in the same run. Idle counter state is modeled, but
+native idle text is a short functional message; original quip text is still pending.
+The new native debt fixture awaits actual arm64 validation.

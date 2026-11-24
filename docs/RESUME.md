@@ -1695,3 +1695,11 @@ continuation in optional Session20 chat metadata. All48 local groups pass.
 Native keeper debt UI remains next; source awaits arm64 validation. Long original
 quip text, item selling, mouse-held mode, keeper AI, original UI/audio and the full
 generated-floor pipeline/playthrough remain unfinished.
+
+
+Native keeper debt UI now connects adjacent clicks, original quote/button order,
+declined/accepted settlement, insufficient funds and keeper return. The synthetic
+shop expands to three pedestals and tests direct purchase, taking/declined debt/
+payment, then another taking and theft exit, with intervening save/reloads.
+All48 portable groups pass; actual arm64 verification is pending. Idle counter
+control flow persists, but native long original quip text remains pending.
