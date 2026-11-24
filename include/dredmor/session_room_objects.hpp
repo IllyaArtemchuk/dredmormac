@@ -36,6 +36,7 @@ public:
     std::optional<ScriptObjectState> object(const Session& session,std::uint64_t identity) const;
     std::optional<ScriptObjectState> find(const Session& session,std::int32_t room,std::string_view id) const;
     std::optional<std::uint64_t> player() const;
+    bool set_event(const Session& session,RoomEventQueue& events,SessionRoomObjectRef reference,std::string_view name) const;
     void save(std::ostream& output,const Session& session) const;
     static SessionRoomObjects load(const XmlNode& node,const Session& session);
 private:

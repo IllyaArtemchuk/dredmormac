@@ -134,6 +134,13 @@ std::optional<std::uint64_t> SessionRoomObjects::player() const {
     for (const auto& binding:bindings_) if (binding.reference.kind==SessionRoomObjectKind::player) return binding.object.identity;
     return std::nullopt;
 }
+bool SessionRoomObjects::set_event(const Session& session,RoomEventQueue& events,SessionRoomObjectRef reference,std::string_view name) const {
+    for (const auto& binding:bindings_) if (binding.reference.kind==reference.kind && binding.reference.subject==reference.subject) {
+        if (!resolve(session,reference)) return false;
+        set_room_event(events,binding.object.assigned_room,binding.object.id,name);return true;
+    }
+    return false;
+}
 void SessionRoomObjects::save(std::ostream& out,const Session& session) const {
     // Do not silently drop stale registrations during save. The lifetime owner
     // must remove them at the destruction/detachment phase first.

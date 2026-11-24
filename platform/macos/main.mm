@@ -733,6 +733,8 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     if (presentation[@"script-messages"]) _scriptMessages=presentation[@"script-messages"];
 }
 - (NSDictionary*)prepareRoomScripts:(dredmor::Session&)session objects:(dredmor::SessionRoomObjects&)objects runtime:(dredmor::RoomRuntimeState&)runtime {
+    for (const auto& event:session.events()) if (event.kind==dredmor::EventKind::object_hit || event.kind==dredmor::EventKind::object_broken)
+        objects.set_event(session,runtime.triggers.events,{dredmor::SessionRoomObjectKind::breakable,event.target},event.kind==dredmor::EventKind::object_hit?"hit":"broken");
     dredmor::SessionRoomScriptHooks hooks;const auto root=_dataRoot;
     hooks.breakable_frames=[root](const auto& definition) {
         return breakableFrames(breakableSprites(definition.intact,definition.breaking.value_or(definition.intact),definition.broken,root));

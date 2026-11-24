@@ -101,6 +101,45 @@ int main() {
         check(saved(session)==unchanged && fresh.triggers.success_counts.empty());
         auto mismatch=profile;mismatch.rooms[0].trigger.scripts=profile.rooms[1].trigger.scripts;
         check(rejects([&]{SessionRoomScriptExecutor::run(session,mismatch,objects,runtime);}));
+        // Breakable SetEvent uses its captured room/name, and hit+broken can
+        // both reach this pass. Removal cancels the destroyed object's pending
+        // integration animation indices instead of targeting a shifted object.
+        std::istringstream event_rows("#########\n#@......#\n#.......#\n#.......#\n#########\n");
+        Session event_session(World::read(event_rows),make_player({3,2,2}),7);
+        BreakableRoomDefinition fragile;fragile.placement.relative={2,1};fragile.placement.id="fragile";
+        fragile.intact.image="intact.spr";fragile.broken.image="broken.spr";fragile.hits_needed=2;
+        event_session.create_breakable(fragile,{0,0},BreakableFrames{3,1,4});
+        auto event_cells=cells;for (auto& cell:event_cells) cell.room_id=0;
+        SessionRoomScriptProfile event_profile(DungeonLayout(9,5,event_cells));
+        auto event_program=std::make_shared<RoomScriptProgram>();
+        RoomCondition hit;hit.kind=RoomConditionKind::event;hit.object_id="fragile";hit.event_name="hit";
+        RoomCondition broken_event=hit;broken_event.event_name="broken";
+        RoomAction hit_message=message;hit_message.text="hit";RoomAction broken_message=message;broken_message.text="broken";
+        RoomAction remove;remove.kind=RoomActionKind::remove;remove.object_id="fragile";
+        RoomScriptDefinition hit_script;hit_script.success_repeat=-1;hit_script.conditions={hit};hit_script.success={hit_message};
+        RoomScriptDefinition broken_script;broken_script.conditions={broken_event};broken_script.success={remove,broken_message};
+        event_program->scripts={hit_script,broken_script};event_profile.programs={event_program};
+        event_profile.sources={parse_xml("<room><custombreakable x='2' y='1' id='fragile' png='intact.spr' broken='broken.spr' hitsNeededToBreak='2'/></room>")};
+        event_profile.rooms={{{true,1,0,std::shared_ptr<const std::vector<RoomScriptDefinition>>(event_program,&event_program->scripts)},{0,0},1}};
+        SessionRoomObjects event_objects;event_objects.bind(event_session,{SessionRoomObjectKind::breakable,1},event_profile.layout);
+        event_objects.bind(event_session,{SessionRoomObjectKind::player,event_session.player().id},event_profile.layout);
+        RoomRuntimeState event_runtime;
+        event_session.step(Action::east);
+        check(event_objects.set_event(event_session,event_runtime.triggers.events,{SessionRoomObjectKind::breakable,1},"hit"));
+        check(event_objects.set_event(event_session,event_runtime.triggers.events,{SessionRoomObjectKind::breakable,1},"hit"));
+        check(event_runtime.triggers.events.size()==1 && event_runtime.triggers.events.begin()->second.size()==1);
+        check(!event_objects.set_event(event_session,event_runtime.triggers.events,{SessionRoomObjectKind::breakable,2},"hit"));
+        std::ostringstream pending_events;SessionRoomScriptExecutor::save(pending_events,event_session,event_profile,event_objects,event_runtime);
+        std::istringstream pending_input(pending_events.str());auto pending=SessionRoomScriptExecutor::load(pending_input,event_profile);
+        auto first_hit=SessionRoomScriptExecutor::run(pending.session,event_profile,pending.objects,pending.runtime);
+        check(first_hit.presentation.size()==1 && first_hit.presentation[0].text=="hit" && pending.session.breakables().size()==1);
+        pending.session.step(Action::east);
+        for (const auto& event:pending.session.events())
+            pending.objects.set_event(pending.session,pending.runtime.triggers.events,{SessionRoomObjectKind::breakable,event.target},event.kind==EventKind::object_hit?"hit":"broken");
+        auto last_hit=SessionRoomScriptExecutor::run(pending.session,event_profile,pending.objects,pending.runtime);
+        check(last_hit.presentation.size()==2 && last_hit.presentation[1].text=="broken" && pending.session.breakables().empty());
+        check(!pending.objects.find(pending.session,0,"fragile") && pending.session.events().empty() && pending.runtime.triggers.events.empty());
+        check(SessionRoomScriptExecutor::run(pending.session,event_profile,pending.objects,pending.runtime).presentation.empty());
         std::cout<<"live Session room puzzle preserves same-pass visibility, deferred deletion/movement, stable references, rollback and saved continuation\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

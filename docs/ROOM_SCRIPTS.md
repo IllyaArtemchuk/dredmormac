@@ -531,3 +531,14 @@ its existing cooldown phase), not the full verified GameTick driver. Other actio
 sources, carried-object ownership, breakable events, clocks, all constructors,
 horde/trap/keeper lifetime, visibility body, full AI/generation/effects/UI/audio
 and the complete game remain unfinished.
+
+Live bindings now deliver SetEvent through the owning assigned room/local label,
+using the measured event-set kernel (GameObj::SetEvent0x36cbe; Level0x61712).
+The native script phase forwards breakable hit/broken events before conditions.
+Script destruction removes pending presentation events for that breakable and
+adjusts later breakable event indices along with bindings, avoiding animation of
+a different object after vector erasure. Tests save pending hit events, reload,
+observe both hit and broken on the breaking turn, remove the live breakable,
+clear events and prevent replay. All70 portable groups pass. Full source event
+coverage/lifetime, scheduling and the complete game remain unfinished; native
+scripted puzzle51ff808 is still running Mac CI45398534536.

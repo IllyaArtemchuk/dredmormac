@@ -110,7 +110,18 @@ SessionRoomScriptPass SessionRoomScriptExecutor::run(Session& session,const Sess
         const auto ref=reference(identity);
         switch (ref.kind) {
             case SessionRoomObjectKind::custom:candidate.custom_objects_.erase(candidate.custom_objects_.begin()+ref.subject-1);break;
-            case SessionRoomObjectKind::breakable:candidate.breakables_.erase(candidate.breakables_.begin()+ref.subject-1);break;
+            case SessionRoomObjectKind::breakable:
+                candidate.breakables_.erase(candidate.breakables_.begin()+ref.subject-1);
+                // Integration presentation events use one-based typed indices.
+                // A destroyed breakable cannot retain an animation request for
+                // the different object that shifts into its old index.
+                candidate.events_.erase(std::remove_if(candidate.events_.begin(),candidate.events_.end(),[&](auto& event) {
+                    if (event.kind!=EventKind::object_hit && event.kind!=EventKind::object_broken) return false;
+                    if (event.target==ref.subject) return true;
+                    if (event.target>ref.subject) --event.target;
+                    return false;
+                }),candidate.events_.end());
+                break;
             case SessionRoomObjectKind::lever:candidate.script_levers_.erase(candidate.script_levers_.begin()+ref.subject-1);break;
             case SessionRoomObjectKind::item:erase_id(candidate.ground_,ref.subject,[](const auto& value){return value.item.instance;});break;
             case SessionRoomObjectKind::trap:throw std::runtime_error("script trap destruction requires origin/effect lifetime integration");
