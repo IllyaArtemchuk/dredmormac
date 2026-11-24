@@ -54,15 +54,15 @@ bool needs_artifact(const ItemDefinition& definition) {
     return (definition.kind==ItemKind::weapon || definition.kind==ItemKind::armour) && item_flag(definition,"artifact");
 }
 std::uint32_t pick_gear(const std::vector<ItemDefinition>& definitions,const ItemFactoryTables& tables,
-    const ItemFactoryContext& context,GameRandom& random,ItemFactoryState& state,ItemKind kind,bool allow_artifact) {
+    const ItemFactoryContext& context,GameRandom& random,ItemFactoryState& state,ItemKind kind,bool allow_artifact,int offset=0) {
     const auto buckets=build_gear_buckets(definitions,tables.named[context.level_set],kind);
     std::vector<GearCandidate> gear;gear.reserve(definitions.size());
     for (std::size_t i=0;i<definitions.size();++i) {
         const auto& item=definitions[i];gear.push_back({item.weapon_type,item_flag(item,"craftoutput"),item_flag(item,"artifact"),
             state.spawned_artifacts.count(static_cast<std::uint32_t>(i))!=0,item.special,item.debug});
     }
-    const auto selected=kind==ItemKind::weapon?select_weapon(gear,buckets,random,context.depth,context.trap_deviation,allow_artifact):
-        select_armour(gear,buckets,random,context.depth,context.trap_deviation);
+    const auto selected=kind==ItemKind::weapon?select_weapon(gear,buckets,random,context.depth,context.trap_deviation,allow_artifact,offset):
+        select_armour(gear,buckets,random,context.depth,context.trap_deviation,offset);
     const auto entry=static_cast<std::uint32_t>(selected.index);
     if (kind==ItemKind::weapon && gear[entry].artifact && gear[entry].artifact_spawned) state.spawned_artifacts.insert(entry);
     return entry;
@@ -99,6 +99,49 @@ InventoryItem construct_factory_item(const ItemDefinition& definition,std::uint3
         }
     }
     random=std::move(candidate);return item;
+}
+InventoryItem make_shop_stock(const std::vector<ItemDefinition>& definitions,
+    const ItemFactoryTables& tables,const ItemFactoryContext& context,
+    std::uint64_t instance,GameRandom& random,ItemFactoryState& state,std::size_t max_retries) {
+    if (context.level_set>=4 || !max_retries) throw std::invalid_argument("invalid shop stock context");
+    auto candidate=random;auto selected_state=state;std::optional<std::uint32_t> index;
+    if (candidate.mt.bounded(4)==0) {
+        const auto& pool=tables.named[context.level_set];
+        if (pool.empty()) throw std::invalid_argument("empty shop stock pool");
+        for (std::size_t attempt=0;attempt<max_retries;++attempt) {
+            const auto selected=pool.at(candidate.libc.bounded(static_cast<std::uint32_t>(pool.size())));
+            const auto& definition=definitions.at(selected);
+            if (!definition.special && !definition.debug) {index=selected;break;}
+        }
+        if (!index) throw std::runtime_error("shop stock rejection budget exceeded");
+    } else {
+        const bool weapon=candidate.mt.bounded(2)==0;
+        index=pick_gear(definitions,tables,context,candidate,selected_state,weapon?ItemKind::weapon:ItemKind::armour,true,weapon?1:0);
+    }
+    const auto& definition=definitions.at(*index);
+    switch (definition.kind) {
+    case ItemKind::weapon:case ItemKind::armour:case ItemKind::potion:case ItemKind::wand:
+    case ItemKind::food:case ItemKind::gem:case ItemKind::reagent:case ItemKind::mushroom:
+    case ItemKind::toolkit:case ItemKind::trap:break;
+    default:throw std::invalid_argument("shop selected unsupported direct item kind");
+    }
+    auto item=construct_factory_item(definition,*index,instance,context,candidate);
+    if (definition.kind==ItemKind::weapon && (definition.weapon_type==5 || definition.weapon_type==6)) {
+        item.stackable=true;
+        item.quantity=int(2+((std::uint64_t(candidate.libc.next())*0x1bffffffU)>>57));
+        const auto maximum=max_stack(definition);if (maximum>0 && item.quantity>maximum) item.quantity=maximum;
+    }
+    random=std::move(candidate);state=std::move(selected_state);return item;
+}
+ShopInventoryPlan make_shop_inventory(const std::vector<ItemDefinition>& definitions,
+    const ItemFactoryTables& tables,const ItemFactoryContext& context,
+    std::size_t count,std::uint64_t first_instance,GameRandom& random,ItemFactoryState& state) {
+    if (count>10000 || (count && (!first_instance || count-1>std::numeric_limits<std::uint64_t>::max()-first_instance)))
+        throw std::invalid_argument("invalid shop inventory identities/count");
+    auto candidate=random;auto selected_state=state;ShopInventoryPlan plan;
+    plan.keeper_variant=candidate.libc.next()>>29;plan.items.reserve(count);
+    for (std::size_t i=0;i<count;++i) plan.items.push_back(make_shop_stock(definitions,tables,context,first_instance+i,candidate,selected_state));
+    random=std::move(candidate);state=std::move(selected_state);return plan;
 }
 InventoryItem make_level_treasure(const std::vector<ItemDefinition>& definitions,
     const ItemFactoryTables& tables,const ItemFactoryContext& context,const TreasureOptions& options,

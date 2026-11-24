@@ -1300,3 +1300,19 @@ job138235736305: all74 tests plus relocated packaged-app smoke.
 Full ordered room content/shops/scripts, generated-floor integration, remaining
 population/AI/effects, original UI/audio/FOV and a reference playthrough remain
 unfinished. These constructor comparisons do not establish a complete game.
+
+
+Automatic armour source642a01e passed actual arm64 macos-15 run45337697243,
+job138253579701: all77 checks and relocated packaged-app smoke. The preceding
+a7f4307 run failed only the new test's equipment-slot selection; the corrected
+fixture explicitly selects Neck through the real inventory popup.
+
+Shop stock planning now implements the actual quarter-pool/gear selection,
+weapon offset1, unique reservations, direct construction, automatic accessories,
+keeper variant ordering and ammunition quantity/caps. Batch creation commits
+identities/RNG/unique state atomically. See SHOPS.md for API/evidence/boundaries.
+Original comparisons pass1,024 actual controlled shop content-writer executions,
+8,166 stock items and full RNG states, including actual selectors/CreateItem/
+Armour automatic tail/CreateArtifact. Keeper/pedestal/base initialization and
+placement are boundaries; shop entities, pricing/purchase/theft/AI and the complete
+ordered room-content pass remain unfinished. New shop source awaits arm64 CI.

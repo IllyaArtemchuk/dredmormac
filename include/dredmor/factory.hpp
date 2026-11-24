@@ -49,6 +49,21 @@ InventoryItem construct_factory_item(const ItemDefinition& definition,std::uint3
 InventoryItem make_level_treasure(const std::vector<ItemDefinition>& definitions,
     const ItemFactoryTables& tables,const ItemFactoryContext& context,const TreasureOptions& options,
     bool artifact,std::uint64_t instance,GameRandom& random);
+// Stock selection in WriteDungeonContentFromRoomRecords. Quarter of requests
+// use the full level-set pool (reject special/debug, permit craftoutput); others
+// select weapon(+1 offset, unique artifacts allowed) or armour(+0). Direct item
+// construction applies automatic armour enchantments, without an outer artifact
+// roll. Returned item belongs on a for-sale pedestal, not ordinary ground loot.
+InventoryItem make_shop_stock(const std::vector<ItemDefinition>& definitions,
+    const ItemFactoryTables& tables,const ItemFactoryContext& context,
+    std::uint64_t instance,GameRandom& random,ItemFactoryState& state,
+    std::size_t max_retries=1000000);
+struct ShopInventoryPlan {int keeper_variant=0;std::vector<InventoryItem> items;};
+// Includes the keeper variant draw before ordered pedestal stock. The entire
+// batch, both random streams and unique reservations commit together.
+ShopInventoryPlan make_shop_inventory(const std::vector<ItemDefinition>& definitions,
+    const ItemFactoryTables& tables,const ItemFactoryContext& context,
+    std::size_t count,std::uint64_t first_instance,GameRandom& random,ItemFactoryState& state);
 // Full modeled loot dispatch. A supplied state retains original unique weapon
 // artifact selection across calls; Session owns and persists that state.
 std::optional<InventoryItem> make_loot_item(const std::vector<ItemDefinition>& definitions,

@@ -15,14 +15,23 @@ void emit_random(GameRandom& random) {
     const auto mt=random.mt.state();std::cout<<' '<<mt.index;for (auto n:mt.words) std::cout<<' '<<n;
     for (int i=0;i<8;++i) std::cout<<' '<<random.mt.u32();std::cout<<'\n';
 }
+void emit_item(const InventoryItem& item) {
+            std::cout<<item.definition<<' '<<unsigned(item.kind)<<' '<<item.quantity<<' '<<item.stackable<<' '<<bool(item.artifact);
+            if (item.artifact) {
+                const auto& a=*item.artifact;std::cout<<' '<<hex(a.name)<<' '<<hex(a.description)<<' '<<hex(a.buff_description)<<' '<<a.quality;
+                for (auto n:a.modifiers.primary) std::cout<<' '<<n;for (auto n:a.modifiers.secondary) std::cout<<' '<<n;
+                for (auto n:a.modifiers.damage) std::cout<<' '<<n;for (auto n:a.modifiers.resistance) std::cout<<' '<<n;for (auto n:a.weapon_damage) std::cout<<' '<<n;
+            }
+}
 int main(int argc,char** argv) {
     try {
         if (argc==2 && std::string(argv[1])=="--armour-rules") {
             std::string line;while (std::getline(std::cin,line)) {const auto rules=armour_constructor_rules(read_item(parse_xml(line)));std::cout<<rules.type<<' '<<rules.randoms<<'\n';}return 0;
         }
         const bool secret_mode=argc==2 && std::string(argv[1])=="--secret-floor";
+        const bool shop_mode=argc==2 && std::string(argv[1])=="--shop-stock";
         const bool armour_mode=argc==2 && std::string(argv[1])=="--armour-constructor";
-        if (argc!=1 && !secret_mode && !armour_mode) throw std::invalid_argument("expected --secret-floor, --armour-constructor or no arguments");
+        if (argc!=1 && !secret_mode && !armour_mode && !shop_mode) throw std::invalid_argument("expected --secret-floor, --armour-constructor, --shop-stock or no arguments");
         std::uint32_t seed;ItemFactoryContext context;int level_depth;bool artifact;TreasureOptions options;std::size_t count;
         while (std::cin>>seed>>context.depth.depth>>context.depth.alternate>>context.depth.alternate_depth>>level_depth>>context.level_set>>context.trap_deviation>>artifact>>options.roll_size) {
             context.level_depth=level_depth;for (auto& range:options.ranges) std::cin>>range.minimum>>range.maximum;
@@ -48,6 +57,13 @@ int main(int argc,char** argv) {
                 for (int i=0;i<3;++i) entries->push_back("W"+std::to_string(pool)+"_"+std::to_string(i));++pool;
             }
             context.artifact_words=&words;GameRandom random;random.seed(seed);
+            if (shop_mode) {
+                std::size_t stock_count;std::cin>>stock_count;if (!std::cin || stock_count>10000) throw std::invalid_argument("invalid shop fixture size");
+                ItemFactoryState state;const auto plan=make_shop_inventory(definitions,tables,context,stock_count,1,random,state);std::cout<<plan.keeper_variant<<' '<<plan.items.size();
+                for (const auto& item:plan.items) {std::cout<<' ';emit_item(item);}
+                std::cout<<' '<<state.spawned_artifacts.size();for (auto index:state.spawned_artifacts) std::cout<<' '<<index;
+                emit_random(random);continue;
+            }
             if (secret_mode) {
                 int width,height;std::size_t rooms;std::cin>>width>>height>>rooms;
                 if (width<6 || width>512 || height<6 || height>512 || !rooms || rooms>256) throw std::invalid_argument("invalid secret floor");
@@ -71,12 +87,7 @@ int main(int argc,char** argv) {
             }
             std::size_t armour_index=0;if (armour_mode) {std::cin>>armour_index;if (!std::cin || armour_index>=definitions.size()) throw std::invalid_argument("invalid armour constructor index");}
             const auto item=armour_mode?construct_factory_item(definitions.at(armour_index),std::uint32_t(armour_index),1,context,random,artifact):make_level_treasure(definitions,tables,context,options,artifact,1,random);
-            std::cout<<item.definition<<' '<<unsigned(item.kind)<<' '<<item.quantity<<' '<<item.stackable<<' '<<bool(item.artifact);
-            if (item.artifact) {
-                const auto& a=*item.artifact;std::cout<<' '<<hex(a.name)<<' '<<hex(a.description)<<' '<<hex(a.buff_description)<<' '<<a.quality;
-                for (auto n:a.modifiers.primary) std::cout<<' '<<n;for (auto n:a.modifiers.secondary) std::cout<<' '<<n;
-                for (auto n:a.modifiers.damage) std::cout<<' '<<n;for (auto n:a.modifiers.resistance) std::cout<<' '<<n;for (auto n:a.weapon_damage) std::cout<<' '<<n;
-            }
+            emit_item(item);
             emit_random(random);
         }
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
