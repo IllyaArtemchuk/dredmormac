@@ -73,7 +73,8 @@ if __name__=='__main__':
         (root/'dungeon').mkdir(exist_ok=True);(root/'dungeon/fixture.spr').write_bytes(sprite())
         if args.decorations:
             for name in ['painting','statue','floor']:(root/f'dungeon/{name}.spr').write_bytes(sprite())
-            words=ET.parse(root/'game/text.xml');ET.SubElement(words.getroot(),'noun',{'text':'Decorator','plural':'Decorators','floor':'dungeon/floor.spr','statue':'dungeon/statue.spr','painting':'dungeon/painting.spr'});words.write(root/'game/text.xml',encoding='unicode')
+            text_path=root/'game/text.xml';words=ET.parse(text_path) if text_path.exists() else ET.ElementTree(ET.Element('text'))
+            ET.SubElement(words.getroot(),'noun',{'text':'Decorator','plural':'Decorators','floor':'dungeon/floor.spr','statue':'dungeon/statue.spr','painting':'dungeon/painting.spr'});words.write(text_path,encoding='unicode')
             (root/'game/rooms.xml').write_text('''<roomdb><room name="Starting Room" width="7" height="5">
 <row text="##P####"/><row text="#..@..#"/><row text="#1.^..#"/><row text="#.....#"/><row text="#######"/>
 <customblocker at="1" png="dungeon/fixture.spr" name="Explicit"/></room></roomdb>''')

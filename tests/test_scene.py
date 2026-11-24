@@ -1,6 +1,10 @@
 import importlib.util
+import json
 from pathlib import Path
+import subprocess
 import struct
+import sys
+import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 import zlib
@@ -10,6 +14,19 @@ scene=importlib.util.module_from_spec(spec); spec.loader.exec_module(scene)
 
 
 class SceneTests(unittest.TestCase):
+    def test_decorations_fixture_without_existing_text_database(self):
+        repository=Path(__file__).resolve().parents[1]
+        source=repository/'tests/fixtures/content-root'
+        self.assertFalse((source/'game/text.xml').exists())
+        with tempfile.TemporaryDirectory() as folder:
+            output=Path(folder)/'native-decorations'
+            subprocess.run([sys.executable,str(repository/'scripts/make-smoke-scene.py'),str(output),'--content-source',str(source),'--decorations'],check=True,capture_output=True,text=True)
+            data=json.loads((output/'scene.json').read_text());root=Path(data['data_root'])
+            noun=ET.parse(root/'game/text.xml').getroot().find('noun')
+            self.assertIsNotNone(noun);self.assertEqual(noun.get('plural'),data['room_subject'])
+            for kind in ['painting','statue','floor']:
+                sprite=root/noun.get(kind);self.assertTrue(sprite.is_file());self.assertEqual(struct.unpack_from('<H',sprite.read_bytes(),3)[0],2)
+
     def test_spr_png(self):
         palette=bytearray(768); palette[3:6]=b'\x10\x20\x30'
         data=b'SPR'+struct.pack('<3H',1,2,1)+struct.pack('<H',80)+palette+b'\0\1'
