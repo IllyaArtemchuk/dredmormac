@@ -28,8 +28,8 @@ sets all three tile kinds to floor, and skips the wake-up loop.
 The free-pick helper scans the first seven skill slots with strict level < rank.
 Static inspection of skillDBXMLLoader_StartElement (`0x147100`, store at
 `0x147bc7`) identifies `opendoors` as ability byte `+0x1fa`. XML aliases use source
-attribute order and atoi-style boolean parsing. The full XML callback is not yet
-included in the door differential check.
+attribute order and atoi-style boolean parsing. The flags branch is now exercised by the separate free-pick differential check
+below; full skill/ability construction remains separate.
 
 Validation: `verify_door_click.py` executes complete original Clicked and ToggleDoor
 on 8,192 controlled fixtures: 4,366 unlocks, 206 broken picks, 807 shatters,
@@ -80,3 +80,12 @@ a consumed lockpick, XP, click opening, occupied closing, center ignored, end
 closing, bump reopening, repeated kicking/shattering, wall changes and save/load.
 It also checks atomic rejection of a save from another door layout. Sprite data
 is generated independently and no supplied resources enter the repository.
+
+
+`verify_free_door_pick.py` now executes the actual flags XML callback and complete
+Door::Clicked eligibility scan on2,048 additional fixtures (740 free picks),
+with zero mismatches. Cases include zero through nine skill entries, duplicates,
+first-seven cutoff, missing/negative/equal ranks/levels, ordered case aliases,
+repeated flags nodes and atoi-style values. The callback uses controlled current
+ability state and string-comparison/atoi boundaries, not a complete XML load.
+This directly validates the source-backed free-pick helper as well as its mapping.

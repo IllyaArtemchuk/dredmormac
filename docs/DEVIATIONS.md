@@ -10,7 +10,10 @@
 - Movement is a harness policy: four cardinal directions; successful movement
   and waiting consume a turn, blocked moves do not. No original comparison yet.
 - Preview imports only the first Starting Room and a small symbol subset.
-  Vending machines and custom blockers block movement; doors are closed borders.
+  Vending machines and custom blockers block movement. Ordinary doors now stamp,
+  build, pick, kick and toggle through the prepared-room adapter; native default
+  wood sprites and atomic save/load are covered by the synthetic door fixture.
+  Full branch rendering and original actor/HP scheduling remain separate.
   Custom blockers/engravings now populate and render from typed metadata, with
   their appearance gate and basic state compared. Other entities/scripts remain
   unfinished. Preview draws occur without preceding full-level generator/RNG

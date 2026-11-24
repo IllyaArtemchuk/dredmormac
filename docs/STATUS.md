@@ -1526,3 +1526,13 @@ save rollback. All52 portable groups pass; this native source awaits Mac CI.
 The isolated room adapter/default sprites do not finish full floor generation,
 branch rendering, original actor/HP scheduling, AI, remaining effects/UI/audio or
 an original reference playthrough. Full game completion is still outstanding.
+
+
+Native ordinary-door source d3405ce passed arm64 Mac run45349573284,
+job138292341747: all89 checks, including the real door-window interaction fixture,
+plus relocated packaged-app smoke. Actual ability flags callback + full original
+door eligibility now match another2,048 fixtures/740 free picks, covering first
+seven skills, strict ranks, aliases/source ordering/repeated flags and atoi values.
+All52 portable groups pass. Full room scripts, generated floors/population,
+original damage/death/AI/scheduling, remaining effects/UI/audio and reference
+playthrough are still incomplete. Room script conditions/actions are next.

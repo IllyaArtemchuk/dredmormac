@@ -3,8 +3,21 @@
 #include <iostream>
 #include <stdexcept>
 using namespace dredmor;
-int main() {
+int main(int argc,char** argv) {
     try {
+        if (argc==2 && std::string(argv[1])=="--free-pick") {
+            std::size_t count;
+            while (std::cin>>count) {
+                if (count>64) throw std::runtime_error("too many skill slots");
+                std::vector<SkillRank> skills(count);for (auto& skill:skills) std::cin>>skill.id>>skill.rank;
+                std::cin>>count;if (count>4096) throw std::runtime_error("too many abilities");
+                std::vector<AbilityDefinition> abilities;
+                for (std::size_t i=0;i<count;++i) {std::string xml;std::cin>>std::quoted(xml);abilities.push_back(read_ability(parse_xml(xml)));}
+                if (!std::cin) throw std::runtime_error("truncated free-pick fixture");
+                std::cout<<has_free_door_pick(skills,abilities)<<'\n';
+            }
+            return 0;
+        }
         std::uint32_t seed;bool horizontal,opened,locked;std::size_t selected;unsigned mask;
         while (std::cin>>seed>>horizontal>>opened>>locked>>selected) {
             DoorState door;door.assembly={{4,4},horizontal,locked,opened,{}};DoorClickContext context;

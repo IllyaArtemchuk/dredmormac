@@ -5,6 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 import random
+import re
 import shlex
 import subprocess
 from verify_dungeon import GeometryOracle
@@ -22,7 +23,11 @@ class DoorOracle(GeometryOracle):
     def boundary(self,machine,address,size,user):
         from unicorn.x86_const import UC_X86_REG_ESP,UC_X86_REG_EAX,UC_X86_REG_EIP
         esp=machine.reg_read(UC_X86_REG_ESP);returned,a,b,c,d,e=self.read(esp,6);result=a;pop=4
-        if address==0x606cc:
+        if address==0x1cbfda:
+            left=self.cstring(a).lower();right=self.cstring(b).lower();result=(left>right)-(left<right)
+        elif address==0x1cbe66:
+            match=re.match(r'\s*([+-]?\d+)',self.cstring(a));result=int(match[1]) if match else 0
+        elif address==0x606cc:
             if a!=self.level or d!=1 or e!=1:raise AssertionError('unexpected door obstruction parameters')
             index=self.positions.index((b,c));self.checks.append(index);result=int(bool(self.mask&(1<<index)))
         elif address==0x5f4b0:self.sounds.append(self.cstring(a))
@@ -60,8 +65,21 @@ class DoorOracle(GeometryOracle):
         self.write(self.player+0x350,0xffffffff);self.write(self.player+0x220,stealth);self.write(self.player+0x894,female)
         vtable=self.allocate(0x110);self.write(self.player,vtable);self.write(vtable+0x100,self.sound_adapter);self.write(vtable+0x7c,self.damage_adapter)
         sprite=self.allocate(0x320);self.write(self.player+0x24,sprite);sprite_holder=self.allocate(4);self.write(sprite_holder,sprite);self.write(0x109009+0x155577,sprite_holder)
-        abilities=self.allocate(4);ability=self.allocate(0x210);self.write(abilities,ability);self.write(self.original.address('_abilityDB'),abilities,abilities+4,abilities+4)
-        self.write(ability+0x18,1,26);self.machine.mem_write(ability+0x1fa,bytes([free]));self.write(self.player+0x70c,26);self.write(self.player+0x754,2)
+        fixture=getattr(self,'ability_fixture',None)
+        if fixture is None:
+            abilities=self.allocate(4);ability=self.allocate(0x210);self.write(abilities,ability);self.write(self.original.address('_abilityDB'),abilities,abilities+4,abilities+4)
+            self.write(ability+0x18,1,26);self.machine.mem_write(ability+0x1fa,bytes([free]));self.write(self.player+0x70c,26);self.write(self.player+0x754,2)
+        else:
+            skills,definitions=fixture;abilities=self.allocate(4*len(definitions));self.write(self.original.address('_abilityDB'),abilities,abilities+4*len(definitions),abilities+4*len(definitions))
+            for i,(identifier,rank) in enumerate(skills[:7]):self.write(self.player+0x70c+i*4,identifier);self.write(self.player+0x754+i*4,rank)
+            for i,(identifier,level,nodes) in enumerate(definitions):
+                ability=self.allocate(0x210);self.write(abilities+i*4,ability);self.write(ability+0x18,level,identifier);self.write(self.original.address('_curAbility'),ability)
+                for tag,attributes in nodes:
+                    name=self.allocate(len(tag)+1);self.machine.mem_write(name,tag.encode()+b'\0');pairs=self.allocate((2*len(attributes)+1)*4)
+                    for j,(key,value) in enumerate(attributes):
+                        for k,text in enumerate([key,value]):
+                            pointer=self.allocate(len(text)+1);self.machine.mem_write(pointer,text.encode()+b'\0');self.write(pairs+(j*2+k)*4,pointer)
+                    self.original.call('__Z29skillDBXMLLoader_StartElementPvPKcPS1_',0,name,pairs,budget=500000)
         self.positions=[(3+i,4) if horizontal else (4,3+i) for i in range(3)]
         self.objects=[self.allocate(0x100) for _ in range(3)]
         for i,pointer in enumerate(self.objects):
