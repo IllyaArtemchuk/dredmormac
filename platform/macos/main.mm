@@ -744,6 +744,14 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
         if (!content) throw std::runtime_error("script record requires installation content");
         return content->create_script_record(candidate,record,trapMap,origin);
     };
+    hooks.create_prototype=[content](auto& candidate,auto type,auto subtype) {
+        if (!content) throw std::runtime_error("script prototype requires installation content");
+        return candidate.create_room_item_prototype(content->item_factory_tables(),content->loot_context(candidate.depth_context()),type,subtype);
+    };
+    hooks.tile_items=[content](const auto& candidate,auto point) {
+        if (!content) throw std::runtime_error("script item query requires installation content");
+        return candidate.room_tile_items(content->item_factory_tables(),point);
+    };
     const auto layout=_roomScripts->layout;
     hooks.queue_horde=[content,layout](auto& candidate,const auto& record,auto origin) {
         if (!content) throw std::runtime_error("script horde requires installation content");
@@ -845,10 +853,11 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
         [self mouseDown:click];
         if (_session->player().position.x!=4 || _session->player().position.y!=1 || _session->world().turn()!=3 ||
             _session->custom_objects().size()!=1 || _session->custom_objects()[0].room_local_id!="replacement" ||
-            !_session->passable({4,1}) || _objectImages.count!=1 || _scriptMessages.count!=2 ||
+            !_session->passable({4,1}) || _objectImages.count!=1 || _scriptMessages.count!=3 ||
             _session->enemies().size()!=1 || _session->ground_items().size()!=1 ||
             !_roomScriptObjects->find(*_session,0,"guardian") || !_roomScriptObjects->find(*_session,0,"reward") ||
-            ![_scriptMessages[1] isEqualToString:@"gate visible until clear"] || _roomScriptObjects->find(*_session,0,"gate"))
+            ![_scriptMessages[1] isEqualToString:@"gate visible until clear"] || ![_scriptMessages[2] isEqualToString:@"reward present"] ||
+            _roomScriptRuntime.prototypes.size()!=1 || _roomScriptObjects->find(*_session,0,"gate"))
             throw std::runtime_error("native mouse did not solve scripted puzzle");
         const auto solved=snapshot();[self display];[self loadFromURL:url];
         if (snapshot()!=initial || _session->custom_objects()[0].room_local_id!="gate") throw std::runtime_error("scripted initial reload differs");

@@ -101,6 +101,8 @@ if __name__=='__main__':
             ET.SubElement(script,'action',{'on':'success','action_type':'ticker','text':'gate visible until clear'})
             script=ET.SubElement(room,'script');ET.SubElement(script,'condition',{'condition_type':'at','id':'gate','at':'2','not':'1'})
             ET.SubElement(script,'action',{'on':'success','action_type':'ticker','text':'gate gone'})
+            script=ET.SubElement(room,'script');ET.SubElement(script,'condition',{'condition_type':'type_at','type':'armour','subtype':'Fixture cap','x':'4','y':'3'})
+            ET.SubElement(script,'action',{'on':'success','action_type':'ticker','text':'reward present'})
             ET.ElementTree(database).write(root/'game/rooms.xml',encoding='unicode')
             scene.update(data_root=str(root),room_objects='Starting Room',room_scripts=True,rows=[row.replace('@','.') for row in rows],collision='\n'.join(rows)+'\n',smoke_room_scripts=True,smoke_expected='{"turn":2,"x":2,"y":1}')
         if args.script_levers:

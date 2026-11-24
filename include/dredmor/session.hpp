@@ -17,6 +17,7 @@
 #include "dredmor/dungeon.hpp"
 #include "dredmor/doors.hpp"
 #include "dredmor/hordes.hpp"
+#include "dredmor/room_scripts.hpp"
 #include <memory>
 #include <map>
 
@@ -189,6 +190,12 @@ public:
         const TreasureOptions& options,bool artifact,Position position);
     RoomLootCreation create_room_loot(const RoomLootRecord& record,const ItemFactoryTables& tables,
         const ItemFactoryContext& context,Position origin={0,0});
+    // Base database IDs follow original XML registration order from zero.
+    // Prototype creation retains factory/RNG side effects without placing an
+    // item in the level or consuming an inventory instance identity.
+    std::optional<ScriptItemType> create_room_item_prototype(const ItemFactoryTables& tables,
+        const ItemFactoryContext& context,std::string_view type,std::string_view subtype);
+    std::vector<ScriptTileItem> room_tile_items(const ItemFactoryTables& tables,Position point) const;
     std::optional<std::uint64_t> create_room_monster(const RoomMonsterRecord& record,
         const std::function<Actor(const RoomPopulationPlan&,GameRandom&,MonsterSpawnState&)>& constructor,Position origin={0,0});
     // Horde destinations stay unoccupied until the caller finishes the room's

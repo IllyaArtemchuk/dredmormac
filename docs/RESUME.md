@@ -2279,3 +2279,26 @@ bindings/groups. All71 portable groups pass. Script-horde native2baba9d is runni
 Mac45403089598; lifetime changes await their own Mac build. Full Monster death/
 AI/flee/quest/base/destructor ownership, verified outer GameTick, live clock/
 effect/generation/UI/audio and full gameplay remain unfinished.
+
+Horde lifetime1c93334 passed arm64 Mac45405258142 and packaged-app smoke. Item
+TypeAt comparison fields now use native constructor rules: ordinary database
+items use their entry ID; Potion/Wand search the four ordered category pools and
+use the first matching ordinal (base subtype0 if absent); Misc uses its builtin
+subtype; currency keeps native kind10 and base subtype0.8,192 original assignment
+fragments/table searches match all12 kinds, duplicates/absence/raw IDs and both
+unchanged RNG streams. This excludes full constructors/resources/XML registration;
+source XML callback0x4faa1..0x4face assigns increasing nextFreeID (initial0).
+Session base data ordinals follow that order. See verify_item_types.py.
+Session now constructs cached room prototypes through the real port loot factory
+with quantity1/artifact=false, retaining RNG/unique factory state while placing no
+inventory object. Tile queries include ground Items and placed Traps, excluding
+carried/equipped contents, origin blockers and pedestal stock. Native TypeAt hooks
+now use these methods. The native lever puzzle also observes its created reward
+through a specific TypeAt condition and preserves that prototype in saves.
+All72 portable groups pass. Tests cover potion/wand ordinal aliases, currency,
+prototype RNG without instance allocation, live trap/ground queries, empty-tile
+lazy construction, cached continuation and full candidate/cache/RNG rollback on
+late action failure. Extended native source awaits Mac CI. Complete simple item
+constructors, dynamic/expansion registration, original prototype object/resource
+lifetime, trap/deferred world lifetime, full GameTick/AI/effects/generation/UI/audio
+and the entire game remain unfinished.
