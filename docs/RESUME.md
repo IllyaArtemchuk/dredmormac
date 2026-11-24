@@ -1666,3 +1666,17 @@ AI and exact arrival music/global sequencing still need integration. Current
 prepared-floor cache and provisional scheduler are not full generated gameplay.
 
 All48 local CTest groups pass for Session shop integration; actual arm64 CI is pending.
+
+
+Session shop source68c2d9c passed actual arm64 macos-15 run45341559860:
+all81 tests and relocated packaged-app smoke.
+Native prepared-room startup now constructs original-flagged shops after explicit
+records/decorations, calls content-based Brax construction at the correct RNG
+point, prepares keeper/pedestal/item resources, and displays owned stock. Adjacent
+pedestal clicks open measured Buy/Don't Buy/Take unpaid dialogs; inventory labels
+unpaid items, guard movement and theft-exit warning are connected. Save loads
+reject changed immutable shop configuration or bad stock resources atomically.
+All48 portable groups pass. New actual-key/mouse/modal synthetic Mac fixture and
+arm64 validation are pending. See SHOPS.md for tested scope and UI/audio limits.
+Sale/debt dialogs, mouse-held transfer mode, hostile keeper AI, exact original
+drawing/UI/audio and full generated-floor population/playthrough remain incomplete.

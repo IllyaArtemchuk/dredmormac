@@ -201,3 +201,22 @@ blocking, buy/decline/insufficient funds, unpaid taking/guarding/theft exit, ful
 inventory drops, Session20 round trips, malformed keeper IDs and whole-run cached
 shop reservations/travel. Component original comparisons establish the rules;
 a complete original shop playthrough has not yet been executed.
+
+Native prepared-room startup now constructs shops after explicit records and noun
+decorations when the room has the original shop flag. It supplies floor positions
+that WriteTemplate would mark13 (ordinary floor and X conversion), calls the real
+content-based Brax construction at the keeper callback, then builds ordered stock.
+Keeper, pedestal PNG and stock icons prepare before presentation commits. Save loads
+validate immutable shop placement and all owned stock resources transactionally.
+The UI displays keepers/pedestals/stock; adjacent pedestal clicks open Buy/Don't Buy/
+Take unpaid dialogs with the measured total price and wallet balance. Inventory
+location labels identify unpaid items. Theft exit shows the original warning text.
+Audio events, original drawing offsets/palette effects and original dialog assets
+remain unimplemented; current Cocoa presentation is not original UI visual parity.
+
+The native synthetic shop fixture exercises actual key/mouse input and modal
+button clicks, decline/buy/taking, wallet and icon removal, guard/anger/cleared
+ownership, save/reload and immutable-layout/missing-stock-resource rollback. It
+uses two eligible item definitions plus two rejected special entries for invalid
+resource-load checks. Portable generator tests check marker order and resources.
+Actual arm64 validation is pending for this new native code.

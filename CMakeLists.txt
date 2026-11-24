@@ -372,6 +372,13 @@ if(APPLE)
     add_test(NAME native-decorations-window COMMAND $<TARGET_FILE:DredmorMac>
       ${CMAKE_BINARY_DIR}/native-decorations/scene.json --smoke-test)
     set_tests_properties(native-decorations-window PROPERTIES FIXTURES_REQUIRED native-decorations TIMEOUT 15)
+    add_test(NAME native-shops-fixture COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-shops
+      --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --shops)
+    set_tests_properties(native-shops-fixture PROPERTIES FIXTURES_SETUP native-shops)
+    add_test(NAME native-shops-window COMMAND $<TARGET_FILE:DredmorMac>
+      ${CMAKE_BINARY_DIR}/native-shops/scene.json --smoke-test)
+    set_tests_properties(native-shops-window PROPERTIES FIXTURES_REQUIRED native-shops TIMEOUT 30)
     add_test(NAME native-automatic-armour-fixture COMMAND ${Python3_EXECUTABLE}
       ${CMAKE_SOURCE_DIR}/scripts/make-smoke-scene.py ${CMAKE_BINARY_DIR}/native-automatic-armour
       --content-source ${CMAKE_SOURCE_DIR}/tests/fixtures/content-root --automatic-armour)

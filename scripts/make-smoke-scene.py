@@ -41,6 +41,7 @@ if __name__=='__main__':
     p.add_argument('--floors',action='store_true',help='Paired stairs, cached floor state, native run save/reload')
     p.add_argument('--secret-levers',action='store_true',help='Bump/click secret lever, wall opening and save/reload')
     p.add_argument('--decorations',action='store_true',help='Ordered conditional paintings/statues/floor engravings')
+    p.add_argument('--shops',action='store_true',help='Keeper, stock, native buying/theft and saved shop state')
     p.add_argument('--automatic-armour',action='store_true',help='Automatic neck-armour enchantment, inventory and save/load')
     args=p.parse_args();out=args.output.resolve();out.mkdir(parents=True,exist_ok=True)
     (out/'atlas.png').write_bytes(png(384,640,(70,80,95,255)))
@@ -66,6 +67,7 @@ if __name__=='__main__':
     if args.floors and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food])):p.error('--floors requires --content-source and excludes other fixture types')
     if args.secret_levers and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors])):p.error('--secret-levers requires --content-source and excludes other fixture types')
     if args.decorations and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers])):p.error('--decorations requires --content-source and excludes other fixture types')
+    if args.shops and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers,args.decorations,args.automatic_armour])):p.error('--shops requires --content-source and excludes other fixture types')
     if args.automatic_armour and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers,args.decorations])):p.error('--automatic-armour requires --content-source and excludes other fixture types')
     if args.content_source:
         root=out/'installation';shutil.copytree(args.content_source,root,dirs_exist_ok=True)
@@ -73,6 +75,14 @@ if __name__=='__main__':
         (root/'tilesets/basic.png').write_bytes(png(384,640,(70,80,95,255)))
         (root/'sprites/hero/hero_idle_d.spr').write_bytes(sprite())
         (root/'dungeon').mkdir(exist_ok=True);(root/'dungeon/fixture.spr').write_bytes(sprite())
+        if args.shops:
+            rows=['#########','#@......#','#.......#','#.......#','#.......#','#########']
+            scene.update(rows=[row.replace('@','.') for row in rows],collision='\n'.join(rows)+'\n',data_root=str(root),room_objects='Starting Room',smoke_shops=True,ground_currency=[dict(amount=100,x=2,y=1)])
+            (root/'game/itemDB.xml').write_text('<itemDB><item name="Shop sword" type="0" iconFile="dungeon/shop_item.png"><weapon/><price amount="10"/></item><item name="Shop cap" iconFile="dungeon/shop_item.png"><armour type="head"/><price amount="10"/></item><item name="Bad shop sword" type="0" special="1" iconFile="dungeon/missing-shop-item.png"><weapon/></item><item name="Bad shop cap" special="1" iconFile="dungeon/missing-shop-item.png"><armour type="head"/></item></itemDB>')
+            (root/'game/monDB.xml').write_text('<monDB><monster name="Brax" level="1" special="1"><stats numFig="2"/><idleSprite down="dungeon/keeper.spr"/></monster></monDB>')
+            (root/'dungeon/keeper.spr').write_bytes(sprite());(root/'dungeon/store_pedestal.png').write_bytes(png(32,32,(100,60,30,255)));(root/'dungeon/shop_item.png').write_bytes(png(32,32,(220,180,40,255)))
+            tweaks=ET.parse(root/'game/tweakDB.xml');tweaks.getroot().append(ET.fromstring('<tweak name="monster level adder" ival="2"/>'));tweaks.getroot().append(ET.fromstring('<tweak name="store buy price scaler" fval="1"/>'));tweaks.write(root/'game/tweakDB.xml',encoding='unicode')
+            (root/'game/rooms.xml').write_text('<roomdb><room name="Starting Room" width="9" height="6"><flags shop="1"/><row text="   ######"/><row text="   d.s..#"/><row text="   #..S.#"/><row text="   #..ii#"/><row text="   #....#"/><row text="   ######"/></room></roomdb>')
         if args.automatic_armour:
             (root/'game/text.xml').write_text('<text><startPhoneme text="A"/><phoneme text="b"/><title text="Keeper"/><noun text="Thing" plural="Things"/><adjective text="Bright"/><quality text="polished"/><material text="tin"/><decor text="dots"/></text>')
             items=ET.parse(root/'game/itemDB.xml');items.getroot().append(ET.fromstring('<item name="Fixture pendant" iconFile="tilesets/basic.png"><armour type="neck" level="1"/><price amount="10"/></item>'));items.write(root/'game/itemDB.xml',encoding='unicode')

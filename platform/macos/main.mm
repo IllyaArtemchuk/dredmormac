@@ -156,6 +156,7 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     BOOL _multiFloor;
     NSArray<SpriteImage*> *_stairImages;
     NSArray<SpriteImage*> *_leverImages;
+    NSArray<NSDictionary*> *_shopImages;
     std::unique_ptr<dredmor::GameContent> _content;
     std::filesystem::path _dataRoot;
     NSArray<NSString*> *_rows;
@@ -184,6 +185,9 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
 - (BOOL)smokeSecretLevers;
 - (BOOL)smokeDecorations;
 - (BOOL)smokeAutomaticArmour;
+- (BOOL)smokeShops;
+- (void)showShopPedestal:(NSUInteger)shop index:(NSUInteger)pedestal;
+- (void)presentShopNotices;
 - (BOOL)smokeSaveLoad;
 - (void)saveDocument:(id)sender;
 - (void)openDocument:(id)sender;
@@ -287,6 +291,16 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
             if (scene[@"room_subject"]) {
                 if (![scene[@"room_subject"] isKindOfClass:NSString.class]) throw std::runtime_error("invalid room decoration subject");
                 _session->create_room_decorations(numeric,{0,0},[scene[@"room_subject"] UTF8String],_content->room_decorations());
+            }
+            if (numeric.shop) {
+                std::vector<dredmor::Position> tiles;
+                for (int y=0;y<numeric.height;++y) for (int x=0;x<numeric.width;++x) {
+                    const auto kind=numeric.cells[std::size_t(y)*numeric.width+x].kind;if (kind==1 || kind==15) tiles.push_back({x,y});
+                }
+                _session->create_shop(numeric.shop_markers,std::move(tiles),_content->item_factory_tables(),_content->loot_context(_session->depth_context()),[&](dredmor::GameRandom& stream) {
+                    return _content->create_monster("Brax",numeric.shop_markers.home,dredmor::Difficulty::medium,_session->depth_context().depth,stream.libc);
+                });
+                _session->update_shop_presence();
             }
         }
         else if (scene[@"room_subject"]) throw std::runtime_error("room decoration subject requires a content room");
@@ -405,8 +419,8 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
                 _floors.add_floor(*_session,std::move(floor));
             }
         }
-        _stairImages=@[];_leverImages=@[];
-        if (_multiFloor || !_session->floor_stairs().empty() || !_session->secret_levers().empty()) {
+        _stairImages=@[];_leverImages=@[];_shopImages=@[];
+        if (_multiFloor || !_session->floor_stairs().empty() || !_session->secret_levers().empty() || !_session->shops().empty()) {
             _floors.for_each_floor(*_session,[&](const dredmor::Session& floor){@autoreleasepool {(void)[self preparePresentation:floor];}});
             [self applyPresentation:[self preparePresentation:*_session]];
         }
@@ -502,6 +516,14 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
         loaded=std::make_unique<dredmor::Session>(dredmor::Session::load(input,definitions,abilities,spells));
         const auto& old=_session->world();const auto& world=loaded->world();
         if (old.width()!=world.width() || old.height()!=world.height()) throw std::runtime_error("open the save's prepared room before loading this file");
+        if (_session->shops().size()!=loaded->shops().size()) throw std::runtime_error("save shops belong to another room");
+        auto samePoint=[](dredmor::Position a,dredmor::Position b){return a.x==b.x && a.y==b.y;};
+        for (std::size_t i=0;i<_session->shops().size();++i) {
+            const auto& a=_session->shops()[i];const auto& b=loaded->shops()[i];
+            if (!samePoint(a.guard,b.guard) || !samePoint(a.home,b.home) || a.keeper.name!=b.keeper.name || a.tiles.size()!=b.tiles.size() || a.pedestals.size()!=b.pedestals.size()) throw std::runtime_error("save shop configuration differs");
+            for (std::size_t j=0;j<a.tiles.size();++j) if (!samePoint(a.tiles[j],b.tiles[j])) throw std::runtime_error("save shop floor differs");
+            for (std::size_t j=0;j<a.pedestals.size();++j) if (!samePoint(a.pedestals[j].position,b.pedestals[j].position)) throw std::runtime_error("save shop pedestal configuration differs");
+        }
         const auto& before=_session->secret_levers();const auto& after=loaded->secret_levers();
         if (before.size()!=after.size()) throw std::runtime_error("save secret levers belong to another room");
         for (std::size_t i=0;i<before.size();++i) if (before[i].position.x!=after[i].position.x || before[i].position.y!=after[i].position.y || before[i].target.x!=after[i].target.x || before[i].target.y!=after[i].target.y) throw std::runtime_error("save secret lever configuration differs");
@@ -558,13 +580,25 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
         const auto path=roomResource(_dataRoot,"dungeon/lever1.spr");SpriteImage *image=[[SpriteImage alloc] initWithPath:[NSString stringWithUTF8String:path.c_str()]];
         if (!image || [image frameCount]<2) throw std::runtime_error("secret lever requires two sprite frames");[levers addObject:image];
     }
+    NSMutableArray<NSDictionary*> *shops=[NSMutableArray array];
+    for (const auto& shop:session.shops()) {
+        if (!_content) throw std::runtime_error("shop rendering needs installation content");
+        const auto& definition=_content->monster(shop.keeper.name);
+        auto prepare=[&](const std::string& resource) {
+            const auto path=roomResource(_dataRoot,resource);SpriteImage *sprite=[[SpriteImage alloc] initWithPath:[NSString stringWithUTF8String:path.c_str()]];
+            if (!sprite) throw std::runtime_error("cannot prepare shop sprite");return sprite;
+        };
+        SpriteImage *keeper=prepare(definition.idle_sprites[3]),*pedestal=prepare("dungeon/store_pedestal.png");NSMutableArray *stock=[NSMutableArray array];
+        for (const auto& object:shop.pedestals) [stock addObject:object.item?(id)prepare(_content->items().at(object.item->definition).icon):(id)NSNull.null];
+        [shops addObject:@{@"keeper":keeper,@"pedestal":pedestal,@"stock":stock}];
+    }
     NSMutableArray<NSString*> *rows=[NSMutableArray array];
     for (int y=0;y<session.world().height();++y) {std::string row;for (int x=0;x<session.world().width();++x) row+=session.world().tile(x,y);[rows addObject:[NSString stringWithUTF8String:row.c_str()]];}
-    return @{@"rows":rows,@"enemies":images,@"objects":objects,@"breakables":breakables,@"traps":traps,@"stairs":stairs,@"levers":levers};
+    return @{@"rows":rows,@"enemies":images,@"objects":objects,@"breakables":breakables,@"traps":traps,@"stairs":stairs,@"levers":levers,@"shops":shops};
 }
 - (void)applyPresentation:(NSDictionary*)presentation {
     _rows=presentation[@"rows"];_enemyImages=presentation[@"enemies"];_objectImages=presentation[@"objects"];_breakableImages=presentation[@"breakables"];_trapImages=presentation[@"traps"];_stairImages=presentation[@"stairs"];
-    _leverImages=presentation[@"levers"];
+    _leverImages=presentation[@"levers"];_shopImages=presentation[@"shops"];
     _targetSpell.reset();[_breakAnimations removeAllObjects];
 }
 - (void)showFailure:(const std::exception&)error {
@@ -623,8 +657,9 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
             [NSString stringWithUTF8String:_content->items()[item.definition].name.c_str()]:
             [NSString stringWithFormat:@"Item %u",item.definition];
         if (item.charges) name=[NSString stringWithFormat:@"%@ (%d charges)",name,*item.charges];
+        if (item.for_sale) location=[@"Unpaid · " stringByAppendingString:location];
         [rows addObject:@{@"name":name,@"quantity":@(item.quantity),@"location":location,@"equipped":@(equipped),
-            @"instance":@(item.instance),@"slot":@(slot)}];
+            @"instance":@(item.instance),@"slot":@(slot),@"for_sale":@(item.for_sale)}];
     };
     const auto& inventory=_session->inventory();
     for (std::size_t i=0;i<inventory.bag().size();++i) if (inventory.bag()[i])
@@ -851,6 +886,55 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     std::ostringstream before;_session->save(before);if (![self smokeSaveLoad]) return NO;std::ostringstream after;_session->save(after);
     [self display];return before.str()==after.str() && !_session->custom_objects()[3].playing;
 }
+- (BOOL)smokeShops {
+    auto fail=[&](const char* stage) {fprintf(stderr,"native shop smoke failed at %s\n",stage);return NO;};
+    if (_session->shops().size()!=1 || _shopImages.count!=1 || _session->shops()[0].pedestals.size()!=2 || _session->player().zorkmids!=100) return fail("initial ownership");
+    {
+        std::ostringstream encoded;_session->save(encoded);const auto before=encoded.str();NSArray *images=_shopImages;
+        auto wrong_layout=before;const auto guard=wrong_layout.find("guard-x=\"5\"");if (guard==std::string::npos) return fail("layout mutation fixture");wrong_layout.replace(guard,11,"guard-x=\"4\"");
+        auto wrong_asset=before;const auto kind=_session->shops()[0].pedestals[0].item->kind;std::size_t bad_definition=0;
+        for (;bad_definition<_content->items().size();++bad_definition) if (_content->items()[bad_definition].name==(kind==dredmor::ItemKind::weapon?"Bad shop sword":"Bad shop cap")) break;
+        const auto pedestal=wrong_asset.find("<pedestal "),field=wrong_asset.find("definition=\"",pedestal);if (field==std::string::npos || bad_definition==_content->items().size()) return fail("asset mutation fixture");
+        const auto value=field+12,end=wrong_asset.find('"',value);wrong_asset.replace(value,end-value,std::to_string(bad_definition));
+        NSURL *url=[NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID.UUID.UUIDString stringByAppendingString:@".dredmor-save"]]];
+        for (const auto& bytes:{wrong_layout,wrong_asset}) {
+            NSData *data=[NSData dataWithBytes:bytes.data() length:bytes.size()];if (![data writeToURL:url options:NSDataWritingAtomic error:nullptr]) return fail("rejection fixture write");
+            bool rejected=false;try {[self loadFromURL:url];} catch(const std::exception&) {rejected=true;}std::ostringstream after;_session->save(after);
+            if (!rejected || after.str()!=before || images!=_shopImages) {[[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];return fail("atomic rejection");}
+        }
+        [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];
+    }
+    auto move=[&](unsigned short code,NSString *key) {
+        NSEvent *event=[NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:self.window.windowNumber context:nil characters:key charactersIgnoringModifiers:key isARepeat:NO keyCode:code];[self keyDown:event];
+    };
+    auto prepareChoice=[&](NSString *title) {
+        NSTimer *timer=[NSTimer timerWithTimeInterval:.05 repeats:YES block:^(NSTimer *active) {
+            std::function<BOOL(NSView*)> press=[&](NSView *view) {
+                if ([view isKindOfClass:NSButton.class] && [[(NSButton*)view title] isEqualToString:title]) {[(NSButton*)view performClick:nil];return YES;}
+                for (NSView *child in view.subviews) if (press(child)) return YES;return NO;
+            };
+            if (NSApp.modalWindow && press(NSApp.modalWindow.contentView)) {[active invalidate];}
+        }];
+        [NSRunLoop.currentRunLoop addTimer:timer forMode:NSModalPanelRunLoopMode];
+        return timer;
+    };
+    auto choose=[&](dredmor::Position position,NSString *title) {
+        NSTimer *timer=prepareChoice(title);
+        const CGFloat cell=MIN((self.bounds.size.width-40)/_session->world().width(),(self.bounds.size.height-110)/_session->world().height());
+        const NSPoint point=[self convertPoint:NSMakePoint(20+(position.x+.5)*cell,20+(position.y+.5)*cell) toView:nil];
+        NSEvent *event=[NSEvent mouseEventWithType:NSEventTypeLeftMouseDown location:point modifierFlags:0 timestamp:0 windowNumber:self.window.windowNumber context:nil eventNumber:0 clickCount:1 pressure:1];[self mouseDown:event];const BOOL clicked=!timer.valid;[timer invalidate];return clicked;
+    };
+    move(124,@"\uf703");move(124,@"\uf703");move(125,@"\uf701");move(125,@"\uf701");move(124,@"\uf703");
+    if (!_session->shop_presence().in_shop || !choose({6,3},@"Don't Buy") || !_session->shops()[0].pedestals[0].item) return fail("decline dialog");
+    if (!choose({6,3},@"Buy") || _session->player().zorkmids!=90 || _session->shops()[0].pedestals[0].item || _shopImages[0][@"stock"][0]!=NSNull.null || ![self smokeSaveLoad]) return fail("purchase save");
+    move(125,@"\uf701");move(124,@"\uf703");move(124,@"\uf703");
+    if (!choose({7,3},@"Take unpaid") || !_session->has_unpaid_goods() || !_session->shops()[0].guarding || _session->shops()[0].keeper.position.x!=5 || ![self smokeSaveLoad]) return fail("taking and guard save");
+    bool labelled=false;for (NSDictionary *row in [self inventoryRows]) if ([row[@"for_sale"] boolValue] && [row[@"location"] hasPrefix:@"Unpaid"]) labelled=true;if (!labelled) return fail("unpaid inventory label");
+    move(123,@"\uf702");move(123,@"\uf702");move(123,@"\uf702");move(126,@"\uf700");move(126,@"\uf700");move(126,@"\uf700");
+    NSTimer *notice=prepareChoice(@"OK");move(123,@"\uf702");const BOOL dismissed=!notice.valid;[notice invalidate];if (!dismissed) return fail("theft notice dialog");
+    if (_session->shop_presence().in_shop || !_session->shop_presence().level_angry || !_session->shops()[0].angry || _session->has_unpaid_goods() || ![self smokeSaveLoad]) return fail("theft exit save");
+    [self display];return YES;
+}
 - (BOOL)smokeAutomaticArmour {
     const auto primary=_session->player().primary;const auto secondary=_session->player().secondary;
     [self pickUpItems:nil];[self showInventory:nil];if ([self inventoryRows].count!=1 || !_session->inventory().bag()[0]) return NO;
@@ -937,7 +1021,7 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
         NSDictionary *presentation=(outcome==dredmor::FloorTravel::travelled || lever)?[self preparePresentation:session]:nil;
         *_session=std::move(session);_floors=std::move(registry);if (presentation) [self applyPresentation:presentation];
         if (outcome==dredmor::FloorTravel::missing_floor || outcome==dredmor::FloorTravel::missing_arrival) NSBeep();
-        [self recordBreakableAnimations];
+        [self recordBreakableAnimations];[self presentShopNotices];
     }
     catch (const std::exception& e) { fprintf(stderr,"turn failed: %s\n",e.what()); }
     [_inventoryController refresh];
@@ -990,6 +1074,24 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     }
     [_inventoryController refresh];self.needsDisplay=YES;
 }
+- (void)presentShopNotices {
+    for (const auto& event:_session->events()) if (event.kind==dredmor::EventKind::shop_presence && event.amount==int(dredmor::ShopPresenceEvent::theft_dialog)) {
+        NSAlert *alert=[NSAlert new];alert.messageText=@"You have stolen merchandise from a shop! You're in trouble now...";[alert addButtonWithTitle:@"OK"];[alert runModal];
+    }
+}
+- (void)showShopPedestal:(NSUInteger)shopIndex index:(NSUInteger)pedestalIndex {
+    const auto& pedestal=_session->shops().at(shopIndex).pedestals.at(pedestalIndex);if (!pedestal.item) return;
+    const auto& item=*pedestal.item;const auto& definition=_content->items().at(item.definition);
+    const float scaler=_content->tweaks().real(dredmor::Difficulty::medium,"store buy price scaler");
+    const auto quote=dredmor::resolve_shop_pedestal(true,dredmor::item_shop_cost(&definition,item),item.stackable,item.quantity,scaler,0,_session->player().zorkmids);
+    NSString *name=[NSString stringWithUTF8String:(item.artifact?item.artifact->name:definition.name).c_str()];
+    NSAlert *alert=[NSAlert new];alert.messageText=name;alert.informativeText=[NSString stringWithFormat:@"Price: %d zorkmids. You have %d.",quote.total_cost,_session->player().zorkmids];
+    [alert addButtonWithTitle:@"Buy"];[alert addButtonWithTitle:@"Don't Buy"];[alert addButtonWithTitle:@"Take unpaid"];
+    const auto response=[alert runModal];const int choice=response==NSAlertFirstButtonReturn?0:response==NSAlertThirdButtonReturn?2:1;
+    auto next=*_session;const auto action=next.use_shop_pedestal(shopIndex,pedestalIndex,choice,scaler);
+    NSDictionary *presentation=[self preparePresentation:next];*_session=std::move(next);[self applyPresentation:presentation];[_inventoryController refresh];self.needsDisplay=YES;
+    if (action.insufficient_funds) {NSAlert *funds=[NSAlert new];funds.messageText=@"You don't have the money, punk!";[funds addButtonWithTitle:@"OK"];[funds runModal];}
+}
 - (void)mouseDown:(NSEvent*)event {
     const auto point=[self convertPoint:event.locationInWindow fromView:nil];const auto& world=_session->world();
     const CGFloat cell=MIN((self.bounds.size.width-40)/world.width(),(self.bounds.size.height-110)/world.height());
@@ -997,12 +1099,16 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     const dredmor::Position target{int((point.x-20)/cell),int((point.y-20)/cell)};
     if (_targetSpell) {[self castSelectedSpellAt:target];return;}
     try {
+        for (std::size_t i=0;i<_session->shops().size();++i) for (std::size_t j=0;j<_session->shops()[i].pedestals.size();++j) {
+            const auto point=_session->shops()[i].pedestals[j].position;
+            if (point.x==target.x && point.y==target.y && std::abs(point.x-_session->player().position.x)+std::abs(point.y-_session->player().position.y)==1) {[self showShopPedestal:i index:j];return;}
+        }
         for (std::size_t i=0;i<_session->secret_levers().size();++i) {
             const auto p=_session->secret_levers()[i].position;if (p.x!=target.x || p.y!=target.y) continue;
             auto next=*_session;if (!next.use_secret_lever(i)) return;NSDictionary *presentation=[self preparePresentation:next];
             *_session=std::move(next);[self applyPresentation:presentation];[_inventoryController refresh];self.needsDisplay=YES;return;
         }
-    } catch(const std::exception& error) {fprintf(stderr,"lever action failed: %s\n",error.what());}
+    } catch(const std::exception& error) {fprintf(stderr,"interaction failed: %s\n",error.what());}
     [super mouseDown:event];
 }
 - (void)recordBreakableAnimations {
@@ -1037,6 +1143,14 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     };
     for (std::size_t i=0;i<_session->floor_stairs().size();++i) drawObject(_session->floor_stairs()[i].position,[_stairImages[i] frameAt:animationTime]);
     for (std::size_t i=0;i<_session->secret_levers().size();++i) drawObject(_session->secret_levers()[i].position,[_leverImages[i] frameAtIndex:(_session->secret_levers()[i].activated?1:0)]);
+    for (std::size_t i=0;i<_session->shops().size();++i) {
+        const auto& shop=_session->shops()[i];NSDictionary *images=_shopImages[i];
+        drawObject(shop.keeper.position,[images[@"keeper"] frameAt:animationTime]);
+        for (std::size_t j=0;j<shop.pedestals.size();++j) {
+            drawObject(shop.pedestals[j].position,[images[@"pedestal"] frameAtIndex:0]);
+            id image=images[@"stock"][j];if (image!=NSNull.null) drawObject(shop.pedestals[j].position,[image frameAtIndex:0]);
+        }
+    }
     for (std::size_t i=0;i<_session->custom_objects().size();++i) {
         const auto& object=_session->custom_objects()[i];
         drawObject(object.position,object.playing?[_objectImages[i] frameAt:animationTime]:[_objectImages[i] frameAtIndex:object.frame]);
@@ -1236,6 +1350,7 @@ int main(int argc,const char**argv) {
                     ([scene[@"smoke_secret_levers"] boolValue] && ![view smokeSecretLevers]) ||
                     ([scene[@"smoke_decorations"] boolValue] && ![view smokeDecorations]) ||
                     ([scene[@"smoke_automatic_armour"] boolValue] && ![view smokeAutomaticArmour]) ||
+                    ([scene[@"smoke_shops"] boolValue] && ![view smokeShops]) ||
                     ([scene[@"smoke_food"] boolValue] && ![view smokeFood]) ||
                     ([scene[@"smoke_regeneration"] boolValue] && ![view smokeRegeneration]) ||
                     ([scene[@"smoke_casting"] boolValue] && ![view smokeCasting]) ||

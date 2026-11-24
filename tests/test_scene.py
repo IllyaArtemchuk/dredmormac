@@ -14,6 +14,19 @@ scene=importlib.util.module_from_spec(spec); spec.loader.exec_module(scene)
 
 
 class SceneTests(unittest.TestCase):
+    def test_shop_fixture_resources_and_marker_order(self):
+        repository=Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as folder:
+            output=Path(folder)/'native-shops'
+            subprocess.run([sys.executable,str(repository/'scripts/make-smoke-scene.py'),str(output),'--content-source',str(repository/'tests/fixtures/content-root'),'--shops'],check=True,capture_output=True,text=True)
+            data=json.loads((output/'scene.json').read_text());root=Path(data['data_root']);self.assertTrue(data['smoke_shops'])
+            self.assertEqual(data['collision'].count('@'),1);self.assertEqual(len(data['rows']),6)
+            room=ET.parse(root/'game/rooms.xml').getroot().find('room');rows=[node.get('text') for node in room.findall('row')]
+            self.assertEqual(room.find('flags').get('shop'),'1');self.assertEqual(rows[1][5],'s');self.assertEqual(rows[2][6],'S');self.assertEqual(rows[3][6:8],'ii')
+            for resource in ['dungeon/store_pedestal.png','dungeon/shop_item.png','dungeon/keeper.spr']:self.assertTrue((root/resource).is_file())
+            items=ET.parse(root/'game/itemDB.xml').getroot();self.assertEqual(len(items),4);self.assertTrue(all((root/item.get('iconFile')).is_file() for item in items if item.get('special')!='1'))
+            self.assertEqual(ET.parse(root/'game/monDB.xml').getroot().find('monster').get('name'),'Brax')
+
     def test_automatic_armour_fixture_has_enchantment_words(self):
         repository=Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as folder:
