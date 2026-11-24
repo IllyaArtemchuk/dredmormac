@@ -2023,3 +2023,10 @@ the supplied data has "horde is overpowered chance", while SpawnHorde requests
 Next recover tint/resource decisions, then connect horde constructors and group
 metadata to Session/native saves. Native room scripting/tick adoption and complete
 population/AI/effects/UI/audio/gameplay remain unfinished.
+
+SPR tint now matches1,152 actual original palettes/294,912 colours. Decoder/read
+support per-frame tint with unchanged transparency/delays, including exact float/
+mixed-double rounding, black NaNs, strict hue wrapping and -1 bypass. All64
+portable groups pass. Source awaits Mac CI. Monster TintSprites resource routing
+is the next missing piece; Session horde metadata/native adoption, scripting/tick,
+AI/effects/generation/UI/audio and full gameplay remain unfinished.

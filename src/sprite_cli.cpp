@@ -1,8 +1,24 @@
 #include "dredmor/sprite.hpp"
 #include <iostream>
+#include <string>
 #include <stdexcept>
 int main(int argc,char** argv) {
     try {
+        if (argc==2 && std::string(argv[1])=="--palette") {
+            std::int32_t angle;
+            while (std::cin>>angle) {
+                dredmor::SpritePalette palette;
+                for (auto& colour:palette) {
+                    unsigned value;
+                    if (!(std::cin>>value) || value>255) throw std::invalid_argument("invalid palette byte");
+                    colour=static_cast<std::uint8_t>(value);
+                }
+                dredmor::tint_sprite_palette(palette,angle);
+                for (auto colour:palette) std::cout<<unsigned(colour)<<' ';
+                std::cout<<'\n';
+            }
+            return 0;
+        }
         if (argc!=2) throw std::invalid_argument("Usage: dredmor-sprite FILE.spr");
         const auto sprite=dredmor::Sprite::read(argv[1]);
         // Stable RGBA/delay fingerprint for independent full-frame comparisons.

@@ -1,5 +1,6 @@
 #include "dredmor/sprite.hpp"
 #include <algorithm>
+#include <cmath>
 #include <fstream>
 #include <stdexcept>
 
@@ -10,7 +11,7 @@ std::uint16_t word(const std::vector<std::uint8_t>& bytes,std::size_t offset) {
     return static_cast<std::uint16_t>(bytes[offset]|(unsigned(bytes[offset+1])<<8));
 }
 }
-Sprite Sprite::decode(const std::vector<std::uint8_t>& bytes) {
+Sprite Sprite::decode(const std::vector<std::uint8_t>& bytes,std::int32_t tint) {
     if (bytes.size()<9 || bytes.size()>budget || bytes[0]!='S' || bytes[1]!='P' || bytes[2]!='R')
         throw std::invalid_argument("invalid SPR header or file size");
     Sprite result;
@@ -26,16 +27,19 @@ Sprite Sprite::decode(const std::vector<std::uint8_t>& bytes) {
         const auto start=9+i*(770+pixels);
         SpriteFrame frame;frame.delay_ms=word(bytes,start);frame.rgba.resize(pixels*4);
         const auto palette=start+2,indices=palette+768;
+        SpritePalette colours;
+        std::copy_n(bytes.begin()+palette,colours.size(),colours.begin());
+        tint_sprite_palette(colours,tint);
         for (std::size_t p=0;p<pixels;++p) {
             const auto index=bytes[indices+p];
-            std::copy_n(bytes.begin()+palette+3*index,3,frame.rgba.begin()+4*p);
+            std::copy_n(colours.begin()+3*index,3,frame.rgba.begin()+4*p);
             frame.rgba[4*p+3]=index?255:0;
         }
         result.frames.push_back(std::move(frame));
     }
     return result;
 }
-Sprite Sprite::read(const std::filesystem::path& path) {
+Sprite Sprite::read(const std::filesystem::path& path,std::int32_t tint) {
     std::ifstream input(path,std::ios::binary|std::ios::ate);
     if (!input) throw std::runtime_error("cannot open SPR: "+path.string());
     const auto size=input.tellg();
@@ -43,7 +47,7 @@ Sprite Sprite::read(const std::filesystem::path& path) {
     std::vector<std::uint8_t> bytes(static_cast<std::size_t>(size));input.seekg(0);
     if (!input.read(reinterpret_cast<char*>(bytes.data()),static_cast<std::streamsize>(bytes.size())))
         throw std::runtime_error("cannot read SPR: "+path.string());
-    return decode(bytes);
+    return decode(bytes,tint);
 }
 std::size_t Sprite::frame_at(std::uint64_t elapsed_ms) const {
     if (frames.empty()) throw std::logic_error("empty sprite has no frame");

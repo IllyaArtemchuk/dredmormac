@@ -2535,3 +2535,14 @@ insert zero. Supplied XML's "horde is overpowered chance" does not match the
 SpawnHorde typo "... change". Preserve missing-key zero in future adapters rather
 than substituting another key. See HORDES.md. Binary SHA256
 `a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.
+
+Sprite::Load palette slice0xa53f2..0xa55a8, CoreConvertRGBToHSL0xa3170 and
+CoreConvertHSLToRGB0xa32f0 match1,152 palettes/294,912 RGB colours byte-for-byte.
+Float intermediates, mixed-double third sector, CVTTSS2SI NaN behavior for black,
+strict >360 outer wrap and -1 bypass are retained. Angle0 is a conversion, not
+an identity operation: (1,100,254) becomes (0,99,254); angle360 gives (0,100,254).
+Sprite decode/read now apply this conversion to every frame's palette before
+index expansion, preserving index0 alpha and delays. No native monster tint
+adoption/resource-cache claim. Angles outside +/-360000 are a port work-budget
+guard. See scripts/verify_sprite_tint.py. Binary SHA256
+`a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.
