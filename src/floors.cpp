@@ -27,6 +27,7 @@ void validate_global_ids(const Session& session,const std::vector<SessionFloor>&
 }
 }
 SessionFloor Session::floor_state() const {
+    if (script_phase_pending_) throw std::invalid_argument("finish the staged room script phase before taking a floor snapshot");
     if (!pending_hordes_.empty()) throw std::invalid_argument("finish queued horde placement before taking a floor snapshot");
     SessionFloor floor(world_);floor.depth=depth_context_;floor.branch=floor_branch_;floor.stairs=stairs_;floor.secret_levers=secret_levers_;floor.script_levers=script_levers_;
     floor.enemies=enemies_;floor.monster_state=monster_state_;floor.ground=ground_;floor.objects=custom_objects_;floor.breakables=breakables_;floor.traps=traps_;floor.shops=shops_;floor.shop_presence=shop_presence_;floor.doors=doors_;return floor;

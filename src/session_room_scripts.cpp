@@ -5,35 +5,43 @@
 #include <type_traits>
 
 namespace dredmor {
+SessionRoomObjectRef SessionRoomScriptExecutor::reference(const SessionRoomObjects& objects,std::uint64_t identity) {
+    if (const auto ref=objects.reference(identity)) return *ref;
+    throw std::runtime_error("script action refers to an unregistered object");
+}
+CustomRoomObject& SessionRoomScriptExecutor::custom(Session& session,SessionRoomObjectRef ref) {
+    switch (ref.kind) {
+        case SessionRoomObjectKind::custom:return session.custom_objects_.at(ref.subject-1);
+        case SessionRoomObjectKind::breakable:return session.breakables_.at(ref.subject-1).object;
+        case SessionRoomObjectKind::lever:return session.script_levers_.at(ref.subject-1).object;
+        default:throw std::runtime_error("script blocking flag is not yet supported for this Session object");
+    }
+}
 SessionRoomScriptPass SessionRoomScriptExecutor::run(Session& session,const SessionRoomScriptProfile& profile,
     SessionRoomObjects& objects,RoomRuntimeState& runtime,const SessionRoomScriptHooks& hooks) {
-    if (profile.layout.width()!=session.world_.width() || profile.layout.height()!=session.world_.height() || profile.rooms.size()!=profile.programs.size())
+    auto candidate=session;auto bindings=objects;auto state=runtime;
+    auto pending=evaluate(candidate,profile,bindings,state,hooks);
+    clear_destruction(candidate,bindings,pending);
+    while (pending.next_move<pending.moves.size()) place_next(candidate,bindings,pending);
+    auto result=finish(candidate,bindings,pending);
+    session=std::move(candidate);objects=std::move(bindings);runtime=std::move(state);return result;
+}
+SessionRoomScriptQueue SessionRoomScriptExecutor::evaluate(Session& candidate,const SessionRoomScriptProfile& profile,
+    SessionRoomObjects& bindings,RoomRuntimeState& state,const SessionRoomScriptHooks& hooks) {
+    if (candidate.script_phase_pending_) throw std::invalid_argument("room script phase is already active");
+    if (profile.layout.width()!=candidate.world_.width() || profile.layout.height()!=candidate.world_.height() || profile.rooms.size()!=profile.programs.size())
         throw std::invalid_argument("room script profile does not match Session");
     for (std::size_t i=0;i<profile.rooms.size();++i) {
         const auto& room=profile.rooms[i];const auto& program=profile.programs[i];
         if (bool(room.trigger.scripts)!=bool(program) || (program && room.trigger.scripts.get()!=&program->scripts))
             throw std::invalid_argument("room script profile has mismatched program");
     }
-    if (!objects.player()) throw std::invalid_argument("room scripts require a registered player");
-    if (!objects.unplaced().empty()) throw std::invalid_argument("finish reserved initial room objects before a scripted turn");
-    if (session.queued_horde_members()) throw std::invalid_argument("finish initial horde placement before a scripted turn");
-    auto candidate=session;auto bindings=objects;auto state=runtime;
-    SessionRoomScriptPass result;
-    std::vector<std::uint64_t> destruction;
-    struct PendingMove {std::uint64_t subject;Position point;bool horde=false;};
-    std::vector<PendingMove> teleports;
-    auto reference=[&](std::uint64_t identity) {
-        if (const auto ref=bindings.reference(identity)) return *ref;
-        throw std::runtime_error("script action refers to an unregistered object");
-    };
-    auto custom=[&](SessionRoomObjectRef ref)->CustomRoomObject& {
-        switch (ref.kind) {
-            case SessionRoomObjectKind::custom:return candidate.custom_objects_.at(ref.subject-1);
-            case SessionRoomObjectKind::breakable:return candidate.breakables_.at(ref.subject-1).object;
-            case SessionRoomObjectKind::lever:return candidate.script_levers_.at(ref.subject-1).object;
-            default:throw std::runtime_error("script blocking flag is not yet supported for this Session object");
-        }
-    };
+    if (!bindings.player()) throw std::invalid_argument("room scripts require a registered player");
+    if (!bindings.unplaced().empty()) throw std::invalid_argument("finish reserved initial room objects before a scripted turn");
+    if (candidate.queued_horde_members()) throw std::invalid_argument("finish initial horde placement before a scripted turn");
+    candidate.script_phase_pending_=true;
+    SessionRoomScriptQueue pending;pending.level=bindings.level();pending.stage=SessionRoomScriptStage::evaluated;
+    auto& result=pending.pass;auto& destruction=pending.destruction;auto& teleports=pending.moves;
     RoomRuntimeHooks live;live.player=*bindings.player();
     live.player_position=[&] {return candidate.player_.position;};
     live.player_room=[&] {
@@ -106,9 +114,9 @@ SessionRoomScriptPass SessionRoomScriptExecutor::run(Session& session,const Sess
             case RoomActionRequestKind::teleport:
                 if (!request.forced) throw std::runtime_error("room script teleport requires forced placement");
                 teleports.push_back({request.subject,request.target,false});break;
-            case RoomActionRequestKind::set_blocking:custom(reference(request.subject)).blocks_movement=request.value!=0;break;
+            case RoomActionRequestKind::set_blocking:custom(candidate,reference(bindings,request.subject)).blocks_movement=request.value!=0;break;
             case RoomActionRequestKind::cast_spell: {
-                if (!request.subject || reference(request.caster).kind!=SessionRoomObjectKind::player) throw std::runtime_error("invalid scripted spell caster or handle");
+                if (!request.subject || reference(bindings,request.caster).kind!=SessionRoomObjectKind::player) throw std::runtime_error("invalid scripted spell caster or handle");
                 const auto spell=candidate.spell_definition(request.subject-1);
                 candidate.cast_spell(spell,request.origin,request.target,candidate.player_.id);break;
             }
@@ -118,6 +126,11 @@ SessionRoomScriptPass SessionRoomScriptExecutor::run(Session& session,const Sess
         }
     };
     result.triggers=run_room_scripts(profile.rooms,state,live);
+    return pending;
+}
+void SessionRoomScriptExecutor::clear_destruction(Session& candidate,SessionRoomObjects& bindings,SessionRoomScriptQueue& pending) {
+    if (!candidate.script_phase_pending_ || pending.stage!=SessionRoomScriptStage::evaluated || pending.level!=bindings.level())
+        throw std::invalid_argument("room script destruction requires its evaluated candidate");
     // Pending removals deliberately remained available to every action and
     // condition in this pass. Delete now, preserving other opaque identities.
     auto erase_id=[](auto& values,std::uint64_t id,auto identity) {
@@ -125,8 +138,8 @@ SessionRoomScriptPass SessionRoomScriptExecutor::run(Session& session,const Sess
         if (found==values.end()) throw std::runtime_error("destroyed script subject has disappeared");
         values.erase(found);
     };
-    for (auto identity:destruction) {
-        const auto ref=reference(identity);
+    for (auto identity:pending.destruction) {
+        const auto ref=reference(bindings,identity);
         switch (ref.kind) {
             case SessionRoomObjectKind::custom:candidate.custom_objects_.erase(candidate.custom_objects_.begin()+ref.subject-1);break;
             case SessionRoomObjectKind::breakable:
@@ -153,22 +166,27 @@ SessionRoomScriptPass SessionRoomScriptExecutor::run(Session& session,const Sess
         bindings.erase_subject(ref);
         // Source derived/base destruction removes queued teleports targeting
         // this object before the later forced-placement pass.
-        teleports.erase(std::remove_if(teleports.begin(),teleports.end(),[&](const auto& value){return value.subject==identity;}),teleports.end());
+        pending.moves.erase(std::remove_if(pending.moves.begin(),pending.moves.end(),[&](const auto& value){return value.subject==identity;}),pending.moves.end());
     }
-    for (const auto& move:teleports) {
-        const auto identity=move.subject;const auto point=move.point;
-        if (point.x<0 || point.y<0 || point.x>=candidate.world_.width() || point.y>=candidate.world_.height())
-            throw std::runtime_error("Session cannot yet persist out-of-grid script teleports");
-        if (move.horde) {
-            const auto ref=reference(identity);
-            if (ref.kind!=SessionRoomObjectKind::monster) throw std::runtime_error("reserved horde placement requires monster identity");
-            candidate.actor_by_id(ref.subject).position=point;
-            bindings.place_reserved(candidate,identity);continue;
-        }
-        const auto ref=reference(identity);
+    pending.destruction.clear();pending.stage=SessionRoomScriptStage::cleared;
+}
+void SessionRoomScriptExecutor::place_next(Session& candidate,SessionRoomObjects& bindings,SessionRoomScriptQueue& pending) {
+    if (!candidate.script_phase_pending_ || pending.stage!=SessionRoomScriptStage::cleared || pending.level!=bindings.level() || pending.next_move>=pending.moves.size())
+        throw std::invalid_argument("room script placement requires its cleared candidate");
+    const auto move=pending.moves[pending.next_move];
+    const auto identity=move.subject;const auto point=move.point;
+    if (point.x<0 || point.y<0 || point.x>=candidate.world_.width() || point.y>=candidate.world_.height())
+        throw std::runtime_error("Session cannot yet persist out-of-grid script teleports");
+    if (move.reserved) {
+        const auto ref=reference(bindings,identity);
+        if (ref.kind!=SessionRoomObjectKind::monster) throw std::runtime_error("reserved horde placement requires monster identity");
+        candidate.actor_by_id(ref.subject).position=point;
+        bindings.place_reserved(candidate,identity);
+    } else {
+        const auto ref=reference(bindings,identity);
         switch (ref.kind) {
             case SessionRoomObjectKind::player:
-                candidate.world_.place_player(point,candidate.world_.turn());candidate.player_.position=point;result.player_teleported=true;break;
+                candidate.world_.place_player(point,candidate.world_.turn());candidate.player_.position=point;pending.pass.player_teleported=true;break;
             case SessionRoomObjectKind::monster:
                 if (!candidate.world_.passable(point) && !candidate.actor_by_id(ref.subject).horde) throw std::runtime_error("Session cannot yet persist ordinary monsters teleported onto walls");
                 candidate.actor_by_id(ref.subject).position=point;break;
@@ -176,13 +194,19 @@ SessionRoomScriptPass SessionRoomScriptExecutor::run(Session& session,const Sess
                 if (!candidate.world_.passable(point)) throw std::runtime_error("Session cannot yet persist items teleported onto walls");
                 for (auto& value:candidate.ground_) if (value.item.instance==ref.subject) value.position=point;
                 break;
-            case SessionRoomObjectKind::custom:case SessionRoomObjectKind::breakable:case SessionRoomObjectKind::lever:custom(ref).position=point;break;
+            case SessionRoomObjectKind::custom:case SessionRoomObjectKind::breakable:case SessionRoomObjectKind::lever:custom(candidate,ref).position=point;break;
             case SessionRoomObjectKind::trap:throw std::runtime_error("script trap teleport requires origin/effect lifetime integration");
             case SessionRoomObjectKind::keeper:throw std::runtime_error("script keeper teleport requires shop guard integration");
         }
     }
+    ++pending.next_move;
+}
+SessionRoomScriptPass SessionRoomScriptExecutor::finish(Session& candidate,const SessionRoomObjects& bindings,SessionRoomScriptQueue& pending) {
+    if (!candidate.script_phase_pending_ || pending.stage!=SessionRoomScriptStage::cleared || pending.level!=bindings.level() || pending.next_move!=pending.moves.size())
+        throw std::invalid_argument("room script finish requires all deferred placements");
     if (!bindings.unplaced().empty()) throw std::runtime_error("scripted turn left unplaced room objects");
     candidate.validate_hordes();
-    session=std::move(candidate);objects=std::move(bindings);runtime=std::move(state);return result;
+    candidate.script_phase_pending_=false;pending.stage=SessionRoomScriptStage::finished;pending.moves.clear();pending.next_move=0;
+    return std::move(pending.pass);
 }
 }

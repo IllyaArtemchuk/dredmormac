@@ -370,6 +370,7 @@ CustomRoomObject read_room_object(const XmlNode& node,const World& world) {
 }
 }
 void Session::save(std::ostream& out) const {
+    if (script_phase_pending_) throw std::runtime_error("finish the staged room script phase before saving");
     validate_hordes();
     bool scheduled=!player_.triggers.empty();for (const auto& actor:enemies_) scheduled=scheduled || !actor.triggers.empty();
     bool gated=false;auto gates=[&](const Actor& actor){for (const auto& trigger:actor.triggers) gated=gated || trigger.requires_buff || trigger.forbids_buff || !trigger.required_buff.empty() || !trigger.forbidden_buff.empty();};

@@ -21,6 +21,7 @@ struct SessionRoomObjectBinding {
 class SessionRoomObjects {
 public:
     explicit SessionRoomObjects(std::uint64_t level=1);
+    std::uint64_t level() const {return level_;}
     const std::vector<SessionRoomObjectBinding>& bindings() const {return bindings_;}
     const std::vector<SessionRoomObjectBinding>& carried() const {return carried_;}
     const std::vector<SessionRoomObjectBinding>& unplaced() const {return unplaced_;}

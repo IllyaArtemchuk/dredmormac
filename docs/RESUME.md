@@ -2320,3 +2320,20 @@ port handle/lifetime integration over previously compared constructor/placement
 rules; no new full GameTick adoption claim. Item-type123fb2f is running Mac
 45408432394. Next split script/destruction/placement phases for the verified outer
 GameTick; full scheduling/AI/effect/generation/UI/audio/game remain unfinished.
+
+Native TypeAt123fb2f passed Mac45408432394; reserved handles4d11cd1 passed45409613713,
+both including packaged-app smoke. SessionRoomScriptExecutor now exposes staged
+evaluate/clear_destruction/place_next/finish phases in addition to the existing
+all-or-nothing run wrapper. The staged owner must retain/discard Session,
+bindings/runtime/queue together; ordering/level guards reject incomplete or reused
+phases. Active phases cannot save or snapshot/travel floors, and finish validates
+all reserved placements/group links before releasing that guard. Native run
+behavior and completed save payloads stay unchanged. All73 portable groups pass.
+New composed fixture uses the verified outer GameTick with live Session scripts:
+pending removals remain findable during evaluation, clear precedes Post, new
+objects get Post before their first Update, cooldown/action delay precede both
+queued player moves, and autosave can run only after phase completion. Virtual
+object/player/director bodies are controlled boundaries; this does not yet adopt
+GameTick as the native Session scheduler or persist its separate driver state.
+Next connect candidate-owned shared RNG/driver state and the remaining actor,
+effect/clock/director lifetimes. Full game remains unfinished.

@@ -275,6 +275,7 @@ private:
     std::vector<Actor> enemies_;
     struct PendingHorde {std::vector<Actor> actors;std::vector<RoomTeleport> teleports;};
     std::vector<PendingHorde> pending_hordes_;
+    bool script_phase_pending_=false;
     std::vector<GroundItem> ground_;
     std::vector<CustomRoomObject> custom_objects_;
     std::vector<BreakableRoomObject> breakables_;
