@@ -2186,3 +2186,20 @@ with unpaid goods calls AngerShopkeepers620c6 and clears carried stolen flags,
 changes music/dialog. Those transitions and full shop entity/native interaction
 are not yet integrated. Keeper MonsterC2/tweak rank draws occur after the variant
 and before stock; full construction must preserve that callback point.
+
+
+Shop layout sourcecd62cd5 passed actual arm64 macos-15 run45339437819,
+job138259258103: all79 tests plus packaged-app smoke.
+Unpaid ownership source6ace889 passed run45340290071: all80 tests and packaged
+app smoke (job identity in workflow). Session format19 and cached unpaid floor
+travel pass on real arm64.
+Shop entry/exit and clear kernels now match2,048 actual DoSteppedOn shop phases
+and2,048 complete ClearStolenGoods executions. The real query/AngerShopkeepers/
+ClearStolenGoods execute inside presence checks; music/dialog/Steam are boundaries.
+Preserved tile13 entry, angry-level entry suppression, ordered normal/theft music
+and dialog requests, inShop/music flags and the original omission of ranged gear
+from clear operations. Neither measured phase consumes RNG. Later DoSteppedOn
+random-colour text and tile callbacks remain outside the comparison.
+All47 local groups pass. Actual arm64 validation is pending for these kernels.
+Full shop ownership/session/native UI and generated-floor content still need
+integration; do not present these isolated transitions as a complete shop system.

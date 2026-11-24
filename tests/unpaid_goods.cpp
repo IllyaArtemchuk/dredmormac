@@ -14,6 +14,11 @@ int main() {
         for (auto& slot:belt) {slot=item;check(carried_unpaid_goods(bag,belt,equipment));slot.reset();}
         for (auto& slot:equipment) {slot=item;check(carried_unpaid_goods(bag,belt,equipment));slot.reset();}
         check(carried_unpaid_goods(bag,belt,equipment,item));auto paid=item;paid.for_sale=false;check(!carried_unpaid_goods(bag,belt,equipment,paid));
+        for (auto& slot:bag) slot=item;for (auto& slot:belt) slot=item;for (auto& slot:equipment) slot=item;std::optional<InventoryItem> held=item;
+        clear_unpaid_goods(bag,belt,equipment,held);check(carried_unpaid_goods(bag,belt,equipment,held));
+        for (const auto& slot:bag) check(slot && !slot->for_sale);for (const auto& slot:belt) check(slot && !slot->for_sale);
+        for (std::size_t i=0;i<equipment.size();++i) check(equipment[i] && equipment[i]->for_sale==(i==8));check(held && !held->for_sale);
+        equipment[8].reset();check(!carried_unpaid_goods(bag,belt,equipment,held));
         auto definitions=std::make_shared<const std::vector<ItemDefinition>>(std::vector<ItemDefinition>{read_item(parse_xml("<item name='Cap'><armour type='head'/></item>"))});
         Session session(room(),make_player({3,2,2}),1);session.equipment_profile({3,2,2},definitions);session.drop(item,{1,1});
         check(!session.has_unpaid_goods() && parse_xml(saved(session)).attribute("version")=="19");session.pickup();check(session.has_unpaid_goods());

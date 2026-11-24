@@ -40,6 +40,27 @@ bool carried_unpaid_goods(const Inventory::Bag& bag,const Inventory::Belt& belt,
     for (const auto& item:equipment) if (item && item->for_sale) return true;
     return held && held->for_sale;
 }
+void clear_unpaid_goods(Inventory::Bag& bag,Inventory::Belt& belt,
+    Equipment::Slots& equipment,std::optional<InventoryItem>& held) {
+    if (held) held->for_sale=false;
+    for (auto& item:bag) if (item) item->for_sale=false;
+    for (auto& item:belt) if (item) item->for_sale=false;
+    for (std::size_t i=0;i<equipment.size();++i) if (i!=std::size_t(EquipmentSlot::ranged) && equipment[i]) equipment[i]->for_sale=false;
+}
+ShopPresenceTransition step_shop_presence(std::uint8_t tile_kind,ShopPresenceState state,bool stolen_goods) {
+    ShopPresenceTransition result{state,{}};auto& next=result.state;
+    if (tile_kind==13 && !next.in_shop && !next.level_angry) {
+        result.events.push_back(ShopPresenceEvent::shop_music);next.music_override=true;next.in_shop=true;
+    }
+    if (tile_kind!=13 && next.in_shop) {
+        if (stolen_goods) {
+            result.events={ShopPresenceEvent::free_music,ShopPresenceEvent::anger_keepers,ShopPresenceEvent::theft_dialog,ShopPresenceEvent::thief_music};
+            next.level_angry=true;next.music_override=true;
+        } else {next.music_override=false;result.events.push_back(ShopPresenceEvent::rotate_music);}
+        next.in_shop=false;
+    }
+    return result;
+}
 ShopPedestalAction resolve_shop_pedestal(bool has_item,std::int32_t shop_cost,bool stackable,
     std::int32_t quantity,float buy_scaler,int dialog_choice,std::int32_t balance) {
     ShopPedestalAction result;result.balance=balance;

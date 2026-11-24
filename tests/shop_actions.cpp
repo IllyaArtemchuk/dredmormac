@@ -27,6 +27,12 @@ int main() {
         definition.price=std::numeric_limits<std::int32_t>::max();item.kind=ItemKind::potion;check(item_shop_cost(&definition,item)==definition.price);
         item.kind=ItemKind::weapon;check(item_shop_cost(&definition,item)==std::numeric_limits<std::int32_t>::min());
         bool rejected=false;try {resolve_shop_pedestal(true,std::numeric_limits<std::int32_t>::min(),false,1,1.f,0,0);} catch(const std::overflow_error&) {rejected=true;}check(rejected);
+        auto presence=step_shop_presence(13,{},false);check(presence.state.in_shop && presence.state.music_override && presence.events==std::vector<ShopPresenceEvent>{ShopPresenceEvent::shop_music});
+        check(step_shop_presence(13,presence.state,true).events.empty());presence=step_shop_presence(1,presence.state,false);
+        check(!presence.state.in_shop && !presence.state.music_override && !presence.state.level_angry && presence.events==std::vector<ShopPresenceEvent>{ShopPresenceEvent::rotate_music});
+        presence=step_shop_presence(13,presence.state,true);presence=step_shop_presence(1,presence.state,true);
+        check(!presence.state.in_shop && presence.state.music_override && presence.state.level_angry && presence.events.size()==4 && presence.events[1]==ShopPresenceEvent::anger_keepers);
+        check(step_shop_presence(13,presence.state,false).events.empty());
         const auto markers=read_shop_markers({"Sisi", "ssSSi", "i"},4,3);
         check(markers.home.x==3 && markers.home.y==1 && markers.guard.x==1 && markers.guard.y==1 && markers.pedestals.size()==3);
         check(markers.pedestals[0].x==1 && markers.pedestals[0].y==0 && markers.pedestals[1].x==3 && markers.pedestals[1].y==0 && markers.pedestals[2].y==2);

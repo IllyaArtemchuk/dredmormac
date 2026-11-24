@@ -141,3 +141,28 @@ ForceShopkeeperMove's mode flag is global inShop. Shopkeeper construction includ
 MonsterC2/tweak-dependent rank adjustment between the variant draw and stock;
 a full shop constructor must account for those draws, rather than treating the
 stock-only plan's keeper initialization boundary as a no-op in full gameplay.
+
+`step_shop_presence` now implements DoSteppedOn's shop phase before0x130ffd.
+Entering tile13 from outside a calm shop starts shop music and sets inShop/music
+override. An angry level suppresses that entry. Leaving tile13 while inShop with
+unpaid goods frees music, angers keepers, shows the theft dialog and starts thief
+music, retaining music override; leaving without unpaid goods clears override and
+rotates the normal tune. Both exit paths clear inShop. Stable states do nothing.
+The dialog is "You have stolen merchandise from a shop! You're in trouble now...".
+
+`clear_unpaid_goods` implements ClearStolenGoods0x47cc0. It clears bag, belt,
+most equipped items and held items. Original equipped ranged field+0x6f4 is omitted,
+even though PlayerHasStolenGoods checks it. The port preserves that omission.
+This kernel takes mutable container snapshots; it does not imply native mouse-item
+ownership or a complete session shop lifecycle.
+
+    .venv/bin/python scripts/verify_shop_presence.py ORIGINAL build/dredmor-shop --cases 2048 --out PRIVATE.json
+    .venv/bin/python scripts/verify_unpaid_goods.py ORIGINAL build/dredmor-shop --cases 2048 --out PRIVATE.json
+
+All2,048 actual shop phases match with real PlayerHasStolenGoods,
+AngerShopkeepers and ClearStolenGoods. Music/dialog and unavailable Steam are
+boundaries. The harness additionally checks room-byte writes, keeper anger and
+cleared flags including ranged omission. The unpaid oracle now also compares
+2,048 complete clear operations alongside query cases. Neither phase consumes
+random state. Later DoSteppedOn random-colour draws and object callbacks remain
+outside this comparison and must not be omitted in a complete movement pipeline.

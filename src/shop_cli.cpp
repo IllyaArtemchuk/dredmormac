@@ -6,13 +6,24 @@
 using namespace dredmor;
 int main(int argc,char** argv) {
     try {
-        if (argc==2 && std::string(argv[1])=="--unpaid") {
+        if (argc==2 && std::string(argv[1])=="--presence") {
+            unsigned kind;ShopPresenceState state;bool stolen;
+            while (std::cin>>kind>>state.in_shop>>state.music_override>>state.level_angry>>stolen) {
+                if (kind>255) throw std::invalid_argument("invalid shop tile");const auto transition=step_shop_presence(std::uint8_t(kind),state,stolen);
+                std::cout<<transition.state.in_shop<<' '<<transition.state.music_override<<' '<<transition.state.level_angry<<' '<<transition.events.size();for (auto event:transition.events) std::cout<<' '<<int(event);std::cout<<'\n';
+            }
+        } else if (argc==2 && (std::string(argv[1])=="--unpaid" || std::string(argv[1])=="--unpaid-clear")) {
             unsigned state;
             while (std::cin>>state) {
                 Inventory::Bag bag;Inventory::Belt belt;Equipment::Slots equipment;std::optional<InventoryItem> held;std::size_t n=0;
                 auto take=[&](auto& slot) {if (n++) std::cin>>state;if (!std::cin || state>2) throw std::invalid_argument("invalid unpaid fixture");if (state) {InventoryItem item;item.for_sale=state==2;slot=item;}};
                 for (auto& item:bag) take(item);for (auto& item:belt) take(item);for (auto& item:equipment) take(item);take(held);
-                std::cout<<carried_unpaid_goods(bag,belt,equipment,held)<<'\n';
+                std::cout<<carried_unpaid_goods(bag,belt,equipment,held);
+                if (std::string(argv[1])=="--unpaid-clear") {
+                    clear_unpaid_goods(bag,belt,equipment,held);std::cout<<' '<<carried_unpaid_goods(bag,belt,equipment,held);
+                    for (const auto& item:bag) std::cout<<' '<<bool(item && item->for_sale);for (const auto& item:belt) std::cout<<' '<<bool(item && item->for_sale);for (const auto& item:equipment) std::cout<<' '<<bool(item && item->for_sale);std::cout<<' '<<bool(held && held->for_sale);
+                }
+                std::cout<<'\n';
             }
         } else if (argc==2 && std::string(argv[1])=="--markers") {
             int width,height;std::size_t count;
