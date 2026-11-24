@@ -489,3 +489,22 @@ All69 portable groups pass, including live Session activation through the full
 RoomRuntime, cross-type duplicate lookup, room-byte capture, movement, snapshot
 isolation, session+binding reload and malformed reference guards. Full game is
 still incomplete; next connect action/deferred phases and immutable profiles.
+
+SessionRoomScriptExecutor now runs the recovered RoomRuntime against actual
+Session storage in one candidate transaction. Default Create supports custom
+objects, pedestals, ordinary levers and resource-backed breakables. It preserves
+same-pass visibility of queued removals, de-duplicates destruction, removes all
+teleports targeting destroyed objects, adjusts remaining static typed indices
+without changing opaque IDs, and applies surviving forced moves in queue order.
+Passable flags mutate live objects. Scripted spell actor/effect preparation and
+other constructors remain explicit hooks, not ignored side effects. Unsupported
+clock/horde/trap/keeper lifetime paths and out-of-grid or unpersistable wall
+placements fail atomically. Ticker/audio requests are returned after success.
+All70 portable groups pass. The real-Session XML puzzle covers pending deletion,
+immediate Create visibility, repeated moves, final index-shift correctness,
+pre-teleport previous-room capture, saved component continuation, late failure
+rollback including RNG and resource failure rollback. This phase is not yet
+scheduled by the native/provisional Session turn loop, and component saves are
+still caller-owned. Next add authoritative profile/save and native puzzle wiring.
+Mac source2da1b85 passed run45396650040; catalogue75bf473 passed45396105118.
+Full outer GameTick, native scripts, effects/AI/generation/UI/audio/game unfinished.

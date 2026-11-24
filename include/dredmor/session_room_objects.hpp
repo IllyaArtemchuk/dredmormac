@@ -30,6 +30,9 @@ public:
     RoomIdAssignment assign(std::uint64_t identity,std::string id,const Session& session,
         const DungeonLayout& layout,bool debug=false);
     bool unregister(std::uint64_t identity);
+    // Called when the typed owner erases an element. Static vector indices
+    // shift; stable actor/item IDs do not. Remaining opaque IDs stay unchanged.
+    void erase_subject(SessionRoomObjectRef reference);
     std::optional<ScriptObjectState> object(const Session& session,std::uint64_t identity) const;
     std::optional<ScriptObjectState> find(const Session& session,std::int32_t room,std::string_view id) const;
     std::optional<std::uint64_t> player() const;

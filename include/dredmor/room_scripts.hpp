@@ -103,6 +103,10 @@ struct RoomScriptDefinition {
     std::vector<RoomCondition> conditions;
     std::vector<RoomAction> success,failure;
 };
+struct RoomScriptProgram {
+    std::vector<RoomScriptDefinition> scripts;
+    std::vector<RoomRecord> created_records;
+};
 RoomScriptDefinition read_room_script(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room,const RoomActionReaders& readers={});
 using RoomEventKey=std::pair<std::int32_t,std::string>;
 using RoomEventQueue=std::map<RoomEventKey,std::set<std::string>>;

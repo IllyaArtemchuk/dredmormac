@@ -239,6 +239,7 @@ public:
                         std::shared_ptr<const std::vector<AbilityDefinition>> abilities={},
                         std::shared_ptr<const std::vector<SpellDefinition>> spells={});
 private:
+    friend class SessionRoomScriptExecutor;
     friend class FloorRegistry;
     static Session load_node(const XmlNode& root,std::shared_ptr<const std::vector<ItemDefinition>> definitions,
                              std::shared_ptr<const std::vector<AbilityDefinition>> abilities,

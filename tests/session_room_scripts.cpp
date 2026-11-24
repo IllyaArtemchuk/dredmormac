@@ -1,0 +1,93 @@
+#include "dredmor/content.hpp"
+#include "dredmor/session_room_scripts.hpp"
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+#define check(v) do {if (!(v)) throw std::runtime_error("Session scripts assertion at line "+std::to_string(__LINE__));} while(false)
+using namespace dredmor;
+template<class F> bool rejects(F body) {try {body();} catch(const std::exception&) {return true;}return false;}
+std::string saved(const Session& session) {std::ostringstream out;session.save(out);return out.str();}
+std::string saved(const SessionRoomObjects& objects,const Session& session) {std::ostringstream out;objects.save(out,session);return out.str();}
+std::string saved(const RoomRuntimeState& state,const std::vector<RoomRuntimeRoom>& rooms) {std::ostringstream out;write_room_runtime_state(out,state,rooms);return out.str();}
+int main() {
+    try {
+        RoomDefinition definition;definition.name="Synthetic live Session puzzle";
+        definition.rows={"#########","#.......#","#..1234.#","#.......#","#########"};
+        definition.source=parse_xml(R"(<room width="9" height="5">
+            <script><condition condition_type="activated_changed" id="switch" activated="1"/>
+              <action on="success" action_type="move" id="gate" at="1"/>
+              <action on="success" action_type="remove" id="gate"/>
+              <action on="success" action_type="remove" id="gate"/>
+              <action on="success" action_type="create" create_type="customblocker" at="3" png="replacement.spr" id="replacement"/>
+              <action on="success" action_type="move" id="player" at="2"/>
+              <action on="success" action_type="move" id="player" at="3"/>
+              <action on="success" action_type="move" id="player" at="4"/>
+              <action on="success" action_type="ticker" text="switch fired"/></script>
+            <script><condition condition_type="at" id="gate" at="2"/>
+              <action on="success" action_type="ticker" text="gate visible until clear"/></script>
+            <script><condition condition_type="at" id="replacement" at="3"/>
+              <action on="success" action_type="set" id="replacement" set_type="passable" value="1"/>
+              <action on="success" action_type="ticker" text="created object visible immediately"/></script>
+            <script><condition condition_type="at" id="gate" at="2" not="1"/>
+              <action on="success" action_type="ticker" text="gate gone"/></script>
+            </room>)");
+        auto program=std::make_shared<const RoomScriptProgram>(definition.script_program());
+        auto entry=std::make_shared<RoomScriptProgram>();RoomCondition entered;entered.kind=RoomConditionKind::entered;
+        RoomAction message;message.kind=RoomActionKind::ticker;message.text="entered second room";
+        RoomScriptDefinition on_entry;on_entry.conditions={entered};on_entry.success={message};entry->scripts={on_entry};
+        std::vector<DungeonCell> cells(45);for (std::size_t i=0;i<cells.size();++i) {cells[i].kind=1;cells[i].room_id=i%9>=6?1:0;}
+        SessionRoomScriptProfile profile(DungeonLayout(9,5,cells));
+        profile.programs={program,entry};
+        profile.rooms={{{true,1,0,std::shared_ptr<const std::vector<RoomScriptDefinition>>(program,&program->scripts)},{0,0},1},
+                       {{true,1,1,std::shared_ptr<const std::vector<RoomScriptDefinition>>(entry,&entry->scripts)},{0,0},2}};
+        std::istringstream rows("#########\n#.......#\n#.@.....#\n#.......#\n#########\n");
+        Session session(World::read(rows),make_player({3,2,2}),7);SessionRoomObjects objects;
+        CustomRoomDefinition gate;gate.placement.relative={4,2};gate.placement.id="gate";gate.sprite.image="gate.spr";
+        session.create_custom_object(gate);auto gate_binding=objects.bind(session,{SessionRoomObjectKind::custom,1},profile.layout);
+        RoomElementDefinition lever;lever.type="lever";lever.placement.relative={3,2};lever.placement.id="switch";
+        session.create_script_lever(lever);objects.bind(session,{SessionRoomObjectKind::lever,1},profile.layout);
+        objects.bind(session,{SessionRoomObjectKind::player,session.player().id},profile.layout);
+        session.step(Action::east);check(session.script_levers()[0].activation.changed());
+        RoomRuntimeState runtime;const auto before_session=saved(session),before_bindings=saved(objects,session),before_runtime=saved(runtime,profile.rooms);
+        // Fail after Create, removal and earlier queued teleports have mutated
+        // the candidate. Every owned payload and both RNG streams roll back.
+        auto bad_program=std::make_shared<RoomScriptProgram>(*program);
+        auto invalid_move=program->scripts[0].success[5];invalid_move.point={99,99};bad_program->scripts[0].success.push_back(invalid_move);
+        auto bad_profile=profile;bad_profile.programs[0]=bad_program;
+        bad_profile.rooms[0].trigger.scripts=std::shared_ptr<const std::vector<RoomScriptDefinition>>(bad_program,&bad_program->scripts);
+        check(rejects([&]{SessionRoomScriptExecutor::run(session,bad_profile,objects,runtime);}));
+        check(saved(session)==before_session && saved(objects,session)==before_bindings && saved(runtime,profile.rooms)==before_runtime);
+        auto result=SessionRoomScriptExecutor::run(session,profile,objects,runtime);
+        check(result.triggers.successes.size()==3 && result.presentation.size()==3 && result.player_teleported);
+        check(result.presentation[0].text=="switch fired" && result.presentation[1].text=="gate visible until clear" && result.presentation[2].text=="created object visible immediately");
+        check(session.custom_objects().size()==1 && session.custom_objects()[0].room_local_id=="replacement");
+        check(!session.custom_objects()[0].blocks_movement && session.custom_objects()[0].position.x==5);
+        check(session.player().position.x==6 && session.player().position.y==2 && session.world().turn()==1);
+        check(!objects.object(session,gate_binding.object.identity) && objects.find(session,0,"replacement")->position.x==5);
+        check(runtime.triggers.previous_room==0); // captured before queued moves
+        // The remaining object's shifted typed index and the opaque ID both
+        // survive Session and script-component snapshots.
+        const auto encoded_session=saved(session),encoded_objects=saved(objects,session),encoded_runtime=saved(runtime,profile.rooms);
+        std::istringstream input(encoded_session);auto restored=Session::load(input);
+        auto restored_objects=SessionRoomObjects::load(parse_xml(encoded_objects),restored);
+        auto restored_runtime=read_room_runtime_state(parse_xml(encoded_runtime),profile.rooms);
+        auto next=SessionRoomScriptExecutor::run(session,profile,objects,runtime);
+        auto next_restored=SessionRoomScriptExecutor::run(restored,profile,restored_objects,restored_runtime);
+        check(next.presentation.size()==2 && next.presentation[0].text=="gate gone" && next.presentation[1].text=="entered second room");
+        check(next_restored.presentation.size()==next.presentation.size() && saved(session)==saved(restored));
+        check(saved(objects,session)==saved(restored_objects,restored) && saved(runtime,profile.rooms)==saved(restored_runtime,profile.rooms));
+        check(SessionRoomScriptExecutor::run(session,profile,objects,runtime).presentation.empty());
+        // Constructor/resource failure cannot leak its created object or RNG.
+        auto resource_program=std::make_shared<RoomScriptProgram>();BreakableRoomDefinition breakable;
+        breakable.placement.relative={5,3};breakable.placement.id="new breakable";resource_program->created_records={breakable};
+        RoomScriptDefinition create;RoomAction action;action.kind=RoomActionKind::create;action.record=1;create.success={action};resource_program->scripts={create};
+        auto resource_profile=profile;resource_profile.programs[0]=resource_program;
+        resource_profile.rooms[0].trigger.scripts=std::shared_ptr<const std::vector<RoomScriptDefinition>>(resource_program,&resource_program->scripts);
+        RoomRuntimeState fresh;SessionRoomScriptHooks resources;resources.breakable_frames=[](const auto&)->BreakableFrames {throw std::runtime_error("resource failure");};
+        const auto unchanged=saved(session);check(rejects([&]{SessionRoomScriptExecutor::run(session,resource_profile,objects,fresh,resources);}));
+        check(saved(session)==unchanged && fresh.triggers.success_counts.empty());
+        auto mismatch=profile;mismatch.rooms[0].trigger.scripts=profile.rooms[1].trigger.scripts;
+        check(rejects([&]{SessionRoomScriptExecutor::run(session,mismatch,objects,runtime);}));
+        std::cout<<"live Session room puzzle preserves same-pass visibility, deferred deletion/movement, stable references, rollback and saved continuation\n";
+    } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
+}

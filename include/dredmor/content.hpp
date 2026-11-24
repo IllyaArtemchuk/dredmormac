@@ -15,10 +15,6 @@ namespace dredmor {
 struct SkillLoadout { std::string type,subtype;int amount=1;bool always=false; };
 struct StartingLoadout { int skill_id;SkillLoadout item; };
 struct SkillDefinition { int id;std::string name;int category;XmlNode source;std::vector<SkillLoadout> loadouts;bool deprecated=false; };
-struct RoomScriptProgram {
-    std::vector<RoomScriptDefinition> scripts;
-    std::vector<RoomRecord> created_records;
-};
 struct HordePopulation {
     HordeResult result;
     // Constructor order. Actors remain unplaced until their queued teleports

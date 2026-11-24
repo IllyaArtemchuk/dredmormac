@@ -111,6 +111,13 @@ bool SessionRoomObjects::unregister(std::uint64_t identity) {
     if (found==bindings_.end()) return false;
     bindings_.erase(found);return true;
 }
+void SessionRoomObjects::erase_subject(SessionRoomObjectRef reference) {
+    bindings_.erase(std::remove_if(bindings_.begin(),bindings_.end(),[&](const auto& binding) {
+        return binding.reference.kind==reference.kind && binding.reference.subject==reference.subject;
+    }),bindings_.end());
+    if (reference.kind==SessionRoomObjectKind::custom || reference.kind==SessionRoomObjectKind::breakable || reference.kind==SessionRoomObjectKind::lever)
+        for (auto& binding:bindings_) if (binding.reference.kind==reference.kind && binding.reference.subject>reference.subject) --binding.reference.subject;
+}
 std::optional<ScriptObjectState> SessionRoomObjects::object(const Session& session,std::uint64_t identity) const {
     const auto found=std::find_if(bindings_.begin(),bindings_.end(),[&](const auto& value){return value.object.identity==identity;});
     if (found==bindings_.end()) return std::nullopt;

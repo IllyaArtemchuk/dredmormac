@@ -1,0 +1,41 @@
+#pragma once
+#include "dredmor/session_room_objects.hpp"
+
+namespace dredmor {
+struct SessionRoomScriptProfile {
+    explicit SessionRoomScriptProfile(DungeonLayout grid):layout(std::move(grid)) {}
+    DungeonLayout layout;
+    std::vector<RoomRuntimeRoom> rooms;
+    // Room index -> program. Runtime script vectors must alias these immutable
+    // programs, retaining the one-based local Create record handles.
+    std::vector<std::shared_ptr<const RoomScriptProgram>> programs;
+};
+struct SessionRoomScriptHooks {
+    // Optional constructor boundary for NPCs, loot, traps and other single
+    // records not handled by the default custom/lever/pedestal constructors.
+    // Mutations must stay in the supplied candidate Session; definitions and
+    // resource callbacks are immutable. Returned objects are already placed.
+    std::function<std::optional<SessionRoomObjectRef>(Session&,const RoomRecord&,Position)> create_record;
+    std::function<std::optional<ScriptItemType>(Session&,std::string_view,std::string_view)> create_prototype;
+    std::function<std::vector<ScriptTileItem>(const Session&,Position)> tile_items;
+    std::function<BreakableFrames(const BreakableRoomDefinition&)> breakable_frames;
+    // Scripted spell setup mutates actor/effect state; it is not merely a
+    // presentation request and cannot be silently skipped by the adapter.
+    std::function<void(Session&,const RoomActionRequest&)> prepare_spell_actor;
+};
+struct SessionRoomScriptPass {
+    RoomTriggerPass triggers;
+    // Ticker/audio presentation requests are delivered only after the
+    // candidate succeeds. Their actual native rendering is caller-owned.
+    std::vector<RoomActionRequest> presentation;
+    bool player_teleported=false;
+};
+// A transactional integration phase: live script pass, destruction clear,
+// then ordered forced teleports. The caller schedules this at its GameTick
+// boundaries. This does not replace Session's provisional outer turn driver.
+class SessionRoomScriptExecutor {
+public:
+    static SessionRoomScriptPass run(Session& session,const SessionRoomScriptProfile& profile,
+        SessionRoomObjects& objects,RoomRuntimeState& runtime,const SessionRoomScriptHooks& hooks={});
+};
+}
