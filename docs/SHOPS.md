@@ -252,3 +252,28 @@ so it can test direct purchase, taking/declining debt/paying debt, then another
 unpaid taking and theft exit in the same run. Idle counter state is modeled, but
 native idle text is a short functional message; original quip text is still pending.
 The new native debt fixture awaits actual arm64 validation.
+
+`resolve_keeper_sale` implements Shopkeeper::ItemUsed0x3f52c. Angry keepers
+request the Monster::ItemUsed fallback. Calm keepers refuse unpaid items, then
+scale/truncate the virtual shop cost using `store sell price scaler`. Nonpositive
+offers refuse; positive offers show Don't Sell/Sell, and nonzero choice destroys
+the item and credits its whole quoted value. Stack quantity is already included
+in virtual cost; no extra multiplication occurs. Session inventory selling removes
+the whole owned item transactionally and preserves refused/declined items.
+
+    .venv/bin/python scripts/verify_shop_selling.py ORIGINAL build/dredmor-shop --cases 2048 --out PRIVATE.json
+
+All2,048 complete ItemUsed executions match with cost/wallet/UI/tweak/formatting/
+destruction and angry Monster::ItemUsed delegation boundaries. The harness checks
+handled/fallback flags, unpaid/nonpositive refusal, float offer, accept/decline,
+destruction/payment, wrapping balances and unchanged RNG. Prices have a separate
+full comparison; hostile item effects and original drag-source detachment are not
+established here. Local tests cover full-stack selling, decline, zero offer,
+unpaid refusal and saved inventory/wallet continuation.
+
+The native inventory Sell action selects a nearby calm keeper and opens original
+sale/refusal messages and response order. Its shop fixture now buys an item,
+declines a sale, sells it, then tests unpaid taking/debt settlement and theft exit,
+including wallet and save checks. Quick selling is a distinct original path and
+remains pending; the native action uses the confirmed keeper offer path. Actual
+arm64 validation is pending for this selling source.

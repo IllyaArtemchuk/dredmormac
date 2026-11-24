@@ -41,6 +41,11 @@ int main() {
         auto chat=cart.settle_shop_debt(0,0,1.f);check(chat.chat_line==0 && cart.shop_chat_counter()==1);cart=loaded(cart);check(cart.shop_chat_counter()==1);
         for (int i=0;i<10;++i) cart.settle_shop_debt(0,0,1.f);check(cart.shop_chat_counter()==0 && saved(loaded(cart))==saved(cart));
         auto no_money=fixture();no_money.use_shop_pedestal(0,0,2,1.f);check(no_money.settle_shop_debt(0,1,1.f).insufficient_funds && no_money.has_unpaid_goods());
+        auto selling=fixture();InventoryItem stack;stack.instance=100;stack.kind=ItemKind::weapon;stack.definition=0;stack.weapon_type=0;stack.quantity=3;stack.stackable=true;selling.inventory().insert(stack,false);
+        const auto sale_before=saved(selling);check(selling.sell_inventory_item(0,100,0,.5f).quote==15 && saved(selling)==sale_before);
+        check(selling.sell_inventory_item(0,100,1,0.f).refused_price && selling.inventory().find(100));
+        const auto sold=selling.sell_inventory_item(0,100,1,.5f);check(sold.destroy_item && selling.player().zorkmids==15 && !selling.inventory().find(100) && saved(loaded(selling))==saved(selling));
+        stack.instance=101;stack.for_sale=true;selling.inventory().insert(stack,false);check(selling.sell_inventory_item(0,101,1,.5f).refused_unpaid && selling.inventory().find(101));
         auto full=fixture();for (std::uint64_t i=10;i<58;++i) {InventoryItem item;item.instance=i;item.kind=ItemKind::armour;item.definition=1;check(full.inventory().insert(item,false).outcome==InsertOutcome::placed);}
         full.give_currency(100);full.use_shop_pedestal(0,0,0,1.f);check(full.player().zorkmids==90 && !full.shops()[0].pedestals[0].item && full.ground_items().size()==1 && !full.ground_items()[0].item.for_sale);
         auto corrupt=saved(s);const auto id=corrupt.find("<keeper id=\"2\"");check(id!=std::string::npos);corrupt.replace(id,14,"<keeper id=\"1\"");rejected=false;try {std::istringstream in(corrupt);Session::load(in,definitions());} catch(const std::exception&) {rejected=true;}check(rejected);

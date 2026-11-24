@@ -32,6 +32,14 @@ struct ShopDebtAction {
 };
 ShopDebtAction resolve_shop_debt(bool keeper_present,bool keeper_angry,bool stolen_goods,
     std::int32_t debt,int choice,std::int32_t balance,std::int32_t chat_counter);
+struct ShopSellAction {
+    bool handled=false,monster_fallback=false,refused_unpaid=false,refused_price=false,quote_dialog=false,destroy_item=false;
+    std::int32_t quote=0,balance=0;
+    std::optional<CurrencyTransfer> payment;
+};
+// Shopkeeper::ItemUsed delegates angry keepers to Monster::ItemUsed. A calm
+// keeper refuses unpaid or nonpositive offers; nonzero dialog choice sells.
+ShopSellAction resolve_keeper_sale(bool angry,bool unpaid,std::int32_t shop_cost,float sell_scaler,int choice,std::int32_t balance);
 struct ShopPedestalAction {
     bool handled=false,transfer_item=false,item_for_sale=true,force_keeper_move=false,insufficient_funds=false;
     std::int32_t scaled_cost=0,total_cost=0,balance=0;

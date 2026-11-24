@@ -29,11 +29,13 @@
         [_slot addItemsWithTitles:@[@"Head",@"Left hand",@"Right hand",@"Left ring",@"Right ring",@"Chest",
             @"Legs",@"Feet",@"Ranged",@"Neck",@"Hands",@"Waist"]];[content addSubview:_slot];
         NSButton *equip=[NSButton buttonWithTitle:@"Equip" target:self action:@selector(equipSelection:)];
-        equip.frame=NSMakeRect(210,28,110,28);[content addSubview:equip];
+        equip.frame=NSMakeRect(210,28,80,28);[content addSubview:equip];
         NSButton *unequip=[NSButton buttonWithTitle:@"Unequip" target:self action:@selector(unequipSelection:)];
-        unequip.frame=NSMakeRect(330,28,110,28);[content addSubview:unequip];
+        unequip.frame=NSMakeRect(300,28,85,28);[content addSubview:unequip];
         NSButton *drink=[NSButton buttonWithTitle:@"Use" target:self action:@selector(useSelection:)];
-        drink.frame=NSMakeRect(442,28,80,28);drink.autoresizingMask=NSViewMinXMargin;[content addSubview:drink];
+        drink.frame=NSMakeRect(395,28,60,28);drink.autoresizingMask=NSViewMinXMargin;[content addSubview:drink];
+        NSButton *sell=[NSButton buttonWithTitle:@"Sell" target:self action:@selector(sellSelection:)];
+        sell.frame=NSMakeRect(465,28,60,28);sell.autoresizingMask=NSViewMinXMargin;[content addSubview:sell];
         [self refresh];[window center];
     }
     return self;
@@ -53,6 +55,12 @@
     const NSInteger row=_tableView.selectedRow;
     if (row<0 || row>=(NSInteger)_rows.count || ![_rows[row][@"equipped"] boolValue] ||
         ![self.inventoryOwner unequipInventorySlot:[_rows[row][@"slot"] integerValue]]) NSBeep();
+    [self refresh];
+}
+- (void)sellSelection:(id)sender {
+    const NSInteger row=_tableView.selectedRow;
+    if (row<0 || row>=(NSInteger)_rows.count || [_rows[row][@"equipped"] boolValue] ||
+        ![self.inventoryOwner sellInventoryInstance:[_rows[row][@"instance"] unsignedLongLongValue]]) NSBeep();
     [self refresh];
 }
 - (void)useSelection:(id)sender {

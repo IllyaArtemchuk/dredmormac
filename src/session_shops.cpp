@@ -57,6 +57,15 @@ ShopPedestalAction Session::use_shop_pedestal(std::size_t shop_index,std::size_t
     }
     *this=std::move(next);return action;
 }
+ShopSellAction Session::sell_inventory_item(std::size_t index,std::uint64_t instance,int choice,float scaler) {
+    const auto& shop=shops_.at(index);const auto* item=inventory_.find(instance);
+    if (!item || !player_.alive() || !shop.keeper.alive()) return {};
+    const auto cost=item_shop_cost(definitions_?&definitions_->at(item->definition):nullptr,*item);
+    auto action=resolve_keeper_sale(shop.angry,item->for_sale,cost,scaler,choice,player_.zorkmids);
+    auto next=*this;next.events_.clear();
+    if (action.destroy_item) {next.inventory_.remove(instance);next.currency_transfer_impl(action.quote,CurrencyOperation::give);}
+    *this=std::move(next);return action;
+}
 std::int32_t Session::shop_debt(float scaler) const {
     ShopDebtEntries entries;std::size_t cursor=0;
     auto take=[&](const std::optional<InventoryItem>& item) {

@@ -1703,3 +1703,20 @@ shop expands to three pedestals and tests direct purchase, taking/declined debt/
 payment, then another taking and theft exit, with intervening save/reloads.
 All48 portable groups pass; actual arm64 verification is pending. Idle counter
 control flow persists, but native long original quip text remains pending.
+
+
+Debt core source21b3cb8 passed actual arm64 macos-15 run45343029181,
+job138270919429 (83 tests plus package smoke). Native debt UI source5384331
+passed run45343250005, job138271629088 (83 tests plus package smoke), including
+actual declined/accepted keeper debt dialogs and save/reload.
+Keeper item selling now matches2,048 original Shopkeeper::ItemUsed executions
+with explicit cost/wallet/UI/destruction/angry-Monster fallback boundaries.
+Session selling handles full-item/stack removal, scaled quote/payment and refused
+or declined retention transactionally. Native inventory Sell selects a nearby
+calm keeper, shows the original offer/refusal/button order, and refreshes inventory
+and wallet. The synthetic native shop fixture adds declined/accepted sale and
+saved proceeds before debt/theft checks. All48 portable groups pass. Actual
+arm64 verification is pending for the selling source. Quick-sell is a different
+original route and remains unimplemented; hostile item use and keeper AI, mouse
+item mode, long quip text, original UI/audio and full generated gameplay remain
+outstanding. The current app is still incomplete.
