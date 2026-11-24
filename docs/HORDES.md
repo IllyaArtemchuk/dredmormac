@@ -49,3 +49,37 @@ constructor depth with original-depth selection, quest branches, leader/follower
 metadata timing and duplicate locations after failed searches. All64 portable
 groups pass. Name generators, tint resources, complete constructors, Session/native
 horde/save integration and the full game remain unfinished.
+
+## Actual names and text pools
+
+GenMonName0xc8b80 now concatenates a start phoneme, two independent body phonemes,
+" the ", a title, space and plural noun. It consumes five ordinary libc picks
+for nonempty pools and no MT. GenPlatoonName0xd2cb0 creates "Lord Dredmor's "
+plus1..100 with English ordinal suffix, one of six unit labels and ", the ".
+Its two initial libc multiply-high rolls precede one bounded MT branch. Both
+branches then draw a title-sized index and a noun-sized index. The first branch
+uses title/singular noun; the alternate uses those same count domains to index
+adjective/plural pools. Extra adjective/plural entries are therefore not reachable
+in the alternate branch. Empty source-count pools yield index0 without a draw;
+an alternate target pool can still contain that entry. Invalid selected entries
+use atomic port guards, not original invalid-pointer behavior.
+
+These functions reuse ArtifactWords' already-compared base text-loader fields.
+verify_monster_names.py matches4,096 actual monster names and4,097 platoon names,
+including repeated/empty/space/quote words, variable safe pool lengths and empty
+alternate source counts. Full output, libc/MT state and next8 MT values match.
+Strings/allocation/libc and itos decimal formatting are supplied; original MT runs.
+
+verify_hordes.py --names also executes both complete original name routines inside
+actual SpawnHorde. All4,096 cases/5,987 members agree, including1,058 accepted
+failed-search coordinates and complete RNG/order/group metadata. Constructor,
+tint, attributes, eligibility and queue boundaries remain. All64 portable groups
+pass; Session/native constructor/group/save integration is still unfinished.
+
+The typo-bearing horde tweak has another consequence. Actual tweakVal0x179b90
+uses std::map::operator[] for the selected difficulty's int table, so absent keys
+insert zero. The supplied XML defines "horde is overpowered chance"; SpawnHorde
+asks for "horde is overpowered change". That lookup therefore produces zero in
+the supplied installation. A content adapter must not silently substitute the
+similarly spelled key. Strict port configuration getters remain separate from
+this original lookup behavior until that adapter is installed.

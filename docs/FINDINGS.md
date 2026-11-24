@@ -2523,3 +2523,15 @@ queue-before-group fields, quest counts and non-reserved spawn occupancy recover
 High confidence for this wrapper with explicit constructor/name/tint/rebuild and
 other boundaries. Full RNG state+next8 match. See HORDES.md. Binary SHA256
 `a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.
+
+GenMonName0xc8b80 and GenPlatoonName0xd2cb0 fully recovered and compared on8,193
+names with full strings/RNG state+next8; platoon uses title/noun counts for both
+branches, despite alternate adjective/plural targets. Original text-loader data
+already available in ArtifactWords. Actual names inside4,096 full horde wrappers
+also match5,987 members. High confidence with std::string/itos/libc boundaries.
+
+Actual tweakVal0x179b90 delegates to difficulty int-map operator[]; missing keys
+insert zero. Supplied XML's "horde is overpowered chance" does not match the
+SpawnHorde typo "... change". Preserve missing-key zero in future adapters rather
+than substituting another key. See HORDES.md. Binary SHA256
+`a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.

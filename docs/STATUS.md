@@ -1737,3 +1737,16 @@ match. All64 portable groups pass. Constructors/name generators/tint/rebuild/
 eligibility/queue helpers are explicit boundaries; actual name/tint routines and
 Session/native horde persistence/adoption remain next. Full native scripting,
 object scheduling/population/AI/effects/UI/audio and complete gameplay unfinished.
+
+Horde wrapper52140bb passed arm64 Mac run45376002953 and packaged-app smoke.
+Actual GenMonName/GenPlatoonName now match8,193 full original comparisons with
+complete strings/libc/MT state+next8. They reuse already-verified text pools;
+platoon alternate indices retain title/noun source counts. Hordes rerun with
+actual original name generators match4,096 cases/5,987 members, including1,058
+accepted failed searches. All64 portable groups pass. Source name changes await
+Mac CI. Also recovered tweakVal0x179b90 uses map::operator[]: missing ints are0;
+the supplied data has "horde is overpowered chance", while SpawnHorde requests
+"... change". The future content adapter must preserve zero for that missing key.
+Next recover tint/resource decisions, then connect horde constructors and group
+metadata to Session/native saves. Native room scripting/tick adoption and complete
+population/AI/effects/UI/audio/gameplay remain unfinished.

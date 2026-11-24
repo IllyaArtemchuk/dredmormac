@@ -1,10 +1,19 @@
 #include "dredmor/hordes.hpp"
+#include "dredmor/names.hpp"
+#include "dredmor/artifact.hpp"
 #include <iomanip>
 #include <iostream>
 #include <stdexcept>
 using namespace dredmor;
-int main() {
+int main(int argc,char** argv) {
     try {
+        const bool real_names=argc==2 && std::string(argv[1])=="--names";
+        ArtifactWords name_words;std::size_t label=0;
+        for (auto* pool:{&name_words.starts,&name_words.phonemes,&name_words.titles,&name_words.nouns,&name_words.plurals,&name_words.adjectives}) {
+            const std::size_t sizes[]={3,4,3,5,5,6};const char* labels[]={"S","P","T","N","L","A"};
+            for (std::size_t i=0;i<sizes[label];++i) pool->push_back(std::string(labels[label])+std::to_string(i));
+            ++label;
+        }
         std::uint32_t seed;
         while (std::cin>>seed) {
             HordeOptions options;int default_min,default_extra,chance,ctor_draws,mon_draws,platoon_draws;bool named,quest;std::uint32_t named_index;
@@ -34,8 +43,8 @@ int main() {
             hooks.can_spawn=[&](std::uint32_t index,std::int32_t depth,bool force) {event(3,index,depth,force);return allowed.at(index);};
             hooks.find_named=[&](std::string_view name) {if (name!="named") throw std::runtime_error("wrong named horde lookup");event(4,named_index);return named_index;};
             hooks.construct=[&](std::uint32_t index,std::int32_t depth,GameRandom& rng) {HordeMember member;member.identity=++constructed;member.primary_percent=percentages;event(5,index,depth,member.identity);draws(rng,ctor_draws);return member;};
-            hooks.monster_name=[&](GameRandom& rng) {event(6,constructed);draws(rng,mon_draws);return "Mon "+std::to_string(rng.libc.state());};
-            hooks.platoon_name=[&](GameRandom& rng) {event(7,constructed);draws(rng,platoon_draws);return "Platoon "+std::to_string(rng.libc.state());};
+            hooks.monster_name=[&](GameRandom& rng) {event(6,constructed);if (real_names) return generate_monster_name(name_words,rng);draws(rng,mon_draws);return "Mon "+std::to_string(rng.libc.state());};
+            hooks.platoon_name=[&](GameRandom& rng) {event(7,constructed);if (real_names) return generate_platoon_name(name_words,rng);draws(rng,platoon_draws);return "Platoon "+std::to_string(rng.libc.state());};
             hooks.tint=[&](HordeMember& member,std::int32_t tint,GameRandom& rng) {event(8,member.identity,tint);draws(rng,1);};
             hooks.rebuild=[&](HordeMember& member,GameRandom&) {event(9,member.identity);};
             hooks.queue=[&](const RoomTeleport& entry,const HordeMember& member) {event(10,entry.object,member.horde,member.leader,member.quest);};
