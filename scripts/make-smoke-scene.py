@@ -40,6 +40,7 @@ if __name__=='__main__':
     p.add_argument('--food',action='store_true',help='Inventory meals, recovery counters and persisted nutrition')
     p.add_argument('--floors',action='store_true',help='Paired stairs, cached floor state, native run save/reload')
     p.add_argument('--secret-levers',action='store_true',help='Bump/click secret lever, wall opening and save/reload')
+    p.add_argument('--decorations',action='store_true',help='Ordered conditional paintings/statues/floor engravings')
     args=p.parse_args();out=args.output.resolve();out.mkdir(parents=True,exist_ok=True)
     (out/'atlas.png').write_bytes(png(384,640,(70,80,95,255)))
     (out/'hero.png').write_bytes(png(64,64,(40,180,150,255)))
@@ -63,12 +64,21 @@ if __name__=='__main__':
     if args.food and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration])):p.error('--food requires --content-source and excludes other fixture types')
     if args.floors and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food])):p.error('--floors requires --content-source and excludes other fixture types')
     if args.secret_levers and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors])):p.error('--secret-levers requires --content-source and excludes other fixture types')
+    if args.decorations and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers])):p.error('--decorations requires --content-source and excludes other fixture types')
     if args.content_source:
         root=out/'installation';shutil.copytree(args.content_source,root,dirs_exist_ok=True)
         (root/'tilesets').mkdir(exist_ok=True);(root/'sprites/hero').mkdir(parents=True,exist_ok=True)
         (root/'tilesets/basic.png').write_bytes(png(384,640,(70,80,95,255)))
         (root/'sprites/hero/hero_idle_d.spr').write_bytes(sprite())
         (root/'dungeon').mkdir(exist_ok=True);(root/'dungeon/fixture.spr').write_bytes(sprite())
+        if args.decorations:
+            for name in ['painting','statue','floor']:(root/f'dungeon/{name}.spr').write_bytes(sprite())
+            words=ET.parse(root/'game/text.xml');ET.SubElement(words.getroot(),'noun',{'text':'Decorator','plural':'Decorators','floor':'dungeon/floor.spr','statue':'dungeon/statue.spr','painting':'dungeon/painting.spr'});words.write(root/'game/text.xml',encoding='unicode')
+            (root/'game/rooms.xml').write_text('''<roomdb><room name="Starting Room" width="7" height="5">
+<row text="##P####"/><row text="#..@..#"/><row text="#1.^..#"/><row text="#.....#"/><row text="#######"/>
+<customblocker at="1" png="dungeon/fixture.spr" name="Explicit"/></room></roomdb>''')
+            rows=['#######','#@....#','#.....#','#.....#','#######']
+            scene.update(data_root=str(root),room_objects='Starting Room',room_subject='Decorators',rows=[r.replace('@','.') for r in rows],collision='\n'.join(rows)+'\n',smoke_decorations=True,smoke_expected='{"turn":2,"x":2,"y":1}')
         if args.secret_levers:
             (root/'dungeon/lever1.spr').write_bytes(sprite())
             rows=['########','#@..#..#','#......#','#......#','########']

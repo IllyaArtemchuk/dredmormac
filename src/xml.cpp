@@ -50,7 +50,7 @@ struct Parser {
             if (p.stack.empty()) node=&p.root;
             else { p.stack.back()->children.emplace_back(); node=&p.stack.back()->children.back(); }
             node->tag=name;
-            for (;*attrs;attrs+=2) node->attributes.emplace(attrs[0],attrs[1]);
+            for (;*attrs;attrs+=2) {node->attributes.emplace(attrs[0],attrs[1]);node->attribute_order.emplace_back(attrs[0]);}
             p.stack.push_back(node);
         });
     }

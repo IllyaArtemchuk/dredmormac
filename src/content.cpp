@@ -176,6 +176,7 @@ GameContent GameContent::load(const std::filesystem::path& root,bool expansions)
     for (const auto& database:content.catalog_.databases()) {
         if (database->layer=="base" && database->source.filename()=="text.xml") {
             content.room_name_words_=read_room_name_words(database->root);content.artifact_words_=read_artifact_words(database->root);
+            content.room_decorations_=read_room_decorations(database->root);
         }
         if (database->layer=="base" && database->source.filename()=="tweakDB.xml") {content.tweaks_=Tweaks::read(database->root);found_tweaks=true;}
         for (const auto& node:database->root.children) {

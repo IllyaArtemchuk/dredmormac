@@ -71,6 +71,18 @@ void Session::use_secret_lever_impl(std::size_t index) {
     if (activation.revealed) world_.carve_floor(secret_levers_[index].target);
     events_.push_back({EventKind::lever_used,player_.id,index+1,activation.revealed?1:0});
 }
+std::vector<std::size_t> Session::create_room_decorations(const RoomStamp& room,Position origin,
+    std::string_view subject,const std::vector<RoomDecorationDefinition>& table) {
+    const auto plan=plan_room_decorations(room,origin,subject,table);
+    if (plan.size()>10000-custom_objects_.size()) throw std::runtime_error("session custom object limit exceeded");
+    auto next=*this;std::vector<std::size_t> indices;
+    for (const auto& placement:plan) {
+        auto object=make_room_decoration(placement);
+        if (object.position.x<0 || object.position.y<0 || object.position.x>=world_.width() || object.position.y>=world_.height()) throw std::invalid_argument("room decoration outside session world");
+        indices.push_back(next.custom_objects_.size());next.custom_objects_.push_back(std::move(object));
+    }
+    *this=std::move(next);return indices;
+}
 bool Session::use_secret_lever(std::size_t index) {
     if (index>=secret_levers_.size()) throw std::out_of_range("invalid secret lever index");
     if (!player_.alive() || !can_click_secret_lever(secret_levers_[index],player_.position)) return false;

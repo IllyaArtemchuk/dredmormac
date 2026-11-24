@@ -219,3 +219,8 @@ The template importer normalizes three missing source cells to empty and skips
 effect coordinates outside the map, where the original can perform invalid reads.
 The comparison scopes and other remaining limits are recorded in
 [findings](docs/FINDINGS.md) and [deviations](docs/DEVIATIONS.md).
+
+Conditional noun [decorations](docs/DECORATIONS.md) now preserve original registration,
+marker traversal and stationary constructor state. Prepared native room scenes can
+supply `room_subject` alongside `room_objects` to exercise them. Full generated-floor
+content and shop/script integration remain unfinished.

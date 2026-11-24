@@ -1527,3 +1527,25 @@ checks bump, actual mouse click, repeat/stuck behavior, wall rendering, opening/
 closing via save-load and configuration-mismatch rollback. NativeCI is pending.
 Other lever types, original room-script wiring and complete room-content passes
 remain unfinished. Activation uses the existing provisional session scheduler.
+
+
+Actual arm64 validation results: secret/treasure source99ac815 passed macos-15
+run45328387542, job138223373756 (68 tests plus packaged-app smoke). Secret-lever
+sourceaa02b59 passed run45329753850, job138227840866 (71 tests plus packaged-app
+smoke), including bump/click, frame/wall rendering, open/closed save loads and
+configuration mismatch rollback.
+
+Conditional noun decorations are now parsed and integrated into core Session and
+native prepared-room scenes via room_subject after room_objects records. Painting/
+statue/floor registration order and x-major template-marker placement are preserved.
+Named-sprite constructors produce stationary frame0 objects with original movement/
+vision flags. XmlNode records attribute source order so case-insensitive aliases
+assign in original order; existing map-based content hashes stay unchanged.
+See docs/DECORATIONS.md. Original checks passed1,024 actual text XML callbacks,
+1,024 no-record/no-shop content-writer traversals and1,024 actual GameObj/Blocker/
+Engraving constructors+Build with sprite I/O boundaries. All43 local groups pass;
+a synthetic native decoration fixture checks ordered sprites, collision, stopped
+frames and save/reload. Arm64 validation is pending for this decoration source.
+Complete ordered room content, shop construction/stock/interactions and room-script
+wiring remain unfinished; native scenes still use prepared floors. GenLevelContent1
+must not skip those earlier phases when connecting the verified secret/stair passes.

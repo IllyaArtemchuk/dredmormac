@@ -182,6 +182,7 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
 - (void)applyPresentation:(NSDictionary*)presentation;
 - (BOOL)smokeFloors;
 - (BOOL)smokeSecretLevers;
+- (BOOL)smokeDecorations;
 - (BOOL)smokeSaveLoad;
 - (void)saveDocument:(id)sender;
 - (void)openDocument:(id)sender;
@@ -282,7 +283,12 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
                     }
                 }
             },record);
+            if (scene[@"room_subject"]) {
+                if (![scene[@"room_subject"] isKindOfClass:NSString.class]) throw std::runtime_error("invalid room decoration subject");
+                _session->create_room_decorations(numeric,{0,0},[scene[@"room_subject"] UTF8String],_content->room_decorations());
+            }
         }
+        else if (scene[@"room_subject"]) throw std::runtime_error("room decoration subject requires a content room");
         _breakableImages=breakables;_breakAnimations=[NSMutableArray array];
         NSMutableArray<NSArray<SpriteImage*>*> *traps=[NSMutableArray array];
         for (const auto& trap:_session->traps()) [traps addObject:trapSprites(trap,_content->items().at(trap.definition),_dataRoot)];
@@ -836,6 +842,14 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     if (!write(invalid)) return NO;bool rejected=false;try {[self loadFromURL:url];} catch(const std::exception&) {rejected=true;}
     [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];std::ostringstream after;_session->save(after);[self display];return rejected && before.str()==after.str();
 }
+- (BOOL)smokeDecorations {
+    const auto& objects=_session->custom_objects();if (objects.size()!=4 || _objectImages.count!=4 || objects[0].name!="Explicit") return NO;
+    if (objects[1].sprite.image!="dungeon/painting.spr" || objects[2].sprite.image!="dungeon/statue.spr" || objects[3].sprite.image!="dungeon/floor.spr") return NO;
+    for (std::size_t i=1;i<objects.size();++i) if (objects[i].playing || objects[i].frame || objects[i].blocks_vision || [_objectImages[i] frameCount]!=2) return NO;
+    if (!objects[1].blocks_movement || !objects[2].blocks_movement || objects[3].blocks_movement || _session->passable({3,1}) || !_session->passable({3,2})) return NO;
+    std::ostringstream before;_session->save(before);if (![self smokeSaveLoad]) return NO;std::ostringstream after;_session->save(after);
+    [self display];return before.str()==after.str() && !_session->custom_objects()[3].playing;
+}
 - (BOOL)smokeFood {
     if (!_session->regeneration()) return NO;
     const auto hp=_session->player().health,mp=_session->player().mana;const auto turn=_session->world().turn();const auto primary=_session->player().primary[0];
@@ -1206,6 +1220,7 @@ int main(int argc,const char**argv) {
                     ([scene[@"smoke_room_monsters"] boolValue] && ![view smokeRoomMonsters]) ||
                     ([scene[@"smoke_floors"] boolValue] && ![view smokeFloors]) ||
                     ([scene[@"smoke_secret_levers"] boolValue] && ![view smokeSecretLevers]) ||
+                    ([scene[@"smoke_decorations"] boolValue] && ![view smokeDecorations]) ||
                     ([scene[@"smoke_food"] boolValue] && ![view smokeFood]) ||
                     ([scene[@"smoke_regeneration"] boolValue] && ![view smokeRegeneration]) ||
                     ([scene[@"smoke_casting"] boolValue] && ![view smokeCasting]) ||

@@ -1,5 +1,6 @@
 #pragma once
 #include "dredmor/levers.hpp"
+#include "dredmor/decorations.hpp"
 #include "dredmor/equipment.hpp"
 #include "dredmor/progression.hpp"
 #include "dredmor/random.hpp"
@@ -90,6 +91,8 @@ public:
     void floor_secret_levers(std::vector<SecretLever> levers);
     const std::vector<SecretLever>& secret_levers() const {return secret_levers_;}
     bool use_secret_lever(std::size_t index);
+    std::vector<std::size_t> create_room_decorations(const RoomStamp& room,Position origin,
+        std::string_view subject,const std::vector<RoomDecorationDefinition>& table);
     const Actor& player() const { return player_; }
     const std::vector<Actor>& enemies() const { return enemies_; }
     const std::vector<GroundItem>& ground_items() const { return ground_; }
