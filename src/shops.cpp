@@ -61,6 +61,29 @@ ShopPresenceTransition step_shop_presence(std::uint8_t tile_kind,ShopPresenceSta
     }
     return result;
 }
+std::int32_t shop_debt(const ShopDebtEntries& entries,float buy_scaler) {
+    std::uint32_t total=0;
+    for (std::size_t i=0;i<entries.size();++i) if (i!=48+9+std::size_t(EquipmentSlot::ranged) && entries[i].present && entries[i].unpaid) {
+        const float scaled=float(entries[i].cost)*buy_scaler;total+=std::uint32_t(truncate(scaled));
+    }
+    return signed_bits(total);
+}
+ShopDebtAction resolve_shop_debt(bool keeper_present,bool keeper_angry,bool stolen_goods,
+    std::int32_t debt,int choice,std::int32_t balance,std::int32_t chat_counter) {
+    ShopDebtAction result;result.balance=balance;result.chat_counter=chat_counter;
+    if (!keeper_present || keeper_angry) return result;
+    if (stolen_goods) {
+        result.debt_dialog=true;
+        if (!choice) return result;
+        if (balance<debt) {result.insufficient_funds=true;return result;}
+        result.payment=transfer_currency(balance,debt,CurrencyOperation::take);result.balance=result.payment->balance;
+        result.clear_unpaid=true;result.force_keeper_move=true;
+    } else {
+        if (chat_counter>=0 && chat_counter<=10) result.chat_line=chat_counter<8?0:chat_counter-7;
+        result.chat_counter=signed_bits(std::uint32_t(chat_counter)+1U);if (result.chat_counter==11) result.chat_counter=0;
+    }
+    return result;
+}
 ShopPedestalAction resolve_shop_pedestal(bool has_item,std::int32_t shop_cost,bool stackable,
     std::int32_t quantity,float buy_scaler,int dialog_choice,std::int32_t balance) {
     ShopPedestalAction result;result.balance=balance;

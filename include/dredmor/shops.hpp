@@ -20,6 +20,18 @@ struct ShopPresenceState {bool in_shop=false,music_override=false,level_angry=fa
 struct ShopPresenceTransition {ShopPresenceState state;std::vector<ShopPresenceEvent> events;};
 // Shop portion of DoSteppedOn, before random colour text and tile callbacks.
 ShopPresenceTransition step_shop_presence(std::uint8_t tile_kind,ShopPresenceState state,bool stolen_goods);
+struct ShopDebtEntry {bool present=false,unpaid=false;std::int32_t cost=0;};
+using ShopDebtEntries=std::array<ShopDebtEntry,70>; // bag48, belt9, gear12, held1.
+// GoShopping omits equipped ranged gear from debt, although the query sees it.
+std::int32_t shop_debt(const ShopDebtEntries& entries,float buy_scaler);
+struct ShopDebtAction {
+    bool debt_dialog=false,insufficient_funds=false,clear_unpaid=false,force_keeper_move=false;
+    std::int32_t balance=0,chat_counter=0;
+    int chat_line=-1;
+    std::optional<CurrencyTransfer> payment;
+};
+ShopDebtAction resolve_shop_debt(bool keeper_present,bool keeper_angry,bool stolen_goods,
+    std::int32_t debt,int choice,std::int32_t balance,std::int32_t chat_counter);
 struct ShopPedestalAction {
     bool handled=false,transfer_item=false,item_for_sale=true,force_keeper_move=false,insufficient_funds=false;
     std::int32_t scaled_cost=0,total_cost=0,balance=0;

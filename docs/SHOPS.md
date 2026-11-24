@@ -220,3 +220,27 @@ ownership, save/reload and immutable-layout/missing-stock-resource rollback. It
 uses two eligible item definitions plus two rejected special entries for invalid
 resource-load checks. Portable generator tests check marker order and resources.
 Actual arm64 validation is pending for this new native code.
+
+`shop_debt` and `resolve_shop_debt` implement GoShopping0x41130. Debt sums each
+carried unpaid item's virtual cost after Float32 buy-scaler/truncation, with wrapping
+integer addition. It omits equipped ranged gear, while the stolen query includes
+it. No second stack-quantity multiplication occurs here. Choice0 declines;
+any nonzero response attempts payment. Insufficient funds retains ownership;
+success pays, calls the measured clear operation and requests keeper movement.
+Null or angry keepers do nothing. Without unpaid goods, a global conversation
+counter selects line0 for0..7 and lines1/2/3 for8/9/10, increments with wrapping,
+and resets11 to0. Original long quip text is not reproduced by the numeric kernel.
+Session exposes debt quote/settlement, applies payment/clearing/guard movement
+transactionally and persists the global chat counter in optional Session20 `chat`.
+
+    .venv/bin/python scripts/verify_shop_debt.py ORIGINAL build/dredmor-shop --cases 2048 --out PRIVATE.json
+
+All2,048 full original GoShopping executions match, with actual stolen query,
+clearing and ForceShopkeeperMove (controlled empty keeper list). Cost/wallet
+virtuals, external UI/tweaks/formatting/telemetry and host stack-protector storage
+are boundaries. Existing price comparisons cover virtual cost separately. Checks
+include debt sum, omitted range slot, null/angry gates, accepted/declined/funds
+branches, payment/clear/guard requests, idle line selection/wrapping counter,
+cleared fields and unchanged RNG. Local Session tests verify unpaid settlement,
+keeper return, insufficient funds and saved chat continuation. Native keeper debt
+UI and original dialogue text remain next; selling items is a different path.

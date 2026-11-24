@@ -1680,3 +1680,18 @@ All48 portable groups pass. New actual-key/mouse/modal synthetic Mac fixture and
 arm64 validation are pending. See SHOPS.md for tested scope and UI/audio limits.
 Sale/debt dialogs, mouse-held transfer mode, hostile keeper AI, exact original
 drawing/UI/audio and full generated-floor population/playthrough remain incomplete.
+
+
+Native shops sourceddce515 passed actual arm64 macos-15 run45342256206,
+job138268433400: all83 checks and relocated packaged-app smoke. Actual mouse/key
+input and modal decline/buy/taking/theft notice, stock images, wallet, guards,
+unpaid labels, saved anger and invalid-config/missing-resource rollback all pass.
+GoShopping debt/conversation control flow now matches2,048 full original
+executions with real stolen query/clear/ForceShopkeeperMove and explicit UI/
+virtual-price/payment/host boundaries. Debt omits ranged gear and has no pedestal
+second quantity multiplication. Counter-driven line selection/wrapping is modeled.
+Session quote/settlement connects wallet, clearing, keeper return and saved chat
+continuation in optional Session20 chat metadata. All48 local groups pass.
+Native keeper debt UI remains next; source awaits arm64 validation. Long original
+quip text, item selling, mouse-held mode, keeper AI, original UI/audio and the full
+generated-floor pipeline/playthrough remain unfinished.

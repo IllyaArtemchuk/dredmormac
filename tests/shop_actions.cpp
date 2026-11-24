@@ -27,6 +27,12 @@ int main() {
         definition.price=std::numeric_limits<std::int32_t>::max();item.kind=ItemKind::potion;check(item_shop_cost(&definition,item)==definition.price);
         item.kind=ItemKind::weapon;check(item_shop_cost(&definition,item)==std::numeric_limits<std::int32_t>::min());
         bool rejected=false;try {resolve_shop_pedestal(true,std::numeric_limits<std::int32_t>::min(),false,1,1.f,0,0);} catch(const std::overflow_error&) {rejected=true;}check(rejected);
+        ShopDebtEntries debt;debt[0]={true,true,11};debt[1]={true,true,11};debt[65]={true,true,100};debt[69]={true,true,5};
+        check(shop_debt(debt,1.25f)==32);const auto refused=resolve_shop_debt(true,false,true,32,0,100,4);check(refused.debt_dialog && !refused.payment && refused.chat_counter==4);
+        const auto settled=resolve_shop_debt(true,false,true,32,1,100,4);check(settled.payment && settled.balance==68 && settled.clear_unpaid && settled.force_keeper_move && settled.chat_counter==4);
+        check(resolve_shop_debt(true,false,true,32,1,31,0).insufficient_funds);
+        check(!resolve_shop_debt(true,true,true,32,1,100,0).debt_dialog && !resolve_shop_debt(false,false,true,32,1,100,0).debt_dialog);
+        for (int counter=0;counter<=10;++counter) {const auto chat=resolve_shop_debt(true,false,false,0,0,0,counter);check(chat.chat_counter==(counter==10?0:counter+1) && chat.chat_line==(counter<8?0:counter-7));}
         auto presence=step_shop_presence(13,{},false);check(presence.state.in_shop && presence.state.music_override && presence.events==std::vector<ShopPresenceEvent>{ShopPresenceEvent::shop_music});
         check(step_shop_presence(13,presence.state,true).events.empty());presence=step_shop_presence(1,presence.state,false);
         check(!presence.state.in_shop && !presence.state.music_override && !presence.state.level_angry && presence.events==std::vector<ShopPresenceEvent>{ShopPresenceEvent::rotate_music});

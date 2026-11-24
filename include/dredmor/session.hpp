@@ -118,6 +118,9 @@ public:
         const ItemFactoryTables& tables,const ItemFactoryContext& context,
         const std::function<Actor(GameRandom&)>& keeper_constructor);
     ShopPedestalAction use_shop_pedestal(std::size_t shop,std::size_t pedestal,int choice,float buy_scaler);
+    std::int32_t shop_debt(float buy_scaler) const;
+    ShopDebtAction settle_shop_debt(std::size_t shop,int choice,float buy_scaler);
+    std::int32_t shop_chat_counter() const {return shop_chat_counter_;}
     void refresh_shop_guards();
     void update_shop_presence();
     bool has_unpaid_goods() const {return carried_unpaid_goods(inventory_.bag(),inventory_.belt(),equipment_.slots());}
@@ -218,6 +221,7 @@ private:
     std::vector<TurnEvent> events_;
     std::vector<SessionShop> shops_;
     ShopPresenceState shop_presence_{};
+    std::int32_t shop_chat_counter_=0;
     Inventory inventory_;
     Equipment equipment_;
     ClassRanks ranks_{};

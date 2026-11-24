@@ -57,6 +57,25 @@ ShopPedestalAction Session::use_shop_pedestal(std::size_t shop_index,std::size_t
     }
     *this=std::move(next);return action;
 }
+std::int32_t Session::shop_debt(float scaler) const {
+    ShopDebtEntries entries;std::size_t cursor=0;
+    auto take=[&](const std::optional<InventoryItem>& item) {
+        auto& entry=entries.at(cursor++);entry.present=bool(item);entry.unpaid=item && item->for_sale;
+        if (entry.unpaid) entry.cost=item_shop_cost(definitions_?&definitions_->at(item->definition):nullptr,*item);
+    };
+    for (const auto& item:inventory_.bag()) take(item);for (const auto& item:inventory_.belt()) take(item);for (const auto& item:equipment_.slots()) take(item);
+    return dredmor::shop_debt(entries,scaler);
+}
+ShopDebtAction Session::settle_shop_debt(std::size_t index,int choice,float scaler) {
+    const auto& shop=shops_.at(index);const auto debt=shop_debt(scaler);
+    auto action=resolve_shop_debt(shop.keeper.alive() && player_.alive(),shop.angry,has_unpaid_goods(),debt,choice,player_.zorkmids,shop_chat_counter_);
+    auto next=*this;next.events_.clear();next.shop_chat_counter_=action.chat_counter;
+    if (action.payment) next.currency_transfer_impl(debt,CurrencyOperation::take);
+    if (action.clear_unpaid) {next.inventory_.clear_unpaid_flags();next.equipment_.clear_unpaid_flags();}
+    if (action.force_keeper_move) next.refresh_shop_guards_impl();
+    if (action.insufficient_funds) next.events_.push_back({EventKind::shop_insufficient_funds,player_.id,shop.keeper.id,debt});
+    *this=std::move(next);return action;
+}
 void Session::refresh_shop_guards_impl() {
     std::vector<ShopKeeperPosition> positions;
     for (const auto& shop:shops_) positions.push_back({shop.keeper.position,shop.guard,shop.home,shop.guarding});

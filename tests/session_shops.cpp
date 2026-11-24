@@ -34,6 +34,13 @@ int main() {
         s=loaded(s);check(s.shops()[0].guarding && s.has_unpaid_goods());s.step(Action::west);
         check(!s.shop_presence().in_shop && s.shop_presence().level_angry && s.shop_presence().music_override && s.shops()[0].angry && !s.has_unpaid_goods());
         s.refresh_shop_guards();check(!s.shops()[0].guarding && s.shops()[0].keeper.position.x==6 && saved(loaded(s))==saved(s));
+        auto cart=fixture();cart.give_currency(100);for (int i=0;i<3;++i) cart.step(Action::east);cart.use_shop_pedestal(0,0,2,1.f);
+        check(cart.has_unpaid_goods() && cart.shop_debt(1.f)==10 && cart.shops()[0].guarding);
+        const auto declined_debt=cart.settle_shop_debt(0,0,1.f);check(declined_debt.debt_dialog && !declined_debt.payment && cart.player().zorkmids==100 && cart.has_unpaid_goods());
+        const auto paid_debt=cart.settle_shop_debt(0,1,1.f);check(paid_debt.payment && cart.player().zorkmids==90 && !cart.has_unpaid_goods() && !cart.shops()[0].guarding && cart.shops()[0].keeper.position.x==6);
+        auto chat=cart.settle_shop_debt(0,0,1.f);check(chat.chat_line==0 && cart.shop_chat_counter()==1);cart=loaded(cart);check(cart.shop_chat_counter()==1);
+        for (int i=0;i<10;++i) cart.settle_shop_debt(0,0,1.f);check(cart.shop_chat_counter()==0 && saved(loaded(cart))==saved(cart));
+        auto no_money=fixture();no_money.use_shop_pedestal(0,0,2,1.f);check(no_money.settle_shop_debt(0,1,1.f).insufficient_funds && no_money.has_unpaid_goods());
         auto full=fixture();for (std::uint64_t i=10;i<58;++i) {InventoryItem item;item.instance=i;item.kind=ItemKind::armour;item.definition=1;check(full.inventory().insert(item,false).outcome==InsertOutcome::placed);}
         full.give_currency(100);full.use_shop_pedestal(0,0,0,1.f);check(full.player().zorkmids==90 && !full.shops()[0].pedestals[0].item && full.ground_items().size()==1 && !full.ground_items()[0].item.for_sale);
         auto corrupt=saved(s);const auto id=corrupt.find("<keeper id=\"2\"");check(id!=std::string::npos);corrupt.replace(id,14,"<keeper id=\"1\"");rejected=false;try {std::istringstream in(corrupt);Session::load(in,definitions());} catch(const std::exception&) {rejected=true;}check(rejected);

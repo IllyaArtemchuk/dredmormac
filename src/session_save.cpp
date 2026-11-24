@@ -346,7 +346,7 @@ void Session::save(std::ostream& out) const {
     bool corpse_state=player_.corpse && player_.health>0;for (const auto& enemy:enemies_) corpse_state=corpse_state || (enemy.corpse && enemy.health>0);
     const bool depth_state=depth_context_.depth!=0 || depth_context_.alternate || depth_context_.alternate_depth!=-1;
     bool unpaid_state=has_unpaid_goods();for (const auto& item:ground_) unpaid_state=unpaid_state || item.item.for_sale;
-    out<<"<dredmor-session version=\""<<(!shops_.empty() || shop_presence_.in_shop || shop_presence_.music_override || shop_presence_.level_angry?20:unpaid_state?19:!secret_levers_.empty()?18:!stairs_.empty() || floor_branch_ || item_floor_!=1?17:regeneration_?16:!spell_cooldowns_.empty()?15:depth_state?14:corpse_state?13:monster_state?12:buff_state?11:gated?10:scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
+    out<<"<dredmor-session version=\""<<(!shops_.empty() || shop_chat_counter_ || shop_presence_.in_shop || shop_presence_.music_override || shop_presence_.level_angry?20:unpaid_state?19:!secret_levers_.empty()?18:!stairs_.empty() || floor_branch_ || item_floor_!=1?17:regeneration_?16:!spell_cooldowns_.empty()?15:depth_state?14:corpse_state?13:monster_state?12:buff_state?11:gated?10:scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
        <<"\" content=\""<<signature(definitions_)<<"\"";
     if (player_facing_!=2) out<<" facing=\""<<player_facing_<<"\"";
     out<<">\n<room>"<<escape(world_.room_text())<<"</room>\n";
@@ -360,7 +360,7 @@ void Session::save(std::ostream& out) const {
         out<<"<regeneration hp-turns=\""<<r.health_turns<<"\" mp-turns=\""<<r.mana_turns<<"\" hp-clock=\""<<r.health_clock<<"\" mp-clock=\""<<r.mana_clock
            <<"\" food=\""<<r.food<<"\" booze=\""<<r.booze<<"\" vampire=\""<<r.vampire<<"\"/>\n";
     }
-    if (!shops_.empty() || shop_presence_.in_shop || shop_presence_.music_override || shop_presence_.level_angry || unpaid_state || !secret_levers_.empty() || !stairs_.empty() || floor_branch_ || item_floor_!=1) {
+    if (!shops_.empty() || shop_chat_counter_ || shop_presence_.in_shop || shop_presence_.music_override || shop_presence_.level_angry || unpaid_state || !secret_levers_.empty() || !stairs_.empty() || floor_branch_ || item_floor_!=1) {
         out<<"<floor-state branch=\""<<floor_branch_<<"\" item-base=\""<<item_floor_<<"\">\n";
         for (const auto& stair:stairs_) out<<"<stair x=\""<<stair.position.x<<"\" y=\""<<stair.position.y<<"\" up=\""<<stair.up<<"\" link=\""<<unsigned(stair.link)<<"\"/>\n";
         for (const auto& lever:secret_levers_) out<<"<secret-lever x=\""<<lever.position.x<<"\" y=\""<<lever.position.y<<"\" target-x=\""<<lever.target.x<<"\" target-y=\""<<lever.target.y<<"\" activated=\""<<lever.activated<<"\"/>\n";
@@ -384,8 +384,10 @@ void Session::save(std::ostream& out) const {
     out<<"</equipment><ground>\n";
     for (const auto& item:ground_) write_item(out,item.item,"x=\""+std::to_string(item.position.x)+"\" y=\""+std::to_string(item.position.y)+"\"");
     out<<"</ground>\n";
-    if (!shops_.empty() || shop_presence_.in_shop || shop_presence_.music_override || shop_presence_.level_angry) {
-        out<<"<shops in-shop=\""<<shop_presence_.in_shop<<"\" music=\""<<shop_presence_.music_override<<"\" angry=\""<<shop_presence_.level_angry<<"\">\n";
+    if (!shops_.empty() || shop_chat_counter_ || shop_presence_.in_shop || shop_presence_.music_override || shop_presence_.level_angry) {
+        out<<"<shops in-shop=\""<<shop_presence_.in_shop<<"\" music=\""<<shop_presence_.music_override<<"\" angry=\""<<shop_presence_.level_angry<<"\"";
+        if (shop_chat_counter_) out<<" chat=\""<<shop_chat_counter_<<"\"";
+        out<<">\n";
         for (const auto& shop:shops_) {
             out<<"<shop variant=\""<<shop.variant<<"\" guard-x=\""<<shop.guard.x<<"\" guard-y=\""<<shop.guard.y<<"\" home-x=\""<<shop.home.x<<"\" home-y=\""<<shop.home.y
                 <<"\" guarding=\""<<shop.guarding<<"\" angry=\""<<shop.angry<<"\">\n";
@@ -682,7 +684,7 @@ Session Session::load_node(const XmlNode& root,std::shared_ptr<const std::vector
     }
     if (root.first("shops")) {
         if (version!="20" || !session.definitions_) throw std::runtime_error("shop state requires version twenty and definitions");
-        const auto& saved=child(root,"shops");session.shop_presence_={flag(saved,"in-shop"),flag(saved,"music"),flag(saved,"angry")};
+        const auto& saved=child(root,"shops");if (saved.attributes.count("chat")) session.shop_chat_counter_=attribute_number<std::int32_t>(saved,"chat");session.shop_presence_={flag(saved,"in-shop"),flag(saved,"music"),flag(saved,"angry")};
         std::set<std::pair<int,int>> occupied;
         for (const auto& node:saved.children) {
             if (node.tag!="shop" || session.shops_.size()>=64 || node.children.size()!=3) throw std::runtime_error("invalid shop record");

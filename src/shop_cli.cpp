@@ -6,7 +6,15 @@
 using namespace dredmor;
 int main(int argc,char** argv) {
     try {
-        if (argc==2 && std::string(argv[1])=="--presence") {
+        if (argc==2 && std::string(argv[1])=="--debt") {
+            bool present,angry;int choice;std::int32_t balance,counter;std::uint32_t bits;
+            while (std::cin>>present>>angry>>choice>>balance>>counter>>bits) {
+                ShopDebtEntries entries;bool unpaid=false;
+                for (auto& entry:entries) {unsigned state;std::cin>>state>>entry.cost;if (!std::cin || state>2) throw std::invalid_argument("invalid shop debt fixture");entry.present=state!=0;entry.unpaid=state==2;unpaid=unpaid || entry.unpaid;}
+                float scaler;std::memcpy(&scaler,&bits,4);const auto debt=shop_debt(entries,scaler);const auto action=resolve_shop_debt(present,angry,unpaid,debt,choice,balance,counter);
+                std::cout<<(action.debt_dialog?debt:0)<<' '<<action.debt_dialog<<' '<<action.insufficient_funds<<' '<<action.clear_unpaid<<' '<<action.force_keeper_move<<' '<<action.balance<<' '<<action.chat_counter<<' '<<action.chat_line<<' '<<bool(action.payment)<<' '<<(action.payment?action.payment->delta:0)<<'\n';
+            }
+        } else if (argc==2 && std::string(argv[1])=="--presence") {
             unsigned kind;ShopPresenceState state;bool stolen;
             while (std::cin>>kind>>state.in_shop>>state.music_override>>state.level_angry>>stolen) {
                 if (kind>255) throw std::invalid_argument("invalid shop tile");const auto transition=step_shop_presence(std::uint8_t(kind),state,stolen);
