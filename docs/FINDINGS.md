@@ -2462,3 +2462,10 @@ room byte and self-alias duplicate semantics recovered with high confidence.
 allocation, global-kind and returning diagnostic boundaries remain explicit.
 See ROOM_SCRIPTS.md. Original binary SHA256
 `a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.
+
+Base teleport0x36e80 / Level AddObj0x6108e / RemoveObject0x610e0:
+8,192 complete original cases match, high confidence for valid nonnull destination
+levels with explicit list/string/allocation/type-query boundaries. Scope/name do
+not refresh during movement. SafeTeleport0x29990 queues rather than moving;
+FixSafeTeleports0x29bc0 clears destruction first. See ROOM_SCRIPTS.md. Binary
+SHA256`a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.

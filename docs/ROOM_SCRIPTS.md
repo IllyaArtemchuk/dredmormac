@@ -233,3 +233,22 @@ controlled boundaries. Registration lifetime, teleport and scheduler integration
 are separate. Original binary SHA256 remains
 `a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.
 All57 portable groups pass.
+
+Base placement now preserves the original lifetime distinction: GameObj::TeleportTo
+0x36e80 changes coordinates/owner/tile attachment, but never recalculates assigned
+room or name. Same-level movement registers an absent object. A cross-level move
+calls old Level::RemoveObject0x610e0, new Level::AddObj0x6108e, then assigns owner.
+AddObj always appends, including duplicates; RemoveObject removes only the first
+registry occurrence and, for IsMonster, the first monster-vector occurrence.
+AddObj itself does not append to the monster vector. Tile removal erases the first
+matching membership; attachment avoids appending if already present. Outside-grid
+coordinates clear the square pointer while retaining owning-level registration.
+
+verify_room_placement.py matches8,192 complete actual base teleports, including
+actual registration helpers and all tile/registry contents. List insertion/unlink,
+allocation, strings and IsMonster are boundaries; spare capacity avoids vector
+reallocation. Null/missing destination levels are rejected as a port guard.
+SafeTeleport0x29990 merely queues requests; FixSafeTeleports0x29bc0 clears pending
+destruction before executing teleports with final flag1. This base implementation
+does not claim immediate script movement, subclass override or full scheduler
+parity. All58 portable groups pass.

@@ -1908,3 +1908,11 @@ bytes and debug payloads. All57 portable groups pass. Parent metadata source
 2e63eff also passed arm64 Mac run45360683131. Scope source awaits Mac CI.
 Registration/removal lifetime, Session/native script bindings/save and full
 constructor/scheduler/gameplay integration remain unfinished.
+
+Scope source65a35db passed arm64 Mac run45362374155. Base object teleport and
+Level add/remove registration now match8,192 complete original cases with every
+registry/monster vector and tile list compared. Assigned room/name remain fixed
+through movement; first-duplicate removal and same-level registration repair are
+preserved. All58 portable groups pass. New placement source awaits Mac CI.
+Safe teleport queuing/subclass overrides, Session/native script integration,
+record constructors and complete game scheduling/gameplay remain unfinished.
