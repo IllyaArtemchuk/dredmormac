@@ -2097,3 +2097,13 @@ Subsystem hooks remain mandatory and explicit, and callbacks must buffer I/O.
 This bridge does not adopt native scheduling, synchronize every Session/driver
 field, or persist driver state; the caller still owns those integrations. Full
 game remains unfinished. Respawn0d9c749 is queued in Mac45415969486.
+
+Complete Monster::PostGameTick0xe2c12 now matches8,192 original calls, including
+signed pending/suppression flags, cached/current opaque sprites, preserve/play,
+animation-byte/frame/phase transitions, unrelated actor bytes and unchanged
+libc/MT. The port reuses its measured current-sprite transition helper. Tests
+cover suppressed/no-pending, changed/unchanged sprite and preserve-current paths.
+All76 portable groups pass. This is the full small PostGameTick body; selecting
+the cached handle during Monster::Update/AI and connecting actor animation to
+the native renderer remain unfinished. Full game is unfinished. Shared-RNG
+1555371 is running Mac45417001620; respawn0d9c749 queued45415969486.

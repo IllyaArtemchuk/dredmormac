@@ -2635,3 +2635,17 @@ now preserve first entry into room0, with stay/exit/re-entry tests. All68 portab
 groups pass. Corrected earlier docs: room lookup, GameTick and base placement use
 the same Level+0xb0 object vector. Next continue live Session room-script binding,
 profile/save ownership and native scripted puzzle; full game remains unfinished.
+
+### Monster PostGameTick animation handoff
+
+Complete Monster::PostGameTick at0xe2c12 matches8,192 original calls via
+scripts/verify_monster_post_tick.py. Actor+0x350 nonzero and+0x3d4 zero clears
++0x350, restores the cached sprite handle at+0x3a8 unless Bob+0x19 preserves
+current, and sets Bob+0x16 playing. Changing the current handle also clears
+Bob+0x17 and resets frame+0x1c/phase+0x20. An unchanged handle preserves those
+animation fields; a suppression value leaves all fields untouched. All unrelated
+actor bytes and full libc/MT remain unchanged. Opaque handle comparison needs no
+resource boundary. Cache selection during Update/AI, full actor lifetime and
+native rendering integration remain separate work; +0x3a8 is not inferred to be
+one of the four idle sprite fields. Port reuses MonsterSpriteState's existing
+current-sprite transition helper, with a new post_game_tick_monster entry point.

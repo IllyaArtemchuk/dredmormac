@@ -2356,3 +2356,11 @@ All76portable groups pass; focused shared-room-phases rerun passes. This is stil
 an integration boundary: native scheduler adoption, field projection and saved
 driver state remain pending. Mac respawn0d9c749 queued45415969486. Next recover
 Monster PostGameTick animation body and remaining virtual/subsystem lifetimes.
+
+Monster PostGameTick complete body0xe2c12 now implemented in monster_sprites.cpp,
+with --post-tick CLI and verify_monster_post_tick.py;8,192 actual calls match
+(private monster-post-tick-8192.json), all76portable pass. Cached sprite+3a8 is an
+explicit input, not guessed to be an idle field; full Update/AI/native animation
+remain pending. Full Monster::Update private export now available at
+/workspace/work/analysis/monster-update-full.txt (0xe9b1a..0xeb420,6,426byte span
+includes trailing jump table). Shared-RNG1555371 Mac45417001620 running.

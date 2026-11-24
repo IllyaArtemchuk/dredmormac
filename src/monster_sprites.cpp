@@ -9,6 +9,11 @@ void current_sprite(MonsterSpriteState& state,MonsterSpriteHandle sprite) {
     }
 }
 }
+void post_game_tick_monster(std::int32_t& pending,std::int32_t suppressed,
+    MonsterSpriteHandle cached,MonsterSpriteState& state) {
+    if (!pending || suppressed) return;
+    pending=0;current_sprite(state,cached);state.playing=true;
+}
 std::int32_t tint_monster_sprites(const MonsterDefinition& definition,MonsterSpriteState& state,
     std::int32_t angle,DarwinRandom& random,const MonsterTintLoader& load) {
     if (!load) throw std::invalid_argument("monster tint requires a sprite loader");

@@ -17,6 +17,18 @@ template<class F> void handles(dredmor::MonsterSpriteState& s,F function) {
 }
 int main(int argc,char** argv) {
     try {
+        if (argc==2 && std::string(argv[1])=="--post-tick") {
+            std::int32_t pending,suppressed;dredmor::MonsterSpriteHandle cached;
+            while (std::cin>>pending>>suppressed>>cached) {
+                dredmor::MonsterSpriteState state;unsigned flag;
+                if (!(std::cin>>state.current>>state.preserve_current>>state.playing>>flag>>state.frame>>state.phase) || flag>255)
+                    throw std::invalid_argument("invalid monster PostGameTick state");
+                state.animation_flag=std::uint8_t(flag);dredmor::post_game_tick_monster(pending,suppressed,cached,state);
+                std::cout<<pending<<' '<<suppressed<<' '<<cached<<' '<<state.current<<' '<<state.preserve_current<<' '<<state.playing<<' '
+                    <<unsigned(state.animation_flag)<<' '<<state.frame<<' '<<state.phase<<'\n';
+            }
+            return 0;
+        }
         if (argc==3 && std::string(argv[1])=="--construction-content") {
             const auto content=dredmor::GameContent::load(argv[2]);
             std::uint32_t seed;unsigned difficulty;std::int32_t depth;std::string name;

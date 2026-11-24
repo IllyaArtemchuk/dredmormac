@@ -71,6 +71,18 @@ int main() {
         check(rebuild_monster_sprites(random_variant,state,1,random,{},load,{})==chosen);
         check(random.state()==reference.state() && paths.size()==20);
         for (auto value:angles) check(value==chosen);
-        std::cout<<"monster sprite XML inheritance/aliases, tint RNG, resource order, optional clearing/retention and animation reset passed\n";
+        std::int32_t pending=-7;state.preserve_current=false;state.current=777;state.frame=3;state.phase=99;state.animation_flag=255;state.playing=false;
+        post_game_tick_monster(pending,1,123,state);
+        check(pending==-7 && state.current==777 && state.frame==3 && !state.playing);
+        post_game_tick_monster(pending,0,123,state);
+        check(pending==0 && state.current==123 && state.frame==0 && state.phase==0 && state.animation_flag==0 && state.playing);
+        pending=1;state.frame=5;state.phase=90;state.animation_flag=255;state.playing=false;
+        post_game_tick_monster(pending,0,123,state);
+        check(pending==0 && state.frame==5 && state.phase==90 && state.animation_flag==255 && state.playing);
+        pending=1;state.preserve_current=true;state.playing=false;
+        post_game_tick_monster(pending,0,0,state);
+        check(pending==0 && state.current==123 && state.frame==5 && state.phase==90 && state.animation_flag==255 && state.playing);
+        state.playing=false;post_game_tick_monster(pending,0,0,state);check(!state.playing);
+        std::cout<<"monster sprite XML, tint/rebuild resource order, animation reset and PostGameTick cache/suppression passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }
