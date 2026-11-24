@@ -39,6 +39,14 @@ int main() {
         check(visible && player.room.id=="player");
         rejected=false;try {teleport_room_player_forced(player,world,{0,0},1,{});} catch(const std::invalid_argument&) {rejected=true;}
         check(rejected && player.room.level==2 && player.room.position.x==-1);
+        RoomPlacementObject item{{9,1,7,"retained item",false,{2,1}},false,RoomSquareIdentity{2,{1,0}}};
+        world.levels.at(1).objects={2,9,9};world.levels.at(1).monsters={9,4};world.squares[*item.square]={9,2,9};
+        detach_room_item(item,world);
+        check(!item.room.level && !item.square && item.room.position.x==2 && item.room.position.y==1 && item.room.assigned_room==7 && item.room.id=="retained item");
+        check((world.levels.at(1).objects==std::vector<std::uint64_t>{2,9}) && (world.levels.at(1).monsters==std::vector<std::uint64_t>{9,4}));
+        check((world.squares.at({2,{1,0}})==std::vector<std::uint64_t>{2,9}));
+        rejected=false;try {detach_room_item(item,world);} catch(const std::invalid_argument&) {rejected=true;}check(rejected);
+        teleport_room_object(item,world,{0,0},2);check(item.room.level==2 && item.square && item.room.assigned_room==7 && item.room.id=="retained item");
         std::cout<<"base registration and teleport preserve scope, ordered duplicate removal, level transfer, tile attachment and same-level registration repair\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

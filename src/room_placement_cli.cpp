@@ -12,7 +12,7 @@ void write_entries(const std::vector<std::uint64_t>& entries) {
 int main(int argc,char** argv) {
     try {
         const std::string mode=argc==2?argv[1]:"";
-        if (argc>2 || (!mode.empty() && mode!="--monster" && mode!="--player")) throw std::invalid_argument("Usage: dredmor-room-placement [--monster|--player]");
+        if (argc>2 || (!mode.empty() && mode!="--monster" && mode!="--player" && mode!="--item-detach")) throw std::invalid_argument("Usage: dredmor-room-placement [--monster|--player|--item-detach]");
         int w1,h1,w2,h2;
         while (std::cin>>w1>>h1>>w2>>h2) {
             if (w1<1 || h1<1 || w2<1 || h2<1 || w1>16 || h1>16 || w2>16 || h2>16) throw std::invalid_argument("invalid room dimensions");
@@ -28,6 +28,7 @@ int main(int argc,char** argv) {
             if (!std::cin) throw std::runtime_error("truncated room placement fixture");
             std::vector<std::vector<std::int64_t>> visibility;
             if (mode=="--monster") teleport_room_monster_forced(object,world,destination,target);
+            else if (mode=="--item-detach") detach_room_item(object,world);
             else if (mode=="--player") teleport_room_player_forced(object,world,destination,target,[&](auto level,auto point) {
                 visibility.push_back({std::int64_t(level),point.x,point.y,std::int64_t(object.room.level),object.room.position.x,object.room.position.y,object.square.has_value(),std::int64_t(world.levels.at(level).objects.size()),std::int64_t(world.levels.at(level).monsters.size())});
             });
@@ -37,7 +38,7 @@ int main(int argc,char** argv) {
                 write_entries(registry.objects);write_entries(registry.monsters);
                 for (int y=0;y<registry.height;++y) for (int x=0;x<registry.width;++x) write_entries(world.squares.at({level,{x,y}}));
             }
-            if (!mode.empty()) {std::cout<<' '<<visibility.size();for (const auto& call:visibility) for (auto value:call) std::cout<<' '<<value;}
+            if (mode=="--monster" || mode=="--player") {std::cout<<' '<<visibility.size();for (const auto& call:visibility) for (auto value:call) std::cout<<' '<<value;}
             std::cout<<'\n';
         }
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}

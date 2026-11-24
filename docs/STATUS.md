@@ -1958,3 +1958,16 @@ Item::Clicked detachment slice0x5bf8a..0x5bfb6 removes square/owning level and c
 not yet a new whole-function comparison). Shared collection/world ownership,
 all creation logs, floor travel, full original Item::Clicked/input phases and all
 previous scheduling/clock/AI/effect/generation/UI/audio/full-game limits remain.
+
+Carried native script objectsf67d00c passed arm64 Mac45400779498 including the
+scripted reward pickup/reload, all checks and packaged-app smoke. Pickup physical
+detachment now has a recovered reusable kernel: Item::Clicked slice0x5bf8a through
+0x5bfb6 executes actual Square::RemoveObject and Level::RemoveObject.4,096 original
+cases match owner/square clearing, retained room/name/coordinates, both level
+registries/monster vectors, every tile list, duplicate first removal and unchanged
+libc/MT. This explicitly excludes full Clicked's input/inventory/UI/audio/tutorial
+paths. See scripts/verify_item_detachment.py; report remains private. SafeTeleport
+null-level non-monster detach now shares this kernel;8,192 complete original
+lifecycle fixtures still match. All70 portable groups pass. Missing attachments
+and non-item identities remain input guards. Next continue script horde queue
+integration and remaining native/runtime lifetimes; the full game is unfinished.

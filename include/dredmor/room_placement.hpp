@@ -40,6 +40,10 @@ void unregister_room_object(RoomLevelRegistry& level,std::uint64_t identity,bool
 // Null/missing destination levels are rejected before changes (port input guard).
 void teleport_room_object(RoomPlacementObject& object,RoomPlacementWorld& world,
     Position destination,std::uint64_t level);
+// Item::Clicked's successful pickup detachment slice: remove its first square
+// and owning-level registration, clear attachments, retain coordinates/label/
+// assigned room. Input gates, inventory insertion and picked-item UI are separate.
+void detach_room_item(RoomPlacementObject& object,RoomPlacementWorld& world);
 // Forced subclass paths used by safe teleport queues. Monster maintains both
 // registries. Player always refreshes visibility after the base placement.
 // Ordinary movement's effects, pickup and stepped-on callbacks are separate.

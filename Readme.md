@@ -13,6 +13,13 @@ attribute function also matches 1,027 fixtures with abilities/equipment/buffs
 absent. Movement, room rendering and the macOS frontend have not been compared
 with original gameplay. See [status](docs/STATUS.md) and [deviations](docs/DEVIATIONS.md).
 
+Prepared native room scenes can opt into live room scripts with ordered object
+lookup, deferred removal/movement, supported record creation and saved puzzle
+progress. The synthetic `native-room-scripts-window` check exercises mouse and
+keyboard solving, sprite-failure rollback and carried reward persistence on Mac
+CI. The full original turn driver, floor-wide scripting and remaining game
+systems are still under development; see [room scripting](docs/ROOM_SCRIPTS.md).
+
 ## Build and verify
 
 Requires a C++17 compiler, Python 3.11+ and the Expat development library.

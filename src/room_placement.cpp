@@ -41,6 +41,14 @@ void teleport_room_monster_forced(RoomPlacementObject& object,RoomPlacementWorld
     if (previous!=level || std::find(monsters.begin(),monsters.end(),object.room.identity)==monsters.end())
         monsters.push_back(object.room.identity);
 }
+void detach_room_item(RoomPlacementObject& object,RoomPlacementWorld& world) {
+    if (object.monster || object.destroyed || !object.square || !object.room.level || !world.levels.count(object.room.level))
+        throw std::invalid_argument("item detachment requires attached owning level and square");
+    const auto square=world.squares.find(*object.square);
+    if (square!=world.squares.end()) erase_first(square->second,object.room.identity);
+    object.square.reset();
+    unregister_room_object(world.levels.at(object.room.level),object.room.identity,false);object.room.level=0;
+}
 void teleport_room_player_forced(RoomPlacementObject& object,RoomPlacementWorld& world,Position destination,std::uint64_t level,
     const std::function<void(std::uint64_t,Position)>& visibility) {
     if (object.monster || !visibility) throw std::invalid_argument("player teleport requires player identity and visibility hook");

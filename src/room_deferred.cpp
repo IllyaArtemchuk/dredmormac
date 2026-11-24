@@ -66,8 +66,11 @@ RoomDeferredResult fix_room_teleports(RoomDeferredState& state,const RoomDeferre
         } else {
             if ((entry.position.x==-1 || entry.position.y==-1) && (object.room.position.x==-1 || object.room.position.y==-1)) continue;
             if (!object.square || !object.room.level) throw std::invalid_argument("null-level teleport detachment requires attached owning level");
-            remove_square(state,object,true);
-            unregister_room_object(state.placement.levels.at(object.room.level),entry.object,object.monster);object.room.level=0;
+            if (!object.monster) detach_room_item(object,state.placement);
+            else {
+                remove_square(state,object,true);
+                unregister_room_object(state.placement.levels.at(object.room.level),entry.object,true);object.room.level=0;
+            }
             result.detached.push_back(entry.object);
         }
     }
