@@ -858,6 +858,7 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     const auto& definition=_content->items().at(item.definition);if (definition.armour_type!=9 || dredmor::armour_constructor_rules(definition).type!=6) return NO;
     if (item.artifact->name==definition.name) return NO;
     if (![[self inventoryRows][0][@"name"] isEqualToString:[NSString stringWithUTF8String:item.artifact->name.c_str()]]) return NO;
+    for (NSView *control in _inventoryController.window.contentView.subviews) if ([control isKindOfClass:NSPopUpButton.class]) [(NSPopUpButton*)control selectItemAtIndex:9];
     [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];[_inventoryController equipSelection:nil];
     if (!_session->equipment().slots()[9] || _session->inventory().bag()[0] || ![[self inventoryRows][0][@"location"] isEqualToString:@"Neck"] || ![self smokeSaveLoad]) return NO;
     [_inventoryController.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];[_inventoryController unequipSelection:nil];[_inventoryController close];
