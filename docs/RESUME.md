@@ -1925,3 +1925,15 @@ preserves source order and parses all2,123 supplied base/expansion records.
 All58 portable groups pass. Placement sourcef07199c awaits Mac CI; clock source
 also needs Mac validation. Clock creation/finalization, Session clocks/script
 bindings/save, regular lever/magicblocker and full game integration remain work.
+
+The outer GameTick driver is now implemented and matches8,192 complete original
+wrapper fixtures, including11863 Update and20483 PostGameTick callbacks,14947
+queued teleports,684 respawn and3533 autosave requests. All phase ordering, live
+registry append/player movement/death, tile effects, cooldowns/delay, incidental
+colour RNG, full libc/MT state and next8 MT draws match. All59 portable groups pass.
+AI/visibility/director/room logic/destruction/save/platform calls are explicit
+subsystem boundaries. This driver is not yet installed in Session; no end-to-end
+gameplay/RNG parity claim. Sourcef07199c and06e0731 Mac jobs are in progress.
+Next: Session script/tick integration with owned caches, saved room bindings,
+constructor/event lifecycle, deferred queues and native puzzle fixtures. The full
+game remains unfinished, including AI/effects/floor population/UI/audio parity.

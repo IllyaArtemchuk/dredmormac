@@ -2478,3 +2478,12 @@ Create0x1a0ba0 skips percent roll; finalizer0x1a0dae reapplies explicit remainin
 through SetTimeRemaining after placement, including-1. Constructor/storage/event
 lifetime remains a separate boundary. Binary SHA256
 `a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.
+
+GameTick0x2b480 full outer control flow now matches8,192 actual wrapper cases:
+phase order, live registry iteration, timed tile membership, player respawn,
+incidental MT/libc colour RNG, cooldowns/delay, deferred teleport flag1, tutorial,
+autosave and final platform callback. High confidence within stable-level/live
+preallocated-registry fixtures; AI, room logic, visibility, destruction, director,
+save, clocks and platform methods remain supplied boundaries. No Session/gameplay
+parity claim. See ROOM_SCRIPTS.md and verify_game_tick.py. Binary SHA256
+`a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.

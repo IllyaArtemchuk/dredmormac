@@ -273,3 +273,39 @@ was present. Constructor default-1 resolution therefore differs from a finalizer
 assignment of explicit-1. Constructor event timing and preinitialized storage need
 separate evidence before full construction parity can be claimed. All58 portable
 groups and ingestion of2,123 supplied base/expansion records pass.
+
+The complete outer GameTick0x2b480 driver is now portable. It first clears the
+inventory announcement flag and calls FixSafeTeleports, advances the slow-time
+counter (reset only when incremented value equals2), clears gameMessage, and
+returns early if no current level. Otherwise it awards zero XP, calculates
+visibility, iterates live registered objects' Update virtuals while player dead
+field+0x704 remains zero, and conditionally updates player buffs/triggers using
+Level byte+0x60. Room triggers precede destruction clearing and DirectorTick.
+
+After those phases it decrements finite tile-effect durations and removes every
+matching membership when a duration reaches zero. Shared/duplicate memberships
+observe live duration changes. Conditional player respawn counter wraps/increments;
+at signed>=101 it subtracts100 and requests SpawnMonster(-1,-1,0,0,1,1).
+Visibility recalculates after these effects. An unconditional MT rejection draw
+(up to0xfffffed7) gates rare colour output at<=0x83126d, then a libc selection
+when tutorial is off and the queue is nonempty. The colour queue always clears.
+
+Synchronized Bobs play/clear, every live registered object gets PostGameTick,
+positive spell cooldowns conditionally decrement, and nonzero player delay wraps
+down even if negative. Every queued teleport then invokes virtual TeleportTo with
+final flag1; the queue clears. Tutorial logic precedes the unsigned300001ms
+autosave check. A living player requests SaveGame("autosave.dredmorsave",1), a
+second GetTicks value becomes the last save timestamp, and ticker reports
+"Game autosaved.". SteamAPI_RunCallbacks runs last. Full subsystem implementations
+and actual disk/platform actions are external callbacks, not performed by this
+portable driver on their own.
+
+verify_game_tick.py executes the entire original wrapper on8,192 fixtures with
+recorded subsystem/virtual boundaries. Every request, live append/move/death,
+tile effect, spell cooldown/delay, respawn and autosave gate, random state and
+next8 MT values match. The fixtures include684 respawn,3533 autosave,14947
+end-of-tick teleport,11863 Update and20483 PostGameTick requests. Stable current
+level and preallocated registry storage are fixture assumptions; replacing a
+level during registry iteration is not claimed. Focused C++ tests compose clock
+expiry with trigger observation and delayed movement. All59 portable groups pass.
+Session/native adoption and full subsystem behavior remain unfinished.
