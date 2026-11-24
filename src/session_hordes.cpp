@@ -5,6 +5,14 @@
 #include <stdexcept>
 
 namespace dredmor {
+void Session::unlink_horde_member(std::uint64_t identity) {
+    HordeLinkMap links;
+    for (const auto& actor:enemies_) links.emplace(actor.id,actor.horde?HordeLinks{actor.horde->leader,actor.horde->followers}:HordeLinks{});
+    unlink_destroyed_horde_member(links,identity);
+    for (auto& actor:enemies_) if (actor.horde) {
+        auto& current=links.at(actor.id);actor.horde->leader=current.leader;actor.horde->followers=std::move(current.followers);
+    }
+}
 std::size_t Session::queued_horde_members() const {
     std::size_t count=0;for (const auto& group:pending_hordes_) count+=group.actors.size();return count;
 }

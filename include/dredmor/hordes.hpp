@@ -3,6 +3,7 @@
 #include "dredmor/generation.hpp"
 #include "dredmor/room_placement.hpp"
 #include <functional>
+#include <map>
 
 namespace dredmor {
 struct HordeRoomBounds {Position minimum{},maximum{};};
@@ -31,6 +32,13 @@ struct HordeMember {
     std::vector<std::uint64_t> followers;
     bool horde=false;
 };
+struct HordeLinks {std::uint64_t leader=0;std::vector<std::uint64_t> followers;};
+using HordeLinkMap=std::map<std::uint64_t,HordeLinks>;
+// Monster destructor's group-link phase. Remove every occurrence from its
+// leader's list, then clear each of its own followers' leader pointer. The
+// victim remains in this map until its owning destructor frees it; no leader
+// is elected and quest/name/stat metadata is not changed by this phase.
+void unlink_destroyed_horde_member(HordeLinkMap& members,std::uint64_t victim);
 struct HordeSearch {Position seed{},position{};bool found=false,accepted=false;};
 struct HordeResult {
     bool accepted=false;

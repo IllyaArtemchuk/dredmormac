@@ -607,3 +607,19 @@ entry script, checks render/group stats/counters/bindings/save+bad leader rollba
 Synthetic fixture generates outside git; native validation pending. Full GameTick/
 Post/AI/quest/destructor/visibility and earlier clock/effect/generation/UI/audio/
 complete-game work remains unfinished.
+
+Monster destructor group-link cleanup is now recovered: actual phase0xed9c0 to
+0xeda93 matches8,192 fixtures, including duplicate follower entries, cycles/self
+aliases, every leader/list result, unchanged unrelated actor bytes and libc/MT.
+List unlink/free are library boundaries; current player is absent, so level/
+projectile/player-map/base/resource cleanup and full OnDeath remain excluded.
+The port removes every victim entry from its leader's list and clears each of
+its own followers' leader pointers; it does not elect/promote a replacement or
+change quest/name/stats. See scripts/verify_horde_links.py and HordeLinks kernel.
+Session scripted NPC destruction now applies these links before erasing actors.
+Tests remove a horde leader and a different group's follower, preserve orphan
+HP/MP/stats/names/quest and unrelated group data/RNG, and reload valid surviving
+bindings/groups. All71 portable groups pass. Script-horde native2baba9d is running
+Mac45403089598; lifetime changes await their own Mac build. Full Monster death/
+AI/flee/quest/base/destructor ownership, verified outer GameTick, live clock/
+effect/generation/UI/audio and full gameplay remain unfinished.

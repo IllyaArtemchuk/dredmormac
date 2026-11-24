@@ -134,6 +134,30 @@ int main(int argc,char** argv) {
         std::ostringstream script_save;SessionRoomScriptExecutor::save(script_save,scripted,script_profile,script_objects,script_runtime);
         std::istringstream script_input(script_save.str());auto script_restored=SessionRoomScriptExecutor::load(script_input,script_profile);
         check(save(script_restored.session)==save(scripted) && script_restored.objects.bindings().size()==5);
+        // Script removal runs destructor link cleanup, not OnDeath's panic or
+        // quest callbacks. Orphan followers retain their own stats/names/quest.
+        auto removal_program=std::make_shared<RoomScriptProgram>();RoomScriptDefinition remove_script;
+        RoomAction remove;remove.kind=RoomActionKind::remove;remove.object_id="victim";remove_script.success={remove};removal_program->scripts={remove_script};
+        SessionRoomScriptProfile removal_profile(layout);removal_profile.programs={removal_program};
+        removal_profile.sources={parse_xml("<room width='5' height='4'><script><action on='success' action_type='remove' id='victim'/></script></room>")};
+        removal_profile.rooms={{{true,1,0,std::shared_ptr<const std::vector<RoomScriptDefinition>>(removal_program,&removal_program->scripts)},{0,0},1}};
+        const auto orphan_before=scripted.enemies()[1],other_leader=scripted.enemies()[2];
+        const auto random_before=*parse_xml(save(scripted)).first("random");
+        script_objects.assign(script_objects.bindings()[1].object.identity,"victim",scripted,layout);
+        RoomRuntimeState removal_state;SessionRoomScriptExecutor::run(scripted,removal_profile,script_objects,removal_state);
+        check(scripted.enemies().size()==3 && scripted.enemies()[0].id==orphan_before.id && !scripted.enemies()[0].horde->leader);
+        const auto& orphan=scripted.enemies()[0];
+        check(orphan.health==orphan_before.health && orphan.mana==orphan_before.mana && orphan.primary==orphan_before.primary &&
+            orphan.horde->moniker==orphan_before.horde->moniker && orphan.horde->platoon==orphan_before.horde->platoon && orphan.horde->quest==orphan_before.horde->quest);
+        check(scripted.enemies()[1].horde->followers==other_leader.horde->followers);
+        const auto random_after=*parse_xml(save(scripted)).first("random");check(random_after.attributes==random_before.attributes && random_after.text==random_before.text);
+        script_objects.assign(script_objects.bindings().back().object.identity,"victim",scripted,layout);
+        removal_state=RoomRuntimeState{};SessionRoomScriptExecutor::run(scripted,removal_profile,script_objects,removal_state);
+        check(scripted.enemies().size()==2 && scripted.enemies()[1].id==other_leader.id && scripted.enemies()[1].horde->followers.empty());
+        check(scripted.enemies()[1].primary==other_leader.primary && scripted.enemies()[1].horde->moniker==other_leader.horde->moniker);
+        std::ostringstream removed_save;SessionRoomScriptExecutor::save(removed_save,scripted,removal_profile,script_objects,removal_state);
+        std::istringstream removed_input(removed_save.str());auto removed=SessionRoomScriptExecutor::load(removed_input,removal_profile);
+        check(save(removed.session)==save(scripted) && removed.objects.bindings().size()==3);
         std::cout<<"horde placement batches preserve pending occupancy, duplicate sites, group links/colour/stats through save24/floor cache and rollback failed construction\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

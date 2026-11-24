@@ -302,6 +302,7 @@ private:
     void refresh_shop_guards_impl();
     void validate_shop(const SessionShop& shop) const;
     void validate_hordes() const;
+    void unlink_horde_member(std::uint64_t identity);
     void pickup_currency();
     bool hit_breakable_impl(std::size_t index);
     std::optional<std::uint64_t> create_ground_loot_impl(const ItemFactoryTables& tables,const ItemFactoryContext& context,

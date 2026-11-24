@@ -142,7 +142,7 @@ SessionRoomScriptPass SessionRoomScriptExecutor::run(Session& session,const Sess
             case SessionRoomObjectKind::item:erase_id(candidate.ground_,ref.subject,[](const auto& value){return value.item.instance;});break;
             case SessionRoomObjectKind::trap:throw std::runtime_error("script trap destruction requires origin/effect lifetime integration");
             case SessionRoomObjectKind::monster: {
-                for (const auto& actor:candidate.enemies_) if (actor.id==ref.subject && actor.horde) throw std::runtime_error("script horde destruction requires group lifetime integration");
+                candidate.unlink_horde_member(ref.subject);
                 erase_id(candidate.enemies_,ref.subject,[](const auto& value){return value.id;});break;
             }
             case SessionRoomObjectKind::keeper:case SessionRoomObjectKind::player:throw std::runtime_error("script player/keeper destruction is not supported");
