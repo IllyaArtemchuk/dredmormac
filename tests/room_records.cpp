@@ -119,11 +119,20 @@ int main() {
         auto podium=create_room_pedestal(pedestal,{10,20},random);
         check(podium && podium->kind==CustomRoomKind::pedestal && podium->blocks_movement && !podium->blocks_vision && !podium->playing && !podium->looping);
         check(podium->sprite.image=="dungeon/podium_scroll.png" && podium->description=="Read this" && podium->room_local_id=="pedestal-id" && podium->can_push==0);
-        definition.source=parse_xml("<room width='5' height='1'><loot at='1'/><custombreakable at='2' png='intact.spr' broken='broken.spr'/><script/><customblocker at='3' png='fixture.spr'/><pedestal at='4'/><element x='0' y='0' type='lever'/><clock at='1'/><unknown/></room>");
+        definition.source=parse_xml("<room width='5' height='1'><loot at='1'/><custombreakable at='2' png='intact.spr' broken='broken.spr'/><script/><customblocker at='3' png='fixture.spr'/><pedestal at='4'/><element x='0' y='0' type='lever'/><clock at='1' png='clock.spr' initial='5'/><unknown/></room>");
         const auto ordered=definition.records();check(ordered.size()==6);
         check(std::holds_alternative<RoomLootRecord>(ordered[0]) && std::holds_alternative<BreakableRoomDefinition>(ordered[1]) &&
             std::holds_alternative<CustomRoomDefinition>(ordered[2]) && std::holds_alternative<RoomPedestalRecord>(ordered[3]) &&
-            std::holds_alternative<RoomElementDefinition>(ordered[4]) && std::get<UnimplementedRoomRecord>(ordered[5]).type=="clock");
+            std::holds_alternative<RoomElementDefinition>(ordered[4]) && std::get<RoomClockRecord>(ordered[5]).initial==5);
+        const auto clock=read_room_clock(parse_xml("<clock at='3' png='clock.spr' initial='8' remaining='-1' started='1' passable='1' visblock='0' id='timer' percent='0' can_push='256'/>"),markers,room);
+        check(clock.initial==8 && clock.remaining==-1 && clock.started && clock.passable==true && clock.vis_block==false);
+        check(clock.placement.relative.x==2 && clock.placement.relative.y==4 && clock.placement.can_push==0 && clock.placement.percent==0 && clock.placement.id=="timer");
+        const auto defaults=read_room_clock(parse_xml("<clock x='0' y='0' png='clock.spr' initial='2'/>"),markers,room);
+        check(!defaults.remaining && !defaults.started && !defaults.passable && !defaults.vis_block);
+        const auto alias=read_room_clock(parse_xml("<clock at='3' png='clock.spr' initial='2' INITIAL='7'/>"),markers,room);check(alias.initial==7);
+        auto isolated=room;isolated.cells[4*room.width+2].kind=9;
+        bool invalid_clock=false;try {read_room_clock(parse_xml("<clock at='3' png='clock.spr' initial='2' unused='1'/>"),markers,isolated);} catch(const std::invalid_argument&) {invalid_clock=true;}
+        check(invalid_clock && isolated.cells[4*room.width+2].kind==9);
         std::cout<<"room point resolution, attribute consumption, marker floors and nested script references passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

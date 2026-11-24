@@ -1,10 +1,27 @@
 #include "dredmor/clocks.hpp"
+#include "dredmor/room_records.hpp"
 #include <iomanip>
 #include <iostream>
 #include <stdexcept>
 using namespace dredmor;
 int main(int argc,char** argv) {
     try {
+        if (argc==2 && std::string(argv[1])=="--metadata") {
+            std::string xml;
+            while (std::cin>>std::quoted(xml)) {
+                RoomStamp room;room.width=room.height=7;room.cells.resize(49);
+                const auto definition=read_room_clock(parse_xml(xml),{{'3',{2,4}}},room);const auto& p=definition.placement;const auto& sprite=definition.sprite;
+                std::cout<<p.relative.x<<' '<<p.relative.y<<' '<<p.percent<<' '<<unsigned(p.can_push)<<' '<<std::quoted(p.id)<<' '
+                    <<std::quoted(definition.name)<<' '<<std::quoted(definition.description)<<' '
+                    <<definition.passable.has_value()<<' '<<definition.passable.value_or(false)<<' '
+                    <<definition.vis_block.has_value()<<' '<<definition.vis_block.value_or(false)<<' '
+                    <<std::quoted(sprite.image)<<' '<<std::quoted(sprite.series)<<' '<<sprite.first<<' '<<sprite.count<<' '<<sprite.rate<<' '
+                    <<definition.initial<<' '<<definition.remaining.has_value()<<' '<<definition.remaining.value_or(-1)<<' '<<definition.started;
+                for (const auto& cell:room.cells) std::cout<<' '<<unsigned(cell.kind);
+                std::cout<<'\n';
+            }
+            return 0;
+        }
         if (argc==2 && std::string(argv[1])=="--activation") {
             ActivationState state;int action;bool value;
             while (std::cin>>state.current>>state.previous>>state.older>>action>>value) {

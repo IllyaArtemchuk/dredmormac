@@ -118,7 +118,17 @@ RoomPopulationRecord read_room_population(const XmlNode& node,const RoomMarkers&
 // Ordered request planning only: database resolution, constructors, loot factory,
 // random spawn/horde selection, entity flags and finalization remain external.
 RoomPopulationPlan plan_room_population(const RoomPopulationRecord& record,Position origin,DarwinRandom& random);
+struct RoomClockRecord {
+    RoomObjectPlacement placement;
+    RoomSprite sprite;
+    std::string name,description;
+    std::optional<bool> passable,vis_block;
+    int initial=0;
+    std::optional<int> remaining;
+    bool started=false;
+};
+RoomClockRecord read_room_clock(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room);
 struct UnimplementedRoomRecord {std::string type;XmlNode source;};
 using RoomRecord=std::variant<CustomRoomDefinition,BreakableRoomDefinition,RoomPedestalRecord,RoomElementDefinition,
-    RoomMonsterRecord,RoomTrapRecord,RoomLootRecord,RoomHordeRecord,UnimplementedRoomRecord>;
+    RoomMonsterRecord,RoomTrapRecord,RoomLootRecord,RoomHordeRecord,RoomClockRecord,UnimplementedRoomRecord>;
 }

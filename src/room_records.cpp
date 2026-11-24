@@ -227,4 +227,32 @@ RoomPopulationPlan plan_room_population(const RoomPopulationRecord& definition,P
     },definition);
     random=candidate;return result;
 }
+RoomClockRecord read_room_clock(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room) {
+    if (lower(node.tag)!="clock") throw std::invalid_argument("expected room clock");
+    if (!node.children.empty()) throw std::invalid_argument("room clock cannot contain child records");
+    XmlNode canonical=node;canonical.attributes.clear();
+    auto assign=[&](const std::string& key) {const auto found=node.attributes.find(key);if (found!=node.attributes.end()) canonical.attributes[lower(key)]=found->second;};
+    for (const auto& key:node.attribute_order) assign(key);
+    for (const auto& entry:node.attributes) if (std::find(node.attribute_order.begin(),node.attribute_order.end(),entry.first)==node.attribute_order.end()) assign(entry.first);
+    auto attributes=canonical.attributes;auto candidate=room;RoomClockRecord result;
+    result.placement=placement(canonical,markers,candidate);
+    const auto sprite=take_room_sprite(attributes);
+    if (!sprite) throw std::invalid_argument("room clock sprite required");
+    result.sprite=*sprite;
+    auto take=[&](const char* name,std::string fallback="") {
+        const auto found=attributes.find(name);if (found==attributes.end()) return fallback;
+        auto value=found->second;attributes.erase(found);return value;
+    };
+    result.name=take("name");result.description=take("description");
+    if (!attributes.count("initial")) throw std::invalid_argument("room clock initial required");
+    result.initial=legacy_integer(take("initial"));
+    if (attributes.count("remaining")) result.remaining=legacy_integer(take("remaining"));
+    result.started=legacy_integer(take("started","0"))!=0;
+    if (attributes.count("passable")) result.passable=legacy_integer(take("passable"))!=0;
+    if (attributes.count("visblock")) result.vis_block=legacy_integer(take("visblock"))!=0;
+    for (const char* key:{"at","x","y","percent","can_push","id"}) attributes.erase(key);
+    if (!attributes.empty()) throw std::invalid_argument("unused room clock attribute: "+attributes.begin()->first);
+    result.placement.source=node;room=std::move(candidate);return result;
+}
+
 }

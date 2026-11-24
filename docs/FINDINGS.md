@@ -2469,3 +2469,12 @@ levels with explicit list/string/allocation/type-query boundaries. Scope/name do
 not refresh during movement. SafeTeleport0x29990 queues rather than moving;
 FixSafeTeleports0x29bc0 clears destruction first. See ROOM_SCRIPTS.md. Binary
 SHA256`a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.
+
+Clock record property registration0x1a070e recovered with high confidence:
+required initial, optional remaining with separate presence, started defaultfalse,
+required common sprite and inherited CustomRecord metadata. 2,048 complete actual
+factory/property/XML fixtures match via verify_room_clock_metadata.py.
+Create0x1a0ba0 skips percent roll; finalizer0x1a0dae reapplies explicit remaining
+through SetTimeRemaining after placement, including-1. Constructor/storage/event
+lifetime remains a separate boundary. Binary SHA256
+`a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.

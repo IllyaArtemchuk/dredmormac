@@ -67,7 +67,8 @@ std::vector<RoomRecord> RoomDefinition::records() const {
         else if (tag=="element") result.emplace_back(read_room_element(node,markers,numeric));
         else if (tag=="monster" || tag=="trap" || tag=="loot" || tag=="horde")
             std::visit([&](auto&& record){result.emplace_back(std::move(record));},read_room_population(node,markers,numeric));
-        else if (tag=="lever" || tag=="clock" || tag=="magicblocker") result.emplace_back(UnimplementedRoomRecord{tag,node});
+        else if (tag=="clock") result.emplace_back(read_room_clock(node,markers,numeric));
+        else if (tag=="lever" || tag=="magicblocker") result.emplace_back(UnimplementedRoomRecord{tag,node});
     }
     return result;
 }

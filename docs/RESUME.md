@@ -1916,3 +1916,12 @@ through movement; first-duplicate removal and same-level registration repair are
 preserved. All58 portable groups pass. New placement source awaits Mac CI.
 Safe teleport queuing/subclass overrides, Session/native script integration,
 record constructors and complete game scheduling/gameplay remain unfinished.
+
+Clock room records now have typed metadata instead of UnimplementedRoomRecord.
+All2,048 actual clock record factory/property/XML fixtures match, including
+sprite forms, initial/remaining presence, started and common collision/name/ID
+fields. Marker mutation is transactional on invalid input. RoomDefinition::records
+preserves source order and parses all2,123 supplied base/expansion records.
+All58 portable groups pass. Placement sourcef07199c awaits Mac CI; clock source
+also needs Mac validation. Clock creation/finalization, Session clocks/script
+bindings/save, regular lever/magicblocker and full game integration remain work.

@@ -33,6 +33,7 @@ int main(int argc,char** argv) {
                     else if constexpr (std::is_same_v<T,RoomTrapRecord>) type="trap";
                     else if constexpr (std::is_same_v<T,RoomLootRecord>) type="loot";
                     else if constexpr (std::is_same_v<T,RoomHordeRecord>) type="horde";
+                    else if constexpr (std::is_same_v<T,RoomClockRecord>) type="clock";
                     else type=record.type;
                     std::cout<<room<<' '<<order<<' '<<type;
                     if constexpr (!std::is_same_v<T,UnimplementedRoomRecord>) {

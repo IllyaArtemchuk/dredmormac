@@ -252,3 +252,24 @@ SafeTeleport0x29990 merely queues requests; FixSafeTeleports0x29bc0 clears pendi
 destruction before executing teleports with final flag1. This base implementation
 does not claim immediate script movement, subclass override or full scheduler
 parity. All58 portable groups pass.
+
+Clock record metadata is now typed in RoomDefinition::records. Actual
+RoomClockRecord::UpdateReadWriter0x1a070e extends CustomRecord fields with required
+integer initial, optional integer remaining(default-1, with a distinct presence
+flag), and optional started(defaultfalse). The common sprite property is required
+in addition to the object point. Name/description, ID, percent/can_push and optional
+passable/visblock are retained. ASCII case-insensitive attribute aliases follow
+source order. Invalid unused attributes/child bodies use explicit port guards;
+room marker mutation commits only after a successful parse.
+
+verify_room_clock_metadata.py executes the actual record factory, constructors,
+virtual property registration and complete attribute reader on2,048 fixtures;
+all typed fields/default/presence flags and every numeric template cell match.
+Map/string/ASCII conversion/library operations are boundaries. This covers record
+metadata, not full Clock object construction or finalization. Original CreateInLevel
+0x1a0ba0 has no percent roll; finalizer0x1a0dae applies base placement/ID, collision
+overrides, then calls SetTimeRemaining again when the optional remaining attribute
+was present. Constructor default-1 resolution therefore differs from a finalizer
+assignment of explicit-1. Constructor event timing and preinitialized storage need
+separate evidence before full construction parity can be claimed. All58 portable
+groups and ingestion of2,123 supplied base/expansion records pass.
