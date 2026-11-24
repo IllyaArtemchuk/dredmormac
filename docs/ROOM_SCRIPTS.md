@@ -69,3 +69,34 @@ activation and clock queries execute. Object lookup, event queue, strings and a
 returning error handler are recording boundaries; diagnostic fixtures do not
 establish original fatal-error behavior. All54 portable groups pass. TypeAt,
 XML construction, script actions/scheduler and Session entities remain work.
+
+Action execution now ports the success/failure ordered loops (0x1a5284 and
+0x1a52d6) and Create, Move, Remove, Ticker, SetObjectProperty and Spell actions,
+including ObjectAction's missing-object dispatch. Requests execute immediately
+through a callback so earlier movement can affect a later scripted spell's
+player-default coordinates. Constructors, teleport, deferred destruction and
+full spell bodies are explicit execution boundaries.
+
+Move wraps room origin plus relative coordinates and requests forced teleport.
+Create passes room origin to its record constructor; Remove queues destruction.
+Ticker uses style1. The exact lowercase property "passable" sets blocking iff
+its integer value is zero. "started" and "stopped" call Clock Start/Stop based
+on exact integer equality with1/0; other integer values are not normalized to
+booleans. Property names are case sensitive. Unknown properties request an error.
+Wrong clock types are diagnosed and guarded in the port; the original roomError
+fatal behavior is not replaced with a call into an unrelated object vtable.
+
+Spell actions request Player::SetIdle, set player byte+0x8a4, remove the secondary
+Bob from attached squares, optionally play the spell's cast sound, then invoke
+DoActualSpellLoop. Origin and target independently default to player position
+only when both coordinates are -1. Partial -1 pairs are relative coordinates.
+The cast uses the player as caster, "by a spell" as reason, and final flag0.
+
+`verify_room_actions.py` compares4,096 complete original success/failure passes,
+46,081 ordered requests, changed live object/player positions, blocking/action
+flags, lookup order and actual clock state/events, with zero mismatches. Actual
+concrete action/lookup-dispatch/clock methods run; named execution, string and
+returning-error boundaries are controlled. Unknown-property diagnostics do not
+establish original fatal behavior; wrong-clock-type guards are excluded. All55
+portable groups pass. Record XML/constructors, full downstream callees, event
+queue, script scheduler and Session/native entities remain unfinished.

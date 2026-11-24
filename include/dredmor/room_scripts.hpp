@@ -19,6 +19,7 @@ struct ScriptObjectState {
     std::int32_t dead=0;
     ActivationState activation;
     ClockState timer;
+    std::uint64_t identity=0;
 };
 struct RoomScriptContext {
     std::int32_t room=0,player_room=0,previous_room=0;
@@ -41,4 +42,37 @@ struct RoomScriptEvaluation {
     std::vector<std::pair<std::size_t,RoomConditionError>> errors;
 };
 RoomScriptEvaluation all_room_conditions_positive(const std::vector<RoomCondition>& conditions,const RoomScriptContext& context);
+enum class RoomActionKind {create,move,remove,ticker,set_property,spell};
+struct RoomAction {
+    RoomActionKind kind=RoomActionKind::ticker;
+    std::string object_id,text,property,cast_sound;
+    std::int32_t value=0;
+    std::uint64_t record=0,spell=0;
+    Position point{},spell_origin{-1,-1},spell_target{-1,-1};
+};
+enum class RoomActionRequestKind {create,teleport,destroy,ticker,set_blocking,clock_start,clock_stop,player_idle,player_action_flag,player_detach_effects,sound,cast_spell,unknown_property,clock_required};
+struct RoomActionRequest {
+    RoomActionRequestKind kind;
+    std::uint64_t subject=0,caster=0;
+    Position origin{},target{};
+    std::int32_t value=0;
+    bool forced=false;
+    std::string text;
+};
+struct RoomActionContext {
+    std::int32_t room=0;
+    Position origin{};
+    std::uint64_t player=1;
+    std::function<std::optional<ScriptObjectState>(std::int32_t,std::string_view)> find_object;
+    std::function<Position()> player_position;
+    // Requests execute immediately in original order. A callback can mutate
+    // live state used by later actions; no script-wide rollback is imposed.
+    std::function<void(const RoomActionRequest&)> perform;
+};
+// Constructors, teleport, destruction, ticker, spell execution and actor
+// presentation are boundaries. A missing perform callback returns a plan only.
+// Invalid clock types request a diagnostic and stop that action; the original
+// roomError's fatal behavior is not emulated by calling an unrelated vtable.
+std::vector<RoomActionRequest> perform_room_action(const RoomAction& action,const RoomActionContext& context);
+void perform_room_actions(const std::vector<RoomAction>& actions,const RoomActionContext& context);
 }

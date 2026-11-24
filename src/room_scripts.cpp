@@ -42,4 +42,50 @@ RoomScriptEvaluation all_room_conditions_positive(const std::vector<RoomConditio
     }
     return result;
 }
+std::vector<RoomActionRequest> perform_room_action(const RoomAction& action,const RoomActionContext& context) {
+    std::vector<RoomActionRequest> result;
+    auto emit=[&](RoomActionRequest request) {result.push_back(request);if (context.perform) context.perform(request);};
+    auto request=[&](RoomActionRequestKind kind,std::uint64_t subject=0) {RoomActionRequest value;value.kind=kind;value.subject=subject;return value;};
+    auto offset=[&](Position point) {
+        auto add=[](int a,int b) {const auto bits=std::uint32_t(a)+std::uint32_t(b);std::int32_t value;std::memcpy(&value,&bits,4);return value;};
+        return Position{add(context.origin.x,point.x),add(context.origin.y,point.y)};
+    };
+    if (action.kind==RoomActionKind::create) {
+        auto value=request(RoomActionRequestKind::create,action.record);value.origin=context.origin;emit(value);return result;
+    }
+    if (action.kind==RoomActionKind::ticker) {
+        auto value=request(RoomActionRequestKind::ticker);value.text=action.text;value.value=1;emit(value);return result;
+    }
+    if (action.kind==RoomActionKind::spell) {
+        emit(request(RoomActionRequestKind::player_idle,context.player));
+        auto flag=request(RoomActionRequestKind::player_action_flag,context.player);flag.value=1;emit(flag);
+        emit(request(RoomActionRequestKind::player_detach_effects,context.player));
+        if (!action.cast_sound.empty()) {auto sound=request(RoomActionRequestKind::sound);sound.text=action.cast_sound;emit(sound);}
+        auto point=[&](Position relative) {
+            if (relative.x!=-1 || relative.y!=-1) return offset(relative);
+            if (!context.player_position) throw std::invalid_argument("scripted spell requires player position");
+            return context.player_position();
+        };
+        auto cast=request(RoomActionRequestKind::cast_spell,action.spell);cast.origin=point(action.spell_origin);cast.target=point(action.spell_target);cast.caster=context.player;cast.text="by a spell";emit(cast);return result;
+    }
+    if (action.kind!=RoomActionKind::move && action.kind!=RoomActionKind::remove && action.kind!=RoomActionKind::set_property) throw std::invalid_argument("invalid room action kind");
+    if (!context.find_object) throw std::invalid_argument("room action requires object lookup");
+    const auto object=context.find_object(context.room,action.object_id);if (!object) return result;
+    if (action.kind==RoomActionKind::move) {
+        auto value=request(RoomActionRequestKind::teleport,object->identity);value.target=offset(action.point);value.forced=true;emit(value);
+    } else if (action.kind==RoomActionKind::remove) emit(request(RoomActionRequestKind::destroy,object->identity));
+    else if (action.property=="passable") {
+        auto value=request(RoomActionRequestKind::set_blocking,object->identity);value.value=action.value==0;emit(value);
+    } else if (action.property=="started" || action.property=="stopped") {
+        if (!object->clock) {emit(request(RoomActionRequestKind::clock_required,object->identity));return result;}
+        const bool start=std::int32_t(action.property=="started")==action.value;
+        emit(request(start?RoomActionRequestKind::clock_start:RoomActionRequestKind::clock_stop,object->identity));
+    } else {
+        auto value=request(RoomActionRequestKind::unknown_property,object->identity);value.text=action.property;emit(value);
+    }
+    return result;
+}
+void perform_room_actions(const std::vector<RoomAction>& actions,const RoomActionContext& context) {
+    for (const auto& action:actions) (void)perform_room_action(action,context);
+}
 }

@@ -2385,3 +2385,14 @@ requests; real virtual/clock/activation queries execute with explicit lookup,
 event and returning-error boundaries. All54 portable groups pass. New source
 awaits Mac CI. TypeAt/XML/actions/event queue/scheduling/Session entities still
 need work, along with full generated floors/AI/damage/effects/UI/audio parity.
+
+
+Condition source85a7b4d passed arm64 Mac run45351539618 and packaged-app smoke.
+RoomScript success/failure loops and six action kinds now preserve immediate
+create/move/remove/ticker/property/spell request order. All4,096 original action
+passes/46,081 requests match, including live moved-player spell defaults, wrapped
+coordinates, exact integer clock properties and actual Clock Start/Stop events.
+All55 portable groups pass. Full constructors/teleport/destruction/spell bodies
+and original error handling are explicit boundaries. See docs/ROOM_SCRIPTS.md.
+TypeAt condition/prototype caching, XML/events/scheduler/Session entities remain
+work; full generated game/AI/damage/effects/original UI/audio is not finished.
