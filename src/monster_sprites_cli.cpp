@@ -16,6 +16,30 @@ template<class F> void handles(dredmor::MonsterSpriteState& s,F function) {
 }
 int main(int argc,char** argv) {
     try {
+        if (argc==2 && std::string(argv[1])=="--horde-metadata") {
+            std::string xml;
+            while (std::cin>>std::quoted(xml)) {
+                const auto definition=dredmor::read_monster(dredmor::parse_xml(xml));
+                std::cout<<definition.horde<<' '<<definition.max_spawns<<'\n';
+            }
+            return 0;
+        }
+        if (argc==2 && std::string(argv[1])=="--eligibility") {
+            bool horde,force;std::int32_t depth,limit;
+            while (std::cin>>horde>>force>>depth>>limit) {
+                dredmor::MonsterDefinition definition;definition.horde=horde;definition.max_spawns=limit;
+                std::size_t count;if (!(std::cin>>std::quoted(definition.name)>>count) || count>1000)
+                    throw std::invalid_argument("invalid eligibility fixture");
+                dredmor::MonsterSpawnState state;
+                for (std::size_t i=0;i<count;++i) {
+                    std::string name;std::int32_t previous;
+                    if (!(std::cin>>std::quoted(name)>>previous) || !state.counts.emplace(name,previous).second)
+                        throw std::invalid_argument("invalid spawn counter");
+                }
+                std::cout<<dredmor::can_spawn_monster(definition,depth,state,force)<<'\n';
+            }
+            return 0;
+        }
         if (argc==2 && std::string(argv[1])=="--records") {
             std::string parent_xml,child_xml;
             while (std::cin>>std::quoted(parent_xml)>>std::quoted(child_xml)) {

@@ -11,7 +11,7 @@ struct MonsterDefinition {
     std::string name,parent,layer,display_name;
     int level=0,experience=0,armour_ac=0,aggressiveness=0,span=0;
     int special=0,max_spawns=0,terrain=0;
-    bool diggle_hell=false;
+    bool diggle_hell=false,horde=true;
     ClassRanks ranks{};
     PrimaryStats primary{};
     SecondaryStats secondary{};
@@ -29,6 +29,8 @@ ClassRanks monster_creation_ranks(ClassRanks ranks,int level_adder,DarwinRandom&
 using MonsterPools=std::array<std::vector<std::uint32_t>,4>;
 struct MonsterTables {MonsterPools named;std::array<MonsterPools,15> levels;std::vector<std::uint32_t> diggle_hell;};
 struct MonsterSpawnState {std::map<std::string,std::int32_t,std::less<>> counts;};
+bool can_spawn_monster(const MonsterDefinition& definition,std::int32_t depth,
+    const MonsterSpawnState& state,bool horde=false);
 struct MonsterSpawnContext {SpawnDepthContext depth;std::size_t level_set=0;bool expansion=false;};
 void register_monster(MonsterTables& tables,std::uint32_t index,const MonsterDefinition& definition,std::uint32_t level_sets);
 MonsterTables build_base_monster_tables(const Catalog& catalog,const std::vector<MonsterDefinition>& definitions);

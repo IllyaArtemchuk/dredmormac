@@ -110,3 +110,19 @@ alpha and delays are retained. See scripts/verify_sprite_tint.py and
 scripts/verify_monster_sprites.py. Latest Mac-verified palette source09ea0b7 passed
 run45378878264; name source162e461 passed run45377684653, both with packaged-app
 smoke. Current monster-routing changes await Mac CI.
+
+## Horde eligibility
+
+Level::CanSpawnMonster0x60876 matches8,192 complete original calls over arbitrary
+case-sensitive count maps, missing/negative/overflowing counts, caps and depth-1.
+A requested horde rejects definitions whose horde byte is zero; otherwise
+next-count is existing+1 (or1), with signed wrap. Positive maxspawns rejects when
+next-count exceeds the cap or argument depth is-1. Nonpositive caps are unlimited.
+The method does not increment counters. MonsterDefinition now retains horde=true
+by default;1,024 actual definition constructors/root XML callbacks verify that
+default, maxspawns and source-order horde aliases/legacy integer parsing. Existing
+ordinary selection shares the recovered eligibility check without requesting a
+horde. Composed names+tint horde comparisons now also execute the actual eligibility
+method with unlimited definitions/empty counts;4,096 wrappers/5,987 members still
+match. All65 portable groups pass. Full constructors/native group ownership remain
+next. See scripts/verify_monster_eligibility.py.

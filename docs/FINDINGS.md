@@ -2557,3 +2557,14 @@ members and both random streams. High confidence for routing; resource cache/IO
 and Session/native ownership remain boundaries. See HORDES.md and
 verify_monster_sprites.py. Binary SHA256
 `a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.
+
+Recovered Level::CanSpawnMonster matches8,192 actual original calls;1,024 actual
+definition constructors/root XML callbacks verify default-true horde eligibility,
+maxspawns and case-alias/source-order updates. Ordinary selection now shares that
+kernel; full names+tint horde tests also run actual eligibility (4,096 wrappers/
+5,987 members match). All65 portable checks pass. Monster sprite palette/tint
+metadata and full constructor-backed Session/native adoption remain next. Original
+RebuildSprites0xec494 was inspected: definition palette tint!=0 delegates to
+TintSprites, while0 uses SpriteMgr_AutoLoad with base+palette key; source palette
+file overrides embedded RGB after hue conversion. Native variant presentation,
+horde saves, scripting/tick adoption and full gameplay remain unfinished.

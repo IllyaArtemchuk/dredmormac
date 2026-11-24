@@ -24,7 +24,7 @@ int main(int argc,char** argv) {
             if (named) options.named="named";if (quest) options.quest=HordeQuest{13,"Quest"};
             PrimaryStats percentages;for (auto& value:percentages) std::cin>>value;
             std::size_t count;std::cin>>count;if (!count || count>64) throw std::invalid_argument("invalid horde definitions");std::vector<MonsterDefinition> definitions(count);std::vector<bool> allowed(count);
-            for (std::size_t i=0;i<count;++i) {bool allow;std::cin>>definitions[i].special>>allow;allowed[i]=allow;}
+            for (std::size_t i=0;i<count;++i) {bool allow;std::cin>>definitions[i].special>>allow;allowed[i]=allow;definitions[i].horde=allow;}
             std::cin>>count;if (!count || count>64) throw std::invalid_argument("invalid horde pool");std::vector<std::uint32_t> base_pool(count);for (auto& value:base_pool) std::cin>>value;
             MonsterTables tables;for (std::size_t level=0;level<15;++level) for (std::size_t set=0;set<4;++set) for (std::size_t i=0;i<base_pool.size();++i) tables.levels[level][set].push_back(base_pool[(i+level+set)%base_pool.size()]);
             if (real_tint) for (std::size_t i=0;i<definitions.size();++i) {
@@ -54,7 +54,7 @@ int main(int argc,char** argv) {
                 if (name=="minimum horde size") {event(1,default_min);return default_min;}
                 if (name!="horde is overpowered change") throw std::runtime_error("unknown horde tweak");event(2,chance);return chance;
             };
-            hooks.can_spawn=[&](std::uint32_t index,std::int32_t depth,bool force) {event(3,index,depth,force);return allowed.at(index);};
+            hooks.can_spawn=[&](std::uint32_t index,std::int32_t depth,bool force) {event(3,index,depth,force);return real_tint?can_spawn_monster(definitions.at(index),depth,MonsterSpawnState{},force):allowed.at(index);};
             hooks.find_named=[&](std::string_view name) {if (name!="named") throw std::runtime_error("wrong named horde lookup");event(4,named_index);return named_index;};
             hooks.construct=[&](std::uint32_t index,std::int32_t depth,GameRandom& rng) {HordeMember member;member.identity=++constructed;member.primary_percent=percentages;event(5,index,depth,member.identity);draws(rng,ctor_draws);return member;};
             hooks.monster_name=[&](GameRandom& rng) {event(6,constructed);if (real_names) return generate_monster_name(name_words,rng);draws(rng,mon_draws);return "Mon "+std::to_string(rng.libc.state());};

@@ -1,4 +1,5 @@
 #include "dredmor/monsters.hpp"
+#include "dredmor/legacy_number.hpp"
 #include <algorithm>
 #include <charconv>
 #include <cstdlib>
@@ -8,6 +9,13 @@
 #include <stdexcept>
 
 namespace dredmor {
+bool can_spawn_monster(const MonsterDefinition& definition,std::int32_t depth,const MonsterSpawnState& state,bool horde) {
+    if (horde && !definition.horde) return false;
+    const auto found=state.counts.find(definition.name);
+    const auto count=found==state.counts.end()?0:found->second;
+    const std::uint32_t bits=std::uint32_t(count)+1U;std::int32_t next;std::memcpy(&next,&bits,4);
+    return !((definition.max_spawns<next || depth==-1) && definition.max_spawns>0);
+}
 std::optional<std::uint32_t> select_room_monster(const MonsterTables& tables,const std::vector<MonsterDefinition>& definitions,
     MonsterSpawnContext context,int boost_chance,const MonsterSpawnState& state,GameRandom& random,std::size_t budget) {
     auto candidate=random;const int level=select_monster_level(context.depth,boost_chance,context.expansion,candidate.mt);
@@ -17,9 +25,7 @@ std::optional<std::uint32_t> select_room_monster(const MonsterTables& tables,con
     if (pool.size()>0x7ffffffeU) throw std::invalid_argument("random monster pool too large");
     for (std::size_t attempt=0;attempt<budget;++attempt) {
         const auto index=pool[candidate.libc.bounded(static_cast<std::uint32_t>(pool.size()))];const auto& definition=definitions.at(index);
-        const auto found=state.counts.find(definition.name);const auto count=found==state.counts.end()?0:found->second;
-        const std::uint32_t bits=std::uint32_t(count)+1U;std::int32_t next;std::memcpy(&next,&bits,4);
-        if ((definition.max_spawns<next || context.depth.depth==-1) && definition.max_spawns>=1) continue;
+        if (!can_spawn_monster(definition,context.depth.depth,state)) continue;
         random=std::move(candidate);return index;
     }
     throw std::runtime_error("random monster selection budget exhausted");
@@ -103,6 +109,9 @@ MonsterDefinition read_monster(const XmlNode& node,const MonsterDefinition* pare
     result.special=integer(node,"special",result.special);result.diggle_hell=integer(node,"digglehell",result.diggle_hell)!=0;
     result.max_spawns=integer(node,"maxspawns",result.max_spawns);
     result.terrain=integer(node,"terrain",result.terrain);
+    ordered_attributes(node,[&](const auto& key,const auto& value) {
+        if (key=="horde") result.horde=legacy_integer(value)!=0;
+    });
     result.level=integer(node,"level",result.level);
     result.source_chain.push_back(node);
     for (const auto& child:node.children) {

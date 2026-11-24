@@ -17,7 +17,7 @@ class Hordes(Placement):
     def __init__(self,binary,real_names=False,real_tint=False):
         from unicorn import UC_HOOK_CODE
         super().__init__(binary);self.real_names=real_names;self.real_tint=real_tint;self.construct=self.original.sentinel+0x400;self.can_spawn=self.original.sentinel+0x420;self.rebuild=self.original.sentinel+0x440
-        self.addresses=[self.construct,self.can_spawn,self.rebuild,0xdc570,0xc8b80,0xd2cb0,0xefebc,0x29990,0x64a40,0x64dec,0x64df1,0x85fc0,0xefd20]
+        self.addresses=[self.construct,self.can_spawn,self.rebuild,0xdc570,0xc8b80,0xd2cb0,0xefebc,0x29990,0x64a40,0x64dec,0x64df1,0x85fc0,0xefd20,0x60876]
         for address in self.addresses:self.machine.hook_add(UC_HOOK_CODE,self.boundary,begin=address,end=address)
 
     def draw(self,count):
@@ -36,10 +36,11 @@ class Hordes(Placement):
         elif address==0x85fc0:self.string(a,str(signed(b)));result=a;hidden=True
         elif address==self.original.address('__Z8tweakValPKc'):
             key=self.cstring(a);stage,result={'additional horde size':(0,self.default_extra),'minimum horde size':(1,self.default_min),'horde is overpowered change':(2,self.chance)}[key];self.trace.append([stage,result,0,0,0])
-        elif address==self.can_spawn:
+        elif address==self.can_spawn or address==0x60876:
             if a!=self.level or c!=1:raise AssertionError('horde eligibility arguments')
             index=self.definition_ids[b];depth=signed(self.read(a+0x64)[0]);self.trace.append([3,index,depth,c,0]);result=self.rows[index][1]
             if result:self.selected=index
+            if self.real_tint:return
         elif address==self.construct:
             if a!=self.level:raise AssertionError('horde constructor level')
             index=self.definition_ids[b];identity=len(self.actors)+1;actor=self.allocate(0x46c);self.actors[actor]=(identity,index);self.actor_ids[identity]=actor;self.trace.append([5,index,signed(self.read(a+0x64)[0]),identity,0]);self.draw(self.ctor_draws)
@@ -73,7 +74,8 @@ class Hordes(Placement):
     def run(self,seed,fields,percentages,rows,pool,rooms,argument,current):
         depth,expansion,level_set,x,y,minimum,additional,self.default_min,self.default_extra,self.chance,named,self.named_index,quest,self.ctor_draws,self.mon_draws,self.platoon_draws=fields
         self.heap=0x73000000;self.state=seed;self.tint_requests=[];self.trace=[];self.actors={};self.actor_ids={};self.searches=[];self.teleports=[];self.selected=0;self.table_level=0;self.rows=rows;self.percentages=percentages
-        self.level=self.allocate(0x100);cur=self.allocate(0x100);self.actor_vtable=self.allocate(0x100);self.write(self.actor_vtable+0xd4,self.rebuild);vtable=self.allocate(0x100);self.write(vtable+0x14,self.can_spawn);self.write(vtable+0x34,self.construct);self.write(self.level,vtable)
+        self.level=self.allocate(0x100);cur=self.allocate(0x100);self.actor_vtable=self.allocate(0x100);self.write(self.actor_vtable+0xd4,self.rebuild);vtable=self.allocate(0x100);self.write(vtable+0x14,0x60876 if self.real_tint else self.can_spawn);self.write(vtable+0x34,self.construct);self.write(self.level,vtable)
+        header=self.level+0x90;self.write(header,0,0,header,header,0)
         for pointer,cells,is_current in [(self.level,argument,False),(cur,current,True)]:
             grid=self.allocate(25*44);self.write(pointer+4,grid);self.write(pointer+0x44,5,5);self.write(pointer+0x64,depth);self.write(pointer+0x84,level_set)
             for i,cell in enumerate(cells):
@@ -83,11 +85,12 @@ class Hordes(Placement):
         for i,bounds in enumerate(rooms):info=self.allocate(0x30);self.write(info+0x1c,*bounds);self.write(room_entries+i*4,info)
         self.definitions=[];self.definition_ids={}
         for special,allowed in rows:
-            entry=self.allocate(0x100)
+            entry=self.allocate(0x360)
             if self.real_tint:
                 from verify_monster_sprites import DEFINITION
                 index=len(self.definitions)
                 for i,offset in enumerate(DEFINITION):self.string(entry+offset,f'M{index}/{i}' if (index+i)%3 else '')
+            self.machine.mem_write(entry+0x27d,bytes([int(allowed)]));self.string(entry+0x44,'Definition'+str(len(self.definitions)))
             self.write(entry+0xf0,special);self.definition_ids[entry]=len(self.definitions);self.definitions.append(entry)
         for bucket in range(15):
             sets=self.allocate(64);self.write(self.original.address('_monsterTables')+bucket*12,sets,sets+64,sets+64)
@@ -158,7 +161,7 @@ def verify(binary,port,count,real_names=False,real_tint=False):
     if len(actual)!=len(expected):raise AssertionError('horde result count differs')
     for i,(a,b) in enumerate(zip(actual,expected)):
         if a!=b:raise AssertionError(f'horde fixture{i}, lengths{len(a)}/{len(b)}, differences{[(j,x,y) for j,(x,y) in enumerate(zip(a,b)) if x!=y][:14]}: {lines[i]}')
-    return dict(binary_sha256=hashlib.sha256(oracle.original.data).hexdigest(),cases=count,actual_name_generators=real_names,actual_tint_routing=real_tint,members=members,searches=searches,failed_searches_accepted=failed_accepted,mismatches=0,scope='Actual complete Level::SpawnHorde and actual bounded location/PassableOnAllSides execute. Coordinates/default tweaks, surviving argument-depth reduction, selection at original capped depth, eligibility/rejections, named overrides, leader percentage modifiers/names/group links, quest counts, queued placements, failed-search coordinate acceptance, full callback order and libc/MT state+next8 compared. Constructor/rebuild/eligibility/named lookup/queue/library boundaries use controlled libc draws. Tint is either a controlled draw or the actual complete Monster::TintSprites, with sprite resource loads supplied, as indicated. Name functions are either controlled libc-only callbacks or actual GenMonName/GenPlatoonName as indicated; actual mode supplies word pools and decimal itos formatting. Current/argument maps have equal dimensions with distinct contents/occupancy; actual constructors/resource cache/IO/subclass teleport/Session scheduling/save excluded.')
+    return dict(binary_sha256=hashlib.sha256(oracle.original.data).hexdigest(),cases=count,actual_name_generators=real_names,actual_tint_routing=real_tint,actual_horde_eligibility=real_tint,members=members,searches=searches,failed_searches_accepted=failed_accepted,mismatches=0,scope='Actual complete Level::SpawnHorde and actual bounded location/PassableOnAllSides execute. Coordinates/default tweaks, surviving argument-depth reduction, selection at original capped depth, eligibility/rejections, named overrides, leader percentage modifiers/names/group links, quest counts, queued placements, failed-search coordinate acceptance, full callback order and libc/MT state+next8 compared. Constructor/rebuild/eligibility/named lookup/queue/library boundaries use controlled libc draws. Tint mode also executes actual Level::CanSpawnMonster with empty count maps and unlimited definitions, using the fixture eligibility flag. Tint is either a controlled draw or the actual complete Monster::TintSprites, with sprite resource loads supplied, as indicated. Name functions are either controlled libc-only callbacks or actual GenMonName/GenPlatoonName as indicated; actual mode supplies word pools and decimal itos formatting. Current/argument maps have equal dimensions with distinct contents/occupancy; actual constructors/resource cache/IO/subclass teleport/Session scheduling/save excluded.')
 
 
 if __name__=='__main__':

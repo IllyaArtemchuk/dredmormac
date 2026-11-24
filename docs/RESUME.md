@@ -2040,3 +2040,14 @@ members and both RNG streams. All65 portable groups pass. Source awaits Mac CI.
 Next connect complete horde construction/group metadata to Session/native save
 and rendering; native room scripts/tick adoption and full population/AI/effects/
 generation/UI/audio/gameplay remain unfinished.
+
+Recovered Level::CanSpawnMonster matches8,192 actual original calls;1,024 actual
+definition constructors/root XML callbacks verify default-true horde eligibility,
+maxspawns and case-alias/source-order updates. Ordinary selection now shares that
+kernel; full names+tint horde tests also run actual eligibility (4,096 wrappers/
+5,987 members match). All65 portable checks pass. Monster sprite palette/tint
+metadata and full constructor-backed Session/native adoption remain next. Original
+RebuildSprites0xec494 was inspected: definition palette tint!=0 delegates to
+TintSprites, while0 uses SpriteMgr_AutoLoad with base+palette key; source palette
+file overrides embedded RGB after hue conversion. Native variant presentation,
+horde saves, scripting/tick adoption and full gameplay remain unfinished.

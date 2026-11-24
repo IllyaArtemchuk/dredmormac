@@ -20,6 +20,14 @@ int main() {
         </monster>)"),&parent);
         check(child.idle_sprites==std::array<std::string,4>({"last","R","U","down"}));
         check(child.attack_sprites[0].empty() && child.attack_sprites[1]=="AR" && child.cast_sprite=="cast");
+        check(parent.horde);
+        auto limited=read_monster(parse_xml(R"(<monster name="limited" horde="1" HORDE="0" maxspawns="2"/>)"));
+        MonsterSpawnState counters;
+        check(!limited.horde && !can_spawn_monster(limited,0,counters,true) && can_spawn_monster(limited,0,counters));
+        limited.horde=true;counters.counts[limited.name]=2;check(!can_spawn_monster(limited,0,counters,true));
+        counters.counts[limited.name]=INT32_MAX;check(can_spawn_monster(limited,0,counters,true));
+        check(!can_spawn_monster(limited,-1,counters,true));
+        limited.max_spawns=0;check(can_spawn_monster(limited,-1,counters,true));
         MonsterSpriteState state;state.hit={91,92,93,94};state.attack.fill(42);state.beam.fill(43);
         state.dig_up=state.dig_down=44;state.die=45;state.current=46;state.frame=12;state.phase=13;state.animation_flag=7;
         DarwinRandom random(1);std::vector<std::string> paths;std::vector<int> angles;
