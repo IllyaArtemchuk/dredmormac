@@ -14,6 +14,10 @@ namespace dredmor {
 struct SkillLoadout { std::string type,subtype;int amount=1;bool always=false; };
 struct StartingLoadout { int skill_id;SkillLoadout item; };
 struct SkillDefinition { int id;std::string name;int category;XmlNode source;std::vector<SkillLoadout> loadouts;bool deprecated=false; };
+struct RoomScriptProgram {
+    std::vector<RoomScriptDefinition> scripts;
+    std::vector<RoomRecord> created_records;
+};
 struct RoomDefinition {
     std::string name,layer;
     std::vector<std::string> rows;
@@ -31,6 +35,7 @@ struct RoomDefinition {
     // separate list; lever/magicblocker retain raw pending definitions.
     std::vector<RoomRecord> records() const;
     std::vector<RoomScriptDefinition> scripts(const RoomActionReaders& readers={}) const;
+    RoomScriptProgram script_program(const std::function<ScriptSpellBinding(std::string_view)>& spells={}) const;
 };
 class GameContent {
 public:
@@ -43,6 +48,8 @@ public:
     const SpellDefinition* find_spell(std::string_view name) const;
     const std::vector<RoomDefinition>& rooms() const { return rooms_; }
     const RoomDefinition& room(std::string_view name) const;
+    RoomScriptProgram room_script_program(std::string_view name) const;
+    RoomScriptProgram room_script_program(std::size_t room_index) const;
     const MonsterDefinition& monster(std::string_view name) const;
     const Tweaks& tweaks() const { return tweaks_; }
     const RoomNameWords& room_name_words() const { return room_name_words_; }

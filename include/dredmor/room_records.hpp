@@ -131,4 +131,8 @@ RoomClockRecord read_room_clock(const XmlNode& node,const RoomMarkers& markers,R
 struct UnimplementedRoomRecord {std::string type;XmlNode source;};
 using RoomRecord=std::variant<CustomRoomDefinition,BreakableRoomDefinition,RoomPedestalRecord,RoomElementDefinition,
     RoomMonsterRecord,RoomTrapRecord,RoomLootRecord,RoomHordeRecord,RoomClockRecord,UnimplementedRoomRecord>;
+// Shared factory schema for placed records and script Create actions. Pending
+// constructor kinds retain their source; unknown record kinds fail explicitly.
+RoomRecord read_room_record(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room);
+
 }

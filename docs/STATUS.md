@@ -1713,3 +1713,16 @@ IsMonster are boundaries; subclass destructors/teleports remain external hooks.
 The null-level detach sentinel and current-level-vs-owner distinction are retained.
 New source awaits Mac CI. Session/native room script/tick integration, constructors,
 full population/AI/effects/UI/audio and complete gameplay remain unfinished.
+
+RoomScriptProgram now links typed conditions/actions to one-based spell handles
+and ordered created-record definitions through a shared placed/script record
+reader. Requests retain room routing for per-program record lookup. Create type
+values stay case-sensitive like RoomObjectRecordFrom. All346 supplied rooms link:
+62 scripts,100 conditions,235 success actions,76 spells and55 created records;
+independent XML coverage agrees. Spell anim/sfx lookup matches2,048 actual original
+callbacks (source-order aliases/repeated/empty updates). A combined XML puzzle
+now composes the program/runtime/tick/deferred kernels: pending removal remains
+visible in-pass, created objects get PostGameTick, deletion precedes movement,
+and the next pass observes removal. All63 portable groups pass. This is core
+composition verification; native Session script binding/save and full gameplay
+remain unfinished. Latest source and deferred2669e90 await Mac validation.

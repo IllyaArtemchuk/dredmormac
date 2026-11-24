@@ -402,3 +402,36 @@ owner levels are included. Allocation/list/string helpers, IsMonster, Bob/resour
 destruction and base storage release are supplied. Callback-appended work is also
 covered by focused portable tests. All62 portable groups pass. Full subclass,
 Session/native script/tick and save integration remain unfinished.
+
+RoomScriptProgram now owns typed script lists and the ordered records requested
+by Create actions. A shared read_room_record schema serves placed and created
+records. The created-record reader enforces case-sensitive create_type values,
+as RoomObjectRecordFrom0x1a3ef0 compares exact strings; placed record tag handling
+retains its existing policy. Each Create gets a one-based record handle. GameContent
+links spells to one-based catalog handles and their cast sound. Every action
+request also carries its source room index so owners can route local handles.
+Unknown spell/record references fail explicitly; pending constructor kinds retain
+their source rather than being silently executed.
+
+spell_cast_sound reads top-level anim/sfx updates in source order. Original
+spell-start initialization0x7ca8b sets Spell+0x138 to an empty string; the anim
+branch0x7fb44 assigns sfx at0x7fcf6. verify_spell_cast_sound.py matches2,048 actual
+spellDBXMLLoader_StartElement callback fixtures for repeated/absent/empty/case-
+aliased sound assignments, with string/ASCII helpers and a preallocated Spell.
+Other animation fields, non-anim/nested parsing, full spell registration/build
+and audio playback remain outside this comparison.
+
+verify_room_programs.py independently parses supplied XML and checks every room's
+script/condition/route/spell/Create counts against linked programs. All346 rooms
+agree:62 scripts,100 conditions,235 success actions,zero failure actions,76 spell
+references and55 created records. All linked handles are range-checked. This is
+content/linkage verification, not original world/constructor parity.
+
+The linked-room-script-puzzle test composes real XML program parsing, ordinary
+activation history, ordered object scope lookup, live runtime conditions/actions,
+base custom object creation, the full outer tick driver and deferred lifetime.
+It confirms pending-removal lookup in a later script of the same pass, new object
+PostGameTick before its first Update, destruction before post-tick, queued player
+movement last, per-room repeat exhaustion and removal visibility on the next tick.
+All63 portable groups pass. Native Session adoption, complete record constructors,
+full actor/effect behavior, generation and original save compatibility remain work.

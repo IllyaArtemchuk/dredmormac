@@ -1,10 +1,28 @@
 #include "dredmor/room_scripts.hpp"
+#include "dredmor/content.hpp"
 #include <iomanip>
 #include <iostream>
 #include <stdexcept>
 using namespace dredmor;
 int main(int argc,char** argv) {
     try {
+        if ((argc==3 || argc==4) && std::string(argv[1])=="--programs") {
+            const auto content=GameContent::load(argv[2],argc==4);
+            for (std::size_t i=0;i<content.rooms().size();++i) {
+                const auto program=content.room_script_program(i);std::size_t conditions=0,success=0,failure=0,spells=0;
+                for (const auto& script:program.scripts) {conditions+=script.conditions.size();success+=script.success.size();failure+=script.failure.size();
+                    for (const auto* actions:{&script.success,&script.failure}) for (const auto& action:*actions) {
+                        if (action.kind==RoomActionKind::spell) {if (!action.spell || action.spell>content.spells().size()) throw std::runtime_error("invalid linked spell");++spells;}
+                        if (action.kind==RoomActionKind::create && (!action.record || action.record>program.created_records.size())) throw std::runtime_error("invalid linked record");
+                    }
+                }
+                std::cout<<i<<' '<<program.scripts.size()<<' '<<conditions<<' '<<success<<' '<<failure<<' '<<spells<<' '<<program.created_records.size()<<'\n';
+            }
+            return 0;
+        }
+        if (argc==2 && std::string(argv[1])=="--spell-sound") {
+            std::string xml;while (std::cin>>std::quoted(xml)) {SpellDefinition spell;spell.source=parse_xml(xml);std::cout<<std::quoted(spell_cast_sound(spell))<<'\n';}return 0;
+        }
         if (argc==2 && std::string(argv[1])=="--script-metadata") {
             std::string xml;
             while (std::cin>>std::quoted(xml)) {

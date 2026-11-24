@@ -2505,3 +2505,12 @@ remain separate. Current-level removal precedes base owning-level cleanup; null
 teleport sentinel preserves coordinates. See ROOM_SCRIPTS.md and
 verify_room_deferred.py. Binary SHA256
 `a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.
+
+Spell anim/sfx assignment0x7fb44/0x7fcf6 writes Spell+0x138; spell-start0x7ca8b
+initializes it empty. 2,048 actual callback fixtures match repeated/absent/empty/
+source-order case aliases. RoomObjectRecordFrom0x1a3ef0 accepts exact lowercase
+factory names, not case-folded values. New linked programs cover all62 supplied
+scripts/76 spells/55 created records, independently audited across346 rooms.
+Combined core puzzle tests compose the verified lifecycle, but no full Session/
+world/constructor or original save claim follows. See ROOM_SCRIPTS.md. Binary
+SHA256`a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.

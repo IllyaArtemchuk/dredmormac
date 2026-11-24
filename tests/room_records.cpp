@@ -133,6 +133,17 @@ int main() {
         auto isolated=room;isolated.cells[4*room.width+2].kind=9;
         bool invalid_clock=false;try {read_room_clock(parse_xml("<clock at='3' png='clock.spr' initial='2' unused='1'/>"),markers,isolated);} catch(const std::invalid_argument&) {invalid_clock=true;}
         check(invalid_clock && isolated.cells[4*room.width+2].kind==9);
+        RoomDefinition programmed;programmed.name="Linked fixture";programmed.rows={"123"};
+        programmed.source=parse_xml("<room width='3' height='1'><script repeat='2'><action on='success' action_type='create' create_type='customblocker' at='1' png='fixture.spr' id='created'/><action on='success' action_type='spell' casts='Fixture spell' targetat='2'/><action on='failure' action_type='create' create_type='horde' at='3' name='Fixture horde'/></script></room>");
+        std::vector<std::string> resolved;const auto program=programmed.script_program([&](std::string_view name) {resolved.emplace_back(name);return ScriptSpellBinding{17,"cast-sound"};});
+        check(program.scripts.size()==1 && program.scripts[0].success_repeat==2 && program.created_records.size()==2 && resolved==std::vector<std::string>{"Fixture spell"});
+        check(program.scripts[0].success[0].record==1 && program.scripts[0].failure[0].record==2 && program.scripts[0].success[1].spell==17 && program.scripts[0].success[1].cast_sound=="cast-sound");
+        check(std::get<CustomRoomDefinition>(program.created_records[0]).placement.id=="created" && std::get<CustomRoomDefinition>(program.created_records[0]).placement.relative.x==0);
+        check(std::get<RoomHordeRecord>(program.created_records[1]).name=="Fixture horde" && std::get<RoomHordeRecord>(program.created_records[1]).placement.relative.x==2);
+        RoomActionContext action_context;action_context.room=3;action_context.origin={10,20};const auto linked_requests=perform_room_action(program.scripts[0].success[0],action_context);
+        check(linked_requests.size()==1 && linked_requests[0].subject==1 && linked_requests[0].room==3 && linked_requests[0].origin.x==10);
+        programmed.source=parse_xml("<room width='3' height='1'><script><action on='success' action_type='create' create_type='Monster' at='1' name='Fixture'/></script></room>");
+        bool wrong_type_case=false;try {programmed.script_program();} catch(const std::invalid_argument&) {wrong_type_case=true;}check(wrong_type_case);
         std::cout<<"room point resolution, attribute consumption, marker floors and nested script references passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

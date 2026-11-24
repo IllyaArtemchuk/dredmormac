@@ -143,7 +143,7 @@ RoomAction read_room_action(const XmlNode& node,const RoomMarkers& markers,RoomS
 std::vector<RoomActionRequest> perform_room_action(const RoomAction& action,const RoomActionContext& context) {
     std::vector<RoomActionRequest> result;
     auto emit=[&](RoomActionRequest request) {result.push_back(request);if (context.perform) context.perform(request);};
-    auto request=[&](RoomActionRequestKind kind,std::uint64_t subject=0) {RoomActionRequest value;value.kind=kind;value.subject=subject;return value;};
+    auto request=[&](RoomActionRequestKind kind,std::uint64_t subject=0) {RoomActionRequest value;value.kind=kind;value.subject=subject;value.room=context.room;return value;};
     auto offset=[&](Position point) {
         auto add=[](int a,int b) {const auto bits=std::uint32_t(a)+std::uint32_t(b);std::int32_t value;std::memcpy(&value,&bits,4);return value;};
         return Position{add(context.origin.x,point.x),add(context.origin.y,point.y)};

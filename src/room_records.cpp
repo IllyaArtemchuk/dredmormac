@@ -255,4 +255,17 @@ RoomClockRecord read_room_clock(const XmlNode& node,const RoomMarkers& markers,R
     result.placement.source=node;room=std::move(candidate);return result;
 }
 
+RoomRecord read_room_record(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room) {
+    const auto tag=lower(node.tag);
+    if (tag=="customblocker" || tag=="customengraving") return read_custom_room_object(node,markers,room);
+    if (tag=="custombreakable") return read_breakable_room_object(node,markers,room);
+    if (tag=="pedestal") return read_room_pedestal(node,markers,room);
+    if (tag=="element") return read_room_element(node,markers,room);
+    if (tag=="clock") return read_room_clock(node,markers,room);
+    if (tag=="monster" || tag=="trap" || tag=="loot" || tag=="horde")
+        return std::visit([](auto&& record)->RoomRecord {return std::move(record);},read_room_population(node,markers,room));
+    if (tag=="lever" || tag=="magicblocker") return UnimplementedRoomRecord{tag,node};
+    throw std::invalid_argument("unknown room record: "+node.tag);
+}
+
 }

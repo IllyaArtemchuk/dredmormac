@@ -40,6 +40,9 @@ struct SpellDefinition {
     std::shared_ptr<const std::vector<ManeuverTemplate>> maneuvers;
     Casting casting;
 };
+// Spell anim/sfx metadata consumed by scripted casting. ASCII case aliases
+// assign in source order; successive anim children can replace the sound.
+std::string spell_cast_sound(const SpellDefinition& spell);
 // Generic effect fields and damage scaling. Unknown properties and child
 // effects remain in source; parsing does not assert execution support.
 SpellEffectDefinition read_spell_effect(const XmlNode& node);

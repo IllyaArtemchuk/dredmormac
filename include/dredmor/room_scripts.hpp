@@ -80,6 +80,7 @@ struct RoomActionRequest {
     std::int32_t value=0;
     bool forced=false;
     std::string text;
+    std::int32_t room=0;
 };
 struct RoomActionContext {
     std::int32_t room=0;

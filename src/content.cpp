@@ -61,16 +61,27 @@ std::vector<RoomRecord> RoomDefinition::records() const {
     std::vector<RoomRecord> result;
     for (const auto& node:source.children) {
         const auto tag=ascii_lower(node.tag);
-        if (tag=="customblocker" || tag=="customengraving") result.emplace_back(read_custom_room_object(node,markers,numeric));
-        else if (tag=="custombreakable") result.emplace_back(read_breakable_room_object(node,markers,numeric));
-        else if (tag=="pedestal") result.emplace_back(read_room_pedestal(node,markers,numeric));
-        else if (tag=="element") result.emplace_back(read_room_element(node,markers,numeric));
-        else if (tag=="monster" || tag=="trap" || tag=="loot" || tag=="horde")
-            std::visit([&](auto&& record){result.emplace_back(std::move(record));},read_room_population(node,markers,numeric));
-        else if (tag=="clock") result.emplace_back(read_room_clock(node,markers,numeric));
-        else if (tag=="lever" || tag=="magicblocker") result.emplace_back(UnimplementedRoomRecord{tag,node});
+        if (tag=="customblocker" || tag=="customengraving" || tag=="custombreakable" || tag=="pedestal" || tag=="element" || tag=="clock" ||
+            tag=="monster" || tag=="trap" || tag=="loot" || tag=="horde" || tag=="lever" || tag=="magicblocker") result.push_back(read_room_record(node,markers,numeric));
     }
     return result;
+}
+RoomScriptProgram RoomDefinition::script_program(const std::function<ScriptSpellBinding(std::string_view)>& spells) const {
+    RoomScriptProgram result;RoomActionReaders readers;readers.spell=spells;
+    readers.record=[&](const XmlNode& node,const RoomMarkers& markers,RoomStamp& numeric) {
+        if (node.tag!=ascii_lower(node.tag)) throw std::invalid_argument("unknown case-sensitive created room record: "+node.tag);
+        result.created_records.push_back(read_room_record(node,markers,numeric));return std::uint64_t(result.created_records.size());
+    };
+    result.scripts=scripts(readers);return result;
+}
+RoomScriptProgram GameContent::room_script_program(std::string_view name) const {
+    return room_script_program(std::size_t(&room(name)-rooms_.data()));
+}
+RoomScriptProgram GameContent::room_script_program(std::size_t room_index) const {
+    return rooms_.at(room_index).script_program([&](std::string_view spell_name) {
+        const auto* spell=find_spell(spell_name);if (!spell) throw std::invalid_argument("unknown room script spell: "+std::string(spell_name));
+        return ScriptSpellBinding{std::uint64_t(spell-spells_.data())+1,spell_cast_sound(*spell)};
+    });
 }
 RoomStamp RoomDefinition::numeric_template() const {
     const auto width=legacy_attribute(source,"width"),height=legacy_attribute(source,"height");

@@ -170,4 +170,15 @@ std::int32_t spell_gold_cost(const SpellDefinition::Casting& casting,std::int32_
     const float discount=static_cast<float>(savvy)*casting.savvy_bonus;
     return cost_integer(std::floor(fee-discount));
 }
+std::string spell_cast_sound(const SpellDefinition& spell) {
+    auto fold=[](std::string value) {for (auto& c:value) if (c>='A' && c<='Z') c=char(c-'A'+'a');return value;};
+    std::string sound;
+    for (const auto& node:spell.source.children) if (fold(node.tag)=="anim") {
+        auto assign=[&](const std::string& key) {const auto found=node.attributes.find(key);if (found!=node.attributes.end() && fold(key)=="sfx") sound=found->second;};
+        for (const auto& key:node.attribute_order) assign(key);
+        for (const auto& entry:node.attributes) if (std::find(node.attribute_order.begin(),node.attribute_order.end(),entry.first)==node.attribute_order.end()) assign(entry.first);
+    }
+    return sound;
+}
+
 }
