@@ -26,6 +26,9 @@ class Sprites(GeometryOracle):
         esp=machine.reg_read(UC_X86_REG_ESP);returned,a,b=self.read(esp,3)
         if address==0xefd20:
             self.requests.append((self.cstring(a),b if b<2**31 else b-2**32));result=999+len(self.requests)
+        elif address==0x1cbe66:
+            import re
+            match=re.match(r'\s*([+-]?\d+)',self.cstring(a));result=int(match.group(1)) if match else 0
         elif address==0x1cbfda:
             a=self.cstring(a).lower();b=self.cstring(b).lower();result=(a>b)-(a<b)
         else:return super().boundary(machine,address,size,user)
@@ -52,7 +55,7 @@ class Sprites(GeometryOracle):
 
     def records(self,parent,child):
         self.heap=0x73000000;definition=self.allocate(0x360)
-        for offset in DEFINITION:self.string(definition+offset,'')
+        for offset in [*DEFINITION,0xb4]:self.string(definition+offset,'')
         self.write(0x268180,definition);depth=self.allocate(4)
         for root in [ET.fromstring(parent),ET.fromstring(child)]:
             for node in root:
@@ -61,7 +64,7 @@ class Sprites(GeometryOracle):
                 for i,(key,value) in enumerate(node.attrib.items()):
                     for j,text in enumerate([key,value]):self.string(attributes+(i*2+j)*4,text)
                 self.original.call('__Z27monDBXMLLoader_StartElementPvPKcPS1_',depth,name,attributes)
-        return [self.value(definition+offset) for offset in DEFINITION]
+        return [self.value(definition+offset) for offset in [*DEFINITION,0xb4]]+[str(self.read(definition+0xf4)[0] if self.read(definition+0xf4)[0]<2**31 else self.read(definition+0xf4)[0]-2**32)]
 
 
 def verify(binary,port,count):
@@ -76,7 +79,7 @@ def verify(binary,port,count):
     if actual!=expected:
         i=next(i for i,(a,b) in enumerate(zip(actual,expected)) if a!=b)
         raise AssertionError(f'TintSprites case{i}: {cases[i]}, differences{[(j,a,b) for j,(a,b) in enumerate(zip(actual[i],expected[i])) if a!=b]}')
-    tags=[('idleSprite',['left','right','up','down']),('attackSprite',['left','right','up','down']),('hitSprite',['left','right','up','down']),('beamSprite',['left','right','up','down']),('dieSprite',['name']),('castSpellSprite',['name']),('digSprites',['upSprite','downSprite'])]
+    tags=[('idleSprite',['left','right','up','down']),('attackSprite',['left','right','up','down']),('hitSprite',['left','right','up','down']),('beamSprite',['left','right','up','down']),('dieSprite',['name']),('castSpellSprite',['name']),('digSprites',['upSprite','downSprite']),('palette',['name','tint'])]
     records=[]
     for i in range(count//2):
         pair=[]
@@ -85,8 +88,8 @@ def verify(binary,port,count):
             for j in range(rng.randrange(1,25)):
                 tag,keys=rng.choice(tags);node=ET.SubElement(root,rng.choice([tag,tag.upper(),tag.lower()]))
                 for key in keys:
-                    if rng.randrange(3):node.set(key,rng.choice(['',f'{name} resource{j}']))
-                    if rng.randrange(4)==0:node.set(key.upper(),rng.choice(['',f'{name} alias{j}']))
+                    if rng.randrange(3):node.set(key,rng.choice(['','-1','0','120','-60','  +1 tail','invalid']) if key=='tint' else rng.choice(['',f'{name} resource{j}']))
+                    if rng.randrange(4)==0:node.set(key.upper(),rng.choice(['','-1','0','360','-60','  +1 tail','invalid']) if key=='tint' else rng.choice(['',f'{name} alias{j}']))
             pair.append(ET.tostring(root,encoding='unicode'))
         records.append(pair)
     expected=[oracle.records(*case) for case in records]

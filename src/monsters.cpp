@@ -135,6 +135,11 @@ MonsterDefinition read_monster(const XmlNode& node,const MonsterDefinition* pare
             ordered_attributes(child,[&](const auto& key,const auto& value) {
                 for (std::size_t i=0;i<4;++i) if (key==keys[i]) sprites[i]=value;
             });
+        } else if (tag=="palette") {
+            ordered_attributes(child,[&](const auto& key,const auto& value) {
+                if (key=="name") result.palette=value;
+                else if (key=="tint") result.palette_tint=legacy_integer(value);
+            });
         } else if (tag=="diesprite" || tag=="castspellsprite") {
             auto& sprite=tag=="diesprite"?result.die_sprite:result.cast_sprite;
             ordered_attributes(child,[&](const auto& key,const auto& value) {if (key=="name") sprite=value;});

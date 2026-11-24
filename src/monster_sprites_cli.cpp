@@ -45,7 +45,32 @@ int main(int argc,char** argv) {
             while (std::cin>>std::quoted(parent_xml)>>std::quoted(child_xml)) {
                 const auto parent=dredmor::read_monster(dredmor::parse_xml(parent_xml));
                 const auto child=dredmor::read_monster(dredmor::parse_xml(child_xml),&parent);
-                paths(child,[](const auto& path){std::cout<<std::quoted(path)<<' ';});std::cout<<'\n';
+                paths(child,[](const auto& path){std::cout<<std::quoted(path)<<' ';});std::cout<<std::quoted(child.palette)<<' '<<child.palette_tint<<'\n';
+            }
+            return 0;
+        }
+        if (argc==2 && std::string(argv[1])=="--rebuild") {
+            std::uint32_t seed;
+            while (std::cin>>seed) {
+                dredmor::MonsterDefinition definition;dredmor::MonsterSpriteState state;
+                std::int32_t health;unsigned flag;
+                if (!(std::cin>>definition.palette_tint>>health>>state.current>>state.preserve_current>>flag>>state.frame>>state.phase>>state.playing) || flag>255)
+                    throw std::invalid_argument("invalid monster rebuild state");
+                state.animation_flag=static_cast<std::uint8_t>(flag);
+                paths(definition,[](auto& path){if (!(std::cin>>std::quoted(path))) throw std::invalid_argument("missing monster path");});
+                if (!(std::cin>>std::quoted(definition.palette))) throw std::invalid_argument("missing monster palette");
+                std::uint64_t next=2000;handles(state,[&](auto& value){value=next++;});
+                struct Request {bool tint;std::string key,path,palette;std::int32_t angle;};std::vector<Request> requests;
+                dredmor::DarwinRandom random(seed);
+                const auto angle=dredmor::rebuild_monster_sprites(definition,state,health,random,
+                    [&](const auto& key,const auto& path,const auto& palette) {requests.push_back({false,key,path,palette,-1});return 999+requests.size();},
+                    [&](const auto& path,auto tint) {requests.push_back({true,"",path,"",tint});return 999+requests.size();},
+                    [](auto handle) {return std::uint16_t((handle>=2000?handle-2000:handle-1000)%7+1);});
+                std::cout<<angle.has_value()<<' '<<angle.value_or(0)<<' '<<random.state()<<' '<<state.current<<' '<<state.preserve_current<<' '
+                    <<unsigned(state.animation_flag)<<' '<<state.frame<<' '<<state.phase<<' '<<state.playing<<' ';
+                handles(state,[](auto value){std::cout<<value<<' ';});std::cout<<requests.size();
+                for (const auto& r:requests) std::cout<<' '<<r.tint<<' '<<std::quoted(r.key)<<' '<<std::quoted(r.path)<<' '<<std::quoted(r.palette)<<' '<<r.angle;
+                std::cout<<'\n';
             }
             return 0;
         }

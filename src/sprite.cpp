@@ -11,7 +11,15 @@ std::uint16_t word(const std::vector<std::uint8_t>& bytes,std::size_t offset) {
     return static_cast<std::uint16_t>(bytes[offset]|(unsigned(bytes[offset+1])<<8));
 }
 }
-Sprite Sprite::decode(const std::vector<std::uint8_t>& bytes,std::int32_t tint) {
+SpritePalette read_sprite_palette(const std::filesystem::path& path) {
+    std::ifstream input(path,std::ios::binary|std::ios::ate);
+    if (!input) throw std::runtime_error("cannot open sprite palette: "+path.string());
+    if (input.tellg()!=768) throw std::invalid_argument("sprite palette must contain exactly 768 bytes");
+    SpritePalette result;input.seekg(0);
+    if (!input.read(reinterpret_cast<char*>(result.data()),result.size())) throw std::runtime_error("cannot read sprite palette");
+    return result;
+}
+Sprite Sprite::decode(const std::vector<std::uint8_t>& bytes,std::int32_t tint,const SpritePalette* replacement) {
     if (bytes.size()<9 || bytes.size()>budget || bytes[0]!='S' || bytes[1]!='P' || bytes[2]!='R')
         throw std::invalid_argument("invalid SPR header or file size");
     Sprite result;
@@ -30,6 +38,9 @@ Sprite Sprite::decode(const std::vector<std::uint8_t>& bytes,std::int32_t tint) 
         SpritePalette colours;
         std::copy_n(bytes.begin()+palette,colours.size(),colours.begin());
         tint_sprite_palette(colours,tint);
+        // Original conversion runs on the embedded palette. An external .pal
+        // replaces its output afterwards, so it is never hue-rotated here.
+        if (replacement) colours=*replacement;
         for (std::size_t p=0;p<pixels;++p) {
             const auto index=bytes[indices+p];
             std::copy_n(colours.begin()+3*index,3,frame.rgba.begin()+4*p);
@@ -39,7 +50,7 @@ Sprite Sprite::decode(const std::vector<std::uint8_t>& bytes,std::int32_t tint) 
     }
     return result;
 }
-Sprite Sprite::read(const std::filesystem::path& path,std::int32_t tint) {
+Sprite Sprite::read(const std::filesystem::path& path,std::int32_t tint,const SpritePalette* replacement) {
     std::ifstream input(path,std::ios::binary|std::ios::ate);
     if (!input) throw std::runtime_error("cannot open SPR: "+path.string());
     const auto size=input.tellg();
@@ -47,7 +58,7 @@ Sprite Sprite::read(const std::filesystem::path& path,std::int32_t tint) {
     std::vector<std::uint8_t> bytes(static_cast<std::size_t>(size));input.seekg(0);
     if (!input.read(reinterpret_cast<char*>(bytes.data()),static_cast<std::streamsize>(bytes.size())))
         throw std::runtime_error("cannot read SPR: "+path.string());
-    return decode(bytes,tint);
+    return decode(bytes,tint,replacement);
 }
 std::size_t Sprite::frame_at(std::uint64_t elapsed_ms) const {
     if (frames.empty()) throw std::logic_error("empty sprite has no frame");

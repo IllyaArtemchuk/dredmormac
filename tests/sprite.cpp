@@ -32,6 +32,13 @@ int main() {
         }
         dredmor::SpritePalette palette{};palette[0]=255;palette[4]=255;palette[8]=255;
         const auto original=palette;
+        const auto replaced=dredmor::Sprite::decode(bytes,120,&original);
+        const auto replacement_plain=dredmor::Sprite::decode(bytes,-1,&original);
+        for (std::size_t i=0;i<2;++i) {
+            check(replaced.frames[i].rgba==replacement_plain.frames[i].rgba);
+            check(replaced.frames[i].delay_ms==sprite.frames[i].delay_ms);
+            check(replaced.frames[i].rgba[3]==0 && replaced.frames[i].rgba[7]==255);
+        }
         dredmor::tint_sprite_palette(palette,-1);check(palette==original);
         dredmor::tint_sprite_palette(palette,120);
         check(palette[0]==0 && palette[1]==255 && palette[2]==0);

@@ -51,6 +51,26 @@ int main() {
         check(paths==std::vector<std::string>({"R","L","U","D","AR","AL","AU","AD","HR","HL","HU","HD","BR","BL","BU","BD","cast","die","dig up","dig down"}));
         // Empty idle strings still issue four mandatory load requests.
         MonsterDefinition empty;paths.clear();tint_monster_sprites(empty,state,1,random,load);check(paths==std::vector<std::string>(4));
+        auto variant=read_monster(parse_xml(R"(<monster name="variant"><palette name="first" NAME="colours.pal" tint="120" TINT="0"/></monster>)"),&parent);
+        check(variant.palette=="colours.pal" && variant.palette_tint==0);
+        auto random_variant=read_monster(parse_xml(R"(<monster name="random"><palette tint="-1"/></monster>)"),&variant);
+        check(random_variant.palette=="colours.pal" && random_variant.palette_tint==-1);
+        // Normal loading uses left before right after the idle group and
+        // includes the palette in its cache key. Death selects its last frame.
+        state=MonsterSpriteState{};paths.clear();const auto before=random.state();
+        const auto normal=rebuild_monster_sprites(variant,state,0,random,[&](const auto& key,const auto& path,const auto& palette) {
+            check(palette=="colours.pal" && key==path+palette);paths.push_back(path);return 999+paths.size();
+        },{},[](auto) {return std::uint16_t(6);});
+        check(!normal && random.state()==before && !state.playing && state.frame==5 && state.current==state.die && state.die==1017);
+        check(paths==std::vector<std::string>({"R","L","U","D","AL","AR","AU","AD","HL","HR","HU","HD","BL","BR","BU","BD","cast","die","dig up","dig down"}));
+        state.current=777;state.preserve_current=true;state.frame=3;state.phase=99;
+        rebuild_monster_sprites(variant,state,-1,random,[](const auto&,const auto&,const auto&) {return 1;},{},[](auto) {return std::uint16_t(0);});
+        check(state.current==777 && state.frame==UINT32_MAX && state.phase==99 && !state.playing);
+        paths.clear();angles.clear();DarwinRandom reference(before);
+        const auto chosen=std::int32_t((std::uint64_t(reference.next())*0x59ffff5dull)>>53);
+        check(rebuild_monster_sprites(random_variant,state,1,random,{},load,{})==chosen);
+        check(random.state()==reference.state() && paths.size()==20);
+        for (auto value:angles) check(value==chosen);
         std::cout<<"monster sprite XML inheritance/aliases, tint RNG, resource order, optional clearing/retention and animation reset passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

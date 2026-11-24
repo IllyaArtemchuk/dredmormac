@@ -1778,3 +1778,12 @@ RebuildSprites0xec494 was inspected: definition palette tint!=0 delegates to
 TintSprites, while0 uses SpriteMgr_AutoLoad with base+palette key; source palette
 file overrides embedded RGB after hue conversion. Native variant presentation,
 horde saves, scripting/tick adoption and full gameplay remain unfinished.
+
+Complete Monster::RebuildSprites0xec494 now matches4,096 original calls, including
+nested real tint, normal cache-key/resource routing, death-frame/playback state,
+libc and unchanged MT. Eight sprite/palette XML tags match2,048 callbacks. External
+palette decoder selection matches1,152 actual original palettes/294,912 colours;
+external .pal replaces embedded colours after hue conversion. All65 portable
+groups pass. Native actor palette/tint/save adoption is next; horde construction/
+group persistence, native scripts/tick, AI/effects/generation/UI/audio and complete
+gameplay remain unfinished. See HORDES.md and verification scripts.

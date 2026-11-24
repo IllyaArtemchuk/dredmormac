@@ -126,3 +126,23 @@ horde. Composed names+tint horde comparisons now also execute the actual eligibi
 method with unlimited definitions/empty counts;4,096 wrappers/5,987 members still
 match. All65 portable groups pass. Full constructors/native group ownership remain
 next. See scripts/verify_monster_eligibility.py.
+
+## Constructor sprite rebuilding and palettes
+
+Monster::RebuildSprites0xec494 now matches4,096 complete original calls with
+actual nested TintSprites, all20 handles, live/dead Bob state, libc and unchanged
+MT. Nonzero definition palette tint delegates to TintSprites (including random-1);
+zero uses SpriteMgr_AutoLoad0xabf20 with key=base+palette and trailing0,0,1.
+Idle loads right/left/up/down; other normal directional groups load left/right/
+up/down, unlike tint routing. Death uses the death resource's last frame and
+stops playback, even when current resource replacement is suppressed. Null death
+resources are a port guard, not a recovered successful original contract.
+
+MonsterDefinition now retains palette/name and palette/tint, including inherited,
+repeated/case-alias source-order updates. The sprite XML oracle rerun compares
+all eight tags on2,048 fixtures. Sprite decoder also supports external768-byte
+palettes. A separate actual palette-selection slice0xa5746..0xa57d1 confirms that
+external colours replace the converted embedded palette after tint;1,152 palettes/
+294,912 colours match. File sizes other than768 are rejected as a port format
+guard. Native actor appearance/save adoption remains next. All65 portable groups
+pass. See verify_monster_sprite_rebuild.py and verify_sprite_tint.py --selection.
