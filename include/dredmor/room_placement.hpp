@@ -1,6 +1,7 @@
 #pragma once
 #include "dredmor/room_scopes.hpp"
 #include <map>
+#include <functional>
 #include <tuple>
 
 namespace dredmor {
@@ -39,4 +40,11 @@ void unregister_room_object(RoomLevelRegistry& level,std::uint64_t identity,bool
 // Null/missing destination levels are rejected before changes (port input guard).
 void teleport_room_object(RoomPlacementObject& object,RoomPlacementWorld& world,
     Position destination,std::uint64_t level);
+// Forced subclass paths used by safe teleport queues. Monster maintains both
+// registries. Player always refreshes visibility after the base placement.
+// Ordinary movement's effects, pickup and stepped-on callbacks are separate.
+void teleport_room_monster_forced(RoomPlacementObject& object,RoomPlacementWorld& world,
+    Position destination,std::uint64_t level);
+void teleport_room_player_forced(RoomPlacementObject& object,RoomPlacementWorld& world,
+    Position destination,std::uint64_t level,const std::function<void(std::uint64_t,Position)>& visibility);
 }

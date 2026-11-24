@@ -1834,3 +1834,14 @@ Original composed horde comparisons still match2,048 cases/6,210 actors;333 room
 bound extents from16 geometry runs also match origin+dimensions. Latest source
 awaits Mac CI. Full group AI/death/lifetime/tile ownership, quest handling, native
 room-script/GameTick integration, population/effects/UI/audio/full game unfinished.
+
+Native horde sourcef42a50e passed Mac run45389291770, including the horde window
+and relocated packaged-app smoke. Forced actor placement now matches4,096 complete
+original Monster teleports and4,096 Player teleports: monster registry repair/
+append order, all tile/object lists and player visibility callback state match,
+with unchanged libc/MT. Visibility body and ordinary movement effects remain
+boundaries. New Level constructor0x67186 confirms previous-room=-1; runtime defaults
+now preserve first entry into room0, with stay/exit/re-entry tests. All68 portable
+groups pass. Corrected earlier docs: room lookup, GameTick and base placement use
+the same Level+0xb0 object vector. Next continue live Session room-script binding,
+profile/save ownership and native scripted puzzle; full game remains unfinished.

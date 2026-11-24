@@ -31,7 +31,7 @@ struct ScriptObjectState {
     std::uint64_t identity=0;
 };
 struct RoomScriptContext {
-    std::int32_t room=0,player_room=0,previous_room=0;
+    std::int32_t room=0,player_room=0,previous_room=-1;
     Position origin{};
     std::function<std::optional<ScriptObjectState>(std::int32_t,std::string_view)> find_object;
     std::function<bool(std::int32_t,std::string_view,std::string_view)> event_occurred;
@@ -111,7 +111,7 @@ bool room_event_is_set(const RoomEventQueue& events,std::int32_t room,std::strin
 using RoomScriptKey=std::pair<std::int32_t,std::int32_t>;
 struct RoomTriggerState {
     std::map<RoomScriptKey,std::int32_t> success_counts;
-    std::int32_t previous_room=0;
+    std::int32_t previous_room=-1;
     RoomEventQueue events;
 };
 struct RoomTriggerRoom {

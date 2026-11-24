@@ -212,8 +212,10 @@ Session integration must own/copy those caches rather than sharing mutations wit
 an older snapshot. Whole template/cache lifetime and original save parity remain
 unverified.
 
-Room object lookup uses the ordered Level registry at+0xb0, separately from its
-main object list. Level::ObjectMatchingRoomID0x609ac calls MatchesRoomID0x36aee:
+Room object lookup uses the ordered Level object vector at+0xb0, shared with
+GameTick updates and base teleport/destructor registration. The earlier note
+describing a separate main object list was incorrect. Level::ObjectMatchingRoomID
+0x609ac calls MatchesRoomID0x36aee:
 owner-level equality, then either IsGlobalRoomObject or assigned-room equality,
 then exact label equality. Player's global override allows cross-room lookup
 within its own level. No alive/deferred-destruction predicate runs here.
@@ -435,3 +437,28 @@ PostGameTick before its first Update, destruction before post-tick, queued playe
 movement last, per-room repeat exhaustion and removal visibility on the next tick.
 All63 portable groups pass. Native Session adoption, complete record constructors,
 full actor/effect behavior, generation and original save compatibility remain work.
+
+## Forced actor placement and initial room entry
+
+Forced Monster::TeleportTo0xe5fb0 and Player::TeleportTo0x11c49a now match4,096
+complete original cases each. Monster maintains the +0xd4 monster vector as well
+as the shared +0xb0 object vector: cross-level moves append even if a duplicate
+exists; same-level moves repair missing membership. Assigned room/name remain
+unchanged. Player delegates base placement with flag0 and always calls
+Level::CalcVisibility0x114824 afterwards; its caller's nonzero forced flag then
+skips movement-only effect removal and adjacent money pickup. Both accept outside
+coordinates at this wrapper boundary. Visibility, ordinary movement's effects/
+pickup/contact paths and Session integration are separate.
+
+Compared every ordered registry/monster vector and tile list, owner/coordinates,
+assigned room/name, unchanged libc/full MT and player visibility arguments plus
+state at that callback. Allocator/string/list/IsMonster/visibility bodies are
+boundaries. See scripts/verify_actor_placement.py. All68 portable groups pass.
+
+Full Level constructor0x67186 against dirty storage confirms previous room at
++0xf4 initializes to-1 (write0x67373). RoomTriggerState/RoomScriptContext defaults
+now retain that value, so Entered on room0 fires on the first pass; tests cover
+staying, leaving and re-entry. Player constructor's assignment0x125dd2 installs
+room ID "player" atGameObj+0x70; this is a source observation for the future live
+Session binding, not a full Player constructor comparison. Native horde source
+f42a50e passed arm64 Mac run45389291770 and relocated packaged-app smoke.

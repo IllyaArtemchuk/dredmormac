@@ -52,6 +52,20 @@ int main() {
         check(pass.successes.size()==2 && (messages==std::vector<std::string>{"emit","observe"}) && state.triggers.events.empty());
         run_room_scripts({{{true,1,0,live},{0,0},8}},state,hooks);check(messages.size()==2);
         bool collision=false;auto conflicting=rooms;conflicting[1].trigger.scripts=live;try {run_room_scripts(conflicting,state,hooks);} catch(const std::invalid_argument&) {collision=true;}check(collision);
+        // A new original Level starts with previous room -1. Room zero's
+        // entered script must run on its first pass, then again on re-entry.
+        RoomRuntimeState new_level;check(new_level.triggers.previous_room==-1);
+        RoomCondition entered;entered.kind=RoomConditionKind::entered;
+        RoomScriptDefinition on_entry;on_entry.success_repeat=-1;on_entry.conditions={entered};on_entry.success={ticker};
+        auto entry_scripts=std::make_shared<const std::vector<RoomScriptDefinition>>(std::vector<RoomScriptDefinition>{on_entry});
+        std::vector<RoomRuntimeRoom> entry_rooms={{{true,1,0,entry_scripts},{0,0},9},{{true,1,1,{}},{4,0},0}};
+        std::int32_t current_room=0;unsigned entries=0;RoomRuntimeHooks entry_hooks;
+        entry_hooks.player_room=[&] {return current_room;};entry_hooks.player_position=[] {return Position{1,1};};
+        entry_hooks.find_object=[](auto,auto)->std::optional<ScriptObjectState> {return std::nullopt;};entry_hooks.perform=[&](const auto&) {++entries;};
+        run_room_scripts(entry_rooms,new_level,entry_hooks);check(entries==1 && new_level.triggers.previous_room==0);
+        run_room_scripts(entry_rooms,new_level,entry_hooks);check(entries==1);
+        current_room=1;run_room_scripts(entry_rooms,new_level,entry_hooks);check(entries==1);
+        current_room=0;run_room_scripts(entry_rooms,new_level,entry_hooks);check(entries==2);
         std::cout<<"room runtime composes live activation/events, per-room repeats and source-order actions with template-shared prototypes isolated between snapshots\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

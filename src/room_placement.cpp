@@ -33,4 +33,17 @@ void teleport_room_object(RoomPlacementObject& object,RoomPlacementWorld& world,
         if (std::find(entries.begin(),entries.end(),object.room.identity)==entries.end()) entries.push_back(object.room.identity);
     } else object.square.reset();
 }
+void teleport_room_monster_forced(RoomPlacementObject& object,RoomPlacementWorld& world,Position destination,std::uint64_t level) {
+    if (!object.monster) throw std::invalid_argument("monster teleport requires monster identity");
+    const auto previous=object.room.level;
+    teleport_room_object(object,world,destination,level);
+    auto& monsters=world.levels.at(level).monsters;
+    if (previous!=level || std::find(monsters.begin(),monsters.end(),object.room.identity)==monsters.end())
+        monsters.push_back(object.room.identity);
+}
+void teleport_room_player_forced(RoomPlacementObject& object,RoomPlacementWorld& world,Position destination,std::uint64_t level,
+    const std::function<void(std::uint64_t,Position)>& visibility) {
+    if (object.monster || !visibility) throw std::invalid_argument("player teleport requires player identity and visibility hook");
+    teleport_room_object(object,world,destination,level);visibility(level,object.room.position);
+}
 }

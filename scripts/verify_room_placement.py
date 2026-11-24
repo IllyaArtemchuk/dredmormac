@@ -47,7 +47,7 @@ class Placement(GeometryOracle):
                     node=self.allocate(12);self.write(node,head,self.read(head+4)[0],self.pointers[entry]);self.write(self.read(head+4)[0],node);self.write(head+4,node)
         owner,room,monster,x,y,square_level,sx,sy,target,dx,dy=fields;obj=self.pointers[1];vtable=self.allocate(0x100);self.write(vtable+0x44,self.adapter);self.write(obj,vtable)
         self.write(obj+0x50,x,y);self.write(obj+0x60,self.squares[square_level,sx,sy] if square_level else 0,self.levels[owner]);self.write(obj+0x6c,room);self.string(obj+0x70,'target')
-        self.original.call('__ZN7GameObj10TeleportToEiiP5Leveli',obj,dx,dy,self.levels[target],1)
+        self.original.call(getattr(self,'teleport_symbol','__ZN7GameObj10TeleportToEiiP5Leveli'),obj,dx,dy,self.levels[target],1)
         square=self.read(obj+0x60)[0];actual_owner=self.levels.index(self.read(obj+0x64)[0]);actual_room=self.read(obj+0x6c)[0];actual_room=actual_room if actual_room<2**31 else actual_room-2**32
         if self.value(obj+0x70)!='target':raise AssertionError('teleport changed object label')
         actual_position=[v if v<2**31 else v-2**32 for v in self.read(obj+0x50,2)]
