@@ -1536,3 +1536,14 @@ seven skills, strict ranks, aliases/source ordering/repeated flags and atoi valu
 All52 portable groups pass. Full room scripts, generated floors/population,
 original damage/death/AI/scheduling, remaining effects/UI/audio and reference
 playthrough are still incomplete. Room script conditions/actions are next.
+
+
+Free-pick evidence source75a9001 passed arm64 Mac run45350169121 and packaged-app
+smoke. Room scripting prerequisites now include original activation history and
+Clock SetTimeRemaining/Start/Stop/Reset/Update/query decisions. Actual4,096 clock
+operations +4,096 activation operations match, including event-time states,
+updated/stopped/expired order, same-room ticker and signed wrapping/negative
+counters. Activation changes compare two stored updates, not one. All53 portable
+groups pass. See docs/ROOM_SCRIPTS.md. Clock record constructors/XML, event queue,
+condition/action runtime and Session/native population remain separate; full
+generated game, damage/death/AI/effects/UI/audio parity are still unfinished.
