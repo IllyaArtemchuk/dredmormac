@@ -59,3 +59,24 @@ door grids/state. Focused tests cover bump/click, occupied closing, wall ends,
 Burglary/no-draw consumption, unpaid stack metadata, XP, shattering, invalid-state
 rollback, save round trips and cached-floor travel. All52 portable groups pass.
 Native rendering/input and full generated-level population remain separate work.
+
+The native prepared-room view now imports doors by stamping the requested room
+and running BuildDoors before its supported content records. `prepare_scene.py`
+enables this adapter when the source Starting Room contains door markers. This
+isolated stamp is not complete generated-level sequencing. Existing generated
+numeric layouts can be installed directly through Session's floor_doors API.
+
+Native drawing uses the recovered default wood sprites (two NS frames, three EW
+frames), visible end sections and hidden center. Clicks and keyboard bumps update
+frames/collision; door messages appear in the status area. Save loading validates
+immutable room door positions, orientation, resolved rules and non-door numeric
+grid against a retained blueprint, then prepares sprites before replacing state.
+Shattered walls can be restored from an earlier save. Alternate branch sprite
+substitution, original z-order/offsets, eye candy and actual sound playback remain
+unfinished; default sprite presentation is not a recovered complete renderer.
+
+The synthetic --doors Mac fixture contains both orientations, deterministic locks,
+a consumed lockpick, XP, click opening, occupied closing, center ignored, end
+closing, bump reopening, repeated kicking/shattering, wall changes and save/load.
+It also checks atomic rejection of a save from another door layout. Sprite data
+is generated independently and no supplied resources enter the repository.

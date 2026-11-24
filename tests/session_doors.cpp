@@ -15,6 +15,10 @@ SessionDoors doors(bool locked=false) {
 int main() {
     try {
         Session s(room(),make_player({3,2,2}),7);s.floor_doors(doors());const auto initial=saved(s);
+        Session stamped(room(),make_player({3,2,2}),7);RoomStamp stamp;stamp.width=9;stamp.height=7;stamp.cells.resize(63);
+        stamp.cells[3*9+4]={6,0,0};stamp.cells[3*9+2].kind=2;stamp.cells[3*9+6].kind=2;
+        stamped.create_room_doors(stamp,false,false,5);check(stamped.doors()->doors.size()==1 && stamped.doors()->doors[0].assembly.horizontal && stamped.doors()->doors[0].assembly.locked);
+        check(parse_xml(saved(stamped)).first("random")->attribute("index")=="1");
         check(parse_xml(initial).attribute("version")=="21" && s.world().passable({4,3}) && !s.passable({4,3}) && !s.world().passable({3,3}));
         s.step(Action::south);check(s.doors()->doors[0].assembly.open && s.world().turn()==1 && s.player().position.y==2 && s.doors()->frames[0]==1);
         check(s.last_door_click()->sounds[0]=="door_open" && s.passable({4,3}) && !s.world().passable({3,3}));

@@ -70,6 +70,7 @@ def prepare(root, out, encounter=None):
                  rows=visual,collision='\n'.join(collision)+'\n',
                  atlas=str(atlas),hero=str(out/'hero.png'),hero_spr=str(root/'sprites/hero/hero_idle_d.spr'),
                  floor_crop=[0,192,32,32],wall_crop=[0,96,32,32],data_root=str(root))
+    if any(symbol in 'dD' for row in visual for symbol in row):scene['ordinary_doors']=room.get('name')
     if encounter:
         found=[]
         def visit(node, inherited_sprite=None):

@@ -41,6 +41,7 @@ if __name__=='__main__':
     p.add_argument('--floors',action='store_true',help='Paired stairs, cached floor state, native run save/reload')
     p.add_argument('--secret-levers',action='store_true',help='Bump/click secret lever, wall opening and save/reload')
     p.add_argument('--decorations',action='store_true',help='Ordered conditional paintings/statues/floor engravings')
+    p.add_argument('--doors',action='store_true',help='Ordinary door picking, clicks, bumps, shattering and saves')
     p.add_argument('--shops',action='store_true',help='Keeper, stock, native buying/theft and saved shop state')
     p.add_argument('--automatic-armour',action='store_true',help='Automatic neck-armour enchantment, inventory and save/load')
     args=p.parse_args();out=args.output.resolve();out.mkdir(parents=True,exist_ok=True)
@@ -69,12 +70,24 @@ if __name__=='__main__':
     if args.decorations and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers])):p.error('--decorations requires --content-source and excludes other fixture types')
     if args.shops and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers,args.decorations,args.automatic_armour])):p.error('--shops requires --content-source and excludes other fixture types')
     if args.automatic_armour and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers,args.decorations])):p.error('--automatic-armour requires --content-source and excludes other fixture types')
+    if args.doors and (not args.content_source or any([args.inventory,args.combat,args.objects,args.breakables,args.monsters,args.traps,args.casting,args.regeneration,args.food,args.floors,args.secret_levers,args.decorations,args.shops,args.automatic_armour])):p.error('--doors requires --content-source and excludes other fixture types')
     if args.content_source:
         root=out/'installation';shutil.copytree(args.content_source,root,dirs_exist_ok=True)
         (root/'tilesets').mkdir(exist_ok=True);(root/'sprites/hero').mkdir(parents=True,exist_ok=True)
         (root/'tilesets/basic.png').write_bytes(png(384,640,(70,80,95,255)))
         (root/'sprites/hero/hero_idle_d.spr').write_bytes(sprite())
         (root/'dungeon').mkdir(exist_ok=True);(root/'dungeon/fixture.spr').write_bytes(sprite())
+        if args.doors:
+            rows=['#########','#@..#...#','#...#...#','#...#...#','#...#...#','######..#','#########']
+            template=['#########','#...#...#','#...#...#','#...d...#','#...#...#','##D###..#','#########']
+            database=ET.Element('roomdb');room=ET.SubElement(database,'room',{'name':'Starting Room','width':'9','height':'7'})
+            for row in template:ET.SubElement(room,'row',{'text':row})
+            ET.ElementTree(database).write(root/'game/rooms.xml',encoding='unicode')
+            for name,frames in [('door_wood3x3_ns_left',2),('door_wood3x3_ns_right',2),('door_wood3x3_ew_top',3),('door_wood3x3_ew_bottom',3)]:
+                (root/f'dungeon/{name}.spr').write_bytes(sprite(frames))
+            (root/'items').mkdir(exist_ok=True);(root/'items/lockpick.png').write_bytes(png(32,32,(220,180,40,255)))
+            tweaks=ET.parse(root/'game/tweakDB.xml');ET.SubElement(tweaks.getroot(),'tweak',{'name':'lockpick exp','ival':'5'});tweaks.write(root/'game/tweakDB.xml',encoding='unicode')
+            scene.update(data_root=str(root),ordinary_doors='Starting Room',rows=[row.replace('@','.') for row in rows],collision='\n'.join(rows)+'\n',seed=7,smoke_doors=True)
         if args.shops:
             rows=['#########','#@......#','#.......#','#.......#','#.......#','#########']
             scene.update(rows=[row.replace('@','.') for row in rows],collision='\n'.join(rows)+'\n',data_root=str(root),room_objects='Starting Room',smoke_shops=True,ground_currency=[dict(amount=100,x=2,y=1)])

@@ -117,6 +117,9 @@ public:
     const std::vector<SecretLever>& secret_levers() const {return secret_levers_;}
     bool use_secret_lever(std::size_t index);
     void floor_doors(SessionDoors doors);
+    // Isolated prepared-room adapter: stamp once, BuildDoors, install. Complete
+    // level generation supplies its already stamped grid through floor_doors.
+    void create_room_doors(const RoomStamp& room,bool burglary,bool female,std::int32_t lockpick_xp);
     const std::optional<SessionDoors>& doors() const {return doors_;}
     const std::optional<DoorClickResult>& last_door_click() const {return last_door_click_;}
     DoorClickResult use_door(std::size_t index,std::size_t selected);

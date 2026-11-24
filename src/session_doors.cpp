@@ -6,6 +6,15 @@
 
 namespace dredmor {
 namespace {bool same(Position a,Position b) {return a.x==b.x && a.y==b.y;}}
+void Session::create_room_doors(const RoomStamp& room,bool burglary,bool female,std::int32_t lockpick_xp) {
+    if (room.width!=world_.width() || room.height!=world_.height()) throw std::invalid_argument("door room dimensions differ");
+    auto next=*this;DungeonLayout layout(room.width,room.height,std::vector<DungeonCell>(std::size_t(room.width)*room.height));
+    layout.write_template(room,0,0,0,depth_context_.depth,next.random_.mt);const auto plan=build_door_plan(layout);
+    SessionDoors doors(std::move(layout));doors.burglary=burglary;doors.female=female;doors.lockpick_xp=lockpick_xp;
+    for (const auto& assembly:plan.doors) {DoorState state;state.assembly=assembly;doors.doors.push_back(state);}
+    for (auto point:plan.repaired) next.world_.carve_floor(point);
+    next.floor_doors(std::move(doors));*this=std::move(next);
+}
 void Session::floor_doors(SessionDoors doors) {
     if (doors.layout.width()!=world_.width() || doors.layout.height()!=world_.height() || doors.doors.size()>4096 || doors.attack_sound.size()>4096)
         throw std::invalid_argument("invalid session door grid");

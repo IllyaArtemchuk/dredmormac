@@ -2341,3 +2341,15 @@ older save formats stay unchanged without doors. All52 portable groups pass.
 Downstream XP/HP uses the existing provisional Session model, not full original
 Player::TakeDamage/death/scheduling parity. Native door presentation/input is next;
 complete generated floors/content/AI/effects/original UI/audio remain unfinished.
+
+
+Session-door source6bc5a47 passed arm64 Mac run45348705923 and packaged-app
+smoke. Native prepared rooms now stamp/build ordinary doors, display both default
+orientations, accept mouse clicks and keyboard bumps, update collision/frames and
+show door notices. Atomic save loading checks an immutable door blueprint and
+restores shattered wall ends from earlier saves. The new synthetic native fixture
+exercises picks/XP, occupied/center closing, bump opening, kicking/shattering and
+save rollback. All52 portable groups pass; this native source awaits Mac CI.
+The isolated room adapter/default sprites do not finish full floor generation,
+branch rendering, original actor/HP scheduling, AI, remaining effects/UI/audio or
+an original reference playthrough. Full game completion is still outstanding.

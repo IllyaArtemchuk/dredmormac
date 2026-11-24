@@ -14,6 +14,23 @@ scene=importlib.util.module_from_spec(spec); spec.loader.exec_module(scene)
 
 
 class SceneTests(unittest.TestCase):
+    def test_ordinary_door_fixture_has_both_orientations_and_frames(self):
+        repository=Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as folder:
+            output=Path(folder)/'native-doors'
+            subprocess.run([sys.executable,str(repository/'scripts/make-smoke-scene.py'),str(output),'--content-source',str(repository/'tests/fixtures/content-root'),'--doors'],check=True,capture_output=True,text=True)
+            data=json.loads((output/'scene.json').read_text());root=Path(data['data_root'])
+            self.assertTrue(data['smoke_doors']);self.assertEqual(data['seed'],7)
+            self.assertEqual(data['ordinary_doors'],'Starting Room')
+            room=ET.parse(root/'game/rooms.xml').getroot().find('room');rows=[node.get('text') for node in room.findall('row')]
+            self.assertEqual(rows[3][4],'d');self.assertEqual(rows[5][2],'D')
+            self.assertEqual(data['collision'].count('@'),1)
+            for name,count in [('ns_left',2),('ns_right',2),('ew_top',3),('ew_bottom',3)]:
+                payload=(root/f'dungeon/door_wood3x3_{name}.spr').read_bytes()
+                self.assertEqual(payload[:3],b'SPR');self.assertEqual(struct.unpack_from('<H',payload,3)[0],count)
+            self.assertTrue((root/'items/lockpick.png').is_file())
+            self.assertTrue(any(node.get('name')=='lockpick exp' and node.get('ival')=='5' for node in ET.parse(root/'game/tweakDB.xml').getroot()))
+
     def test_shop_fixture_resources_and_marker_order(self):
         repository=Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as folder:
