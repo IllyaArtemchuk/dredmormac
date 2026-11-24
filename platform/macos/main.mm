@@ -975,11 +975,11 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     if (!_session->script_levers()[0].activation.activated() || !_session->script_levers()[0].activation.changed() || _session->world().turn()!=turn+1 || ![self smokeSaveLoad]) return fail("click/save");
     std::ostringstream active;_session->save(active);NSURL *url=[NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID.UUID.UUIDString stringByAppendingString:@".dredmor-save"]]];
     auto write=[&](const std::string& value) {NSData *data=[NSData dataWithBytes:value.data() length:value.size()];return [data writeToURL:url options:NSDataWritingAtomic error:nullptr];};
-    key(@"d",2);if (_session->script_levers()[0].activation.activated() || _session->world().turn()!=turn+2 || _session->player().position.x!=2) return fail("bump");
+    key(@"d",124);if (_session->script_levers()[0].activation.activated() || _session->world().turn()!=turn+2 || _session->player().position.x!=2) return fail("bump");
     if (!write(active.str())) return fail("write");[self loadFromURL:url];
     if (!_session->script_levers()[0].activation.activated() || _session->world().turn()!=turn+1) return fail("restore");
     key(@".",47);if (_session->script_levers()[0].activation.changed()) return fail("history");
-    key(@"a",0);const auto distant=_session->world().turn();[self mouseDown:click];if (_session->world().turn()!=distant) return fail("distance");
+    key(@"a",123);const auto distant=_session->world().turn();[self mouseDown:click];if (_session->world().turn()!=distant) return fail("distance");
     std::ostringstream before;_session->save(before);auto invalid=before.str();const auto field=invalid.find("current=\"1\"");if (field==std::string::npos) return fail("history field");invalid.replace(field,11,"current=\"2\"");
     if (!write(invalid)) return fail("invalid write");bool rejected=false;try {[self loadFromURL:url];} catch(const std::exception&) {rejected=true;}
     [[NSFileManager defaultManager] removeItemAtURL:url error:nullptr];std::ostringstream after;_session->save(after);[self display];return rejected && before.str()==after.str();

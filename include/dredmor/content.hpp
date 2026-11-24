@@ -28,7 +28,7 @@ struct RoomDefinition {
     std::vector<CustomRoomDefinition> custom_objects() const;
     std::vector<RoomPopulationRecord> population() const;
     // All recognized object records in original source order. Scripts have a
-    // separate list; lever/clock/magicblocker retain raw pending definitions.
+    // separate list; lever/magicblocker retain raw pending definitions.
     std::vector<RoomRecord> records() const;
     std::vector<RoomScriptDefinition> scripts(const RoomActionReaders& readers={}) const;
 };
