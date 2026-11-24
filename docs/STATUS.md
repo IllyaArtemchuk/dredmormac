@@ -1580,3 +1580,14 @@ constructor RNG/uniqueness and original save semantics are not included. All55
 portable groups pass. Script XML metadata/event queue/scheduler/Session entities
 and the full generated game remain unfinished. Action source a08b89c awaits
 its currently running Mac CI; do not claim completion of the full game.
+
+
+TypeAt source7379cf2 passed arm64 Mac run45353207300 and packaged-app smoke.
+All11 factory condition XML schemas now have a typed reader with recovered
+defaults and point/template effects. Actual constructor/property/ReadFromXMLAttrs
+execution matches2,048 fixtures, including missing=true for isdead/isalive/
+activated_changed, filter=-1 for changed, key case and atoi values. All55 portable
+groups pass. See docs/ROOM_SCRIPTS.md for boundaries. Action metadata, full outer
+script XML/repetition/event queue/scheduler and Session/native script entities
+remain next; complete generated-floor/gameplay/AI/damage/UI/audio parity is still
+unfinished. New condition XML reader awaits Mac CI.

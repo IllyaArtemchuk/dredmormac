@@ -1,9 +1,21 @@
 #include "dredmor/room_scripts.hpp"
+#include <iomanip>
 #include <iostream>
 #include <stdexcept>
 using namespace dredmor;
 int main(int argc,char** argv) {
     try {
+        if (argc==2 && std::string(argv[1])=="--metadata") {
+            std::string xml;
+            while (std::cin>>std::quoted(xml)) {
+                RoomStamp room;room.width=room.height=7;room.cells.resize(49);
+                const auto condition=read_room_condition(parse_xml(xml),{{'3',{2,4}}},room);
+                std::cout<<int(condition.kind)<<' '<<condition.negated<<' '<<condition.missing_value<<' '<<condition.wanted<<' '<<condition.point.x<<' '<<condition.point.y<<' '
+                         <<std::quoted(condition.object_id)<<' '<<std::quoted(condition.event_name)<<' '<<std::quoted(condition.item_type)<<' '<<std::quoted(condition.item_subtype)<<' '<<bool(condition.cached_item);
+                for (auto cell:room.cells) std::cout<<' '<<unsigned(cell.kind);std::cout<<'\n';
+            }
+            return 0;
+        }
         if (argc==2 && std::string(argv[1])=="--type-at") {
             RoomScriptContext context;RoomCondition condition;condition.kind=RoomConditionKind::type_at;condition.item_type="weapon";
             bool random_subtype,cached;ScriptItemType prototype;

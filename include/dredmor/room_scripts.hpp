@@ -1,6 +1,7 @@
 #pragma once
 #include "dredmor/clocks.hpp"
 #include "dredmor/world.hpp"
+#include "dredmor/room_records.hpp"
 #include <functional>
 
 namespace dredmor {
@@ -16,6 +17,7 @@ struct RoomCondition {
     std::string item_type,item_subtype;
     mutable std::optional<ScriptItemType> cached_item;
 };
+RoomCondition read_room_condition(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room);
 struct ScriptObjectState {
     Position position{};
     std::string room_local_id;

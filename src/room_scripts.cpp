@@ -1,8 +1,46 @@
 #include "dredmor/room_scripts.hpp"
+#include "dredmor/legacy_number.hpp"
+#include <algorithm>
+#include <array>
 #include <cstring>
 #include <stdexcept>
 
 namespace dredmor {
+RoomCondition read_room_condition(const XmlNode& node,const RoomMarkers& markers,RoomStamp& room) {
+    auto lower=[](std::string text) {for (auto& c:text) if (c>='A' && c<='Z') c=char(c-'A'+'a');return text;};
+    if (lower(node.tag)!="condition") throw std::invalid_argument("expected room condition");
+    RoomAttributes attributes;
+    auto assign=[&](const std::string& key) {const auto found=node.attributes.find(key);if (found!=node.attributes.end()) attributes[lower(key)]=found->second;};
+    for (const auto& key:node.attribute_order) assign(key);
+    for (const auto& entry:node.attributes) if (std::find(node.attribute_order.begin(),node.attribute_order.end(),entry.first)==node.attribute_order.end()) assign(entry.first);
+    auto take=[&](const char* name,bool required=false,std::string fallback="") {
+        const auto found=attributes.find(name);
+        if (found==attributes.end()) {if (required) throw std::invalid_argument(std::string("room condition requires ")+name);return fallback;}
+        auto value=found->second;attributes.erase(found);return value;
+    };
+    const auto type=take("condition_type",true);RoomCondition result;result.wanted=0;
+    const std::array<std::pair<const char*,RoomConditionKind>,11> kinds{{{"isdead",RoomConditionKind::is_dead},{"isalive",RoomConditionKind::is_alive},{"activated",RoomConditionKind::activated},{"activated_changed",RoomConditionKind::activation_changed},{"at",RoomConditionKind::at},{"event",RoomConditionKind::event},{"type_at",RoomConditionKind::type_at},{"entered",RoomConditionKind::entered},{"exited",RoomConditionKind::exited},{"started",RoomConditionKind::started},{"stopped",RoomConditionKind::stopped}}};
+    const auto found=std::find_if(kinds.begin(),kinds.end(),[&](const auto& entry){return entry.first==type;});
+    if (found==kinds.end()) throw std::invalid_argument("unknown room condition type");
+    result.kind=found->second;
+    result.negated=legacy_integer(take("not"))!=0;
+    if (result.kind!=RoomConditionKind::entered && result.kind!=RoomConditionKind::exited && result.kind!=RoomConditionKind::type_at) {
+        result.object_id=take("id",true);
+        const bool missing=result.kind==RoomConditionKind::is_dead || result.kind==RoomConditionKind::is_alive || result.kind==RoomConditionKind::activation_changed;
+        result.missing_value=legacy_integer(take("notfound",false,missing?"1":"0"))!=0;
+    }
+    auto candidate=room;
+    if (result.kind==RoomConditionKind::at || result.kind==RoomConditionKind::type_at) {
+        const auto point=take_room_point(attributes,"",markers,candidate);if (!point) throw std::invalid_argument("room condition requires a point");result.point=*point;
+    }
+    if (result.kind==RoomConditionKind::activation_changed) result.wanted=legacy_integer(take("activated",false,"-1"));
+    if (result.kind==RoomConditionKind::activated || result.kind==RoomConditionKind::started || result.kind==RoomConditionKind::stopped)
+        result.wanted=legacy_integer(take(result.kind==RoomConditionKind::activated?"activated":result.kind==RoomConditionKind::started?"started":"stopped",false,"1"))!=0;
+    if (result.kind==RoomConditionKind::event) result.event_name=take("event_type",true);
+    if (result.kind==RoomConditionKind::type_at) {result.item_type=take("type",true);result.item_subtype=take("subtype",false,"random");}
+    if (!attributes.empty() || !node.children.empty()) throw std::invalid_argument("unsupported room condition field");
+    room=std::move(candidate);return result;
+}
 RoomConditionValue room_condition_value(const RoomCondition& condition,const RoomScriptContext& context) {
     auto wrapped=[](int a,int b) {const auto bits=std::uint32_t(a)+std::uint32_t(b);std::int32_t result;std::memcpy(&result,&bits,4);return result;};
     if (condition.kind==RoomConditionKind::entered) return {context.player_room==context.room && context.previous_room!=context.room,{}};

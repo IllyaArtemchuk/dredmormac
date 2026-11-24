@@ -5,6 +5,19 @@
 using namespace dredmor;
 int main() {
     try {
+        RoomStamp template_room;template_room.width=template_room.height=7;template_room.cells.resize(49);RoomMarkers markers{{'3',{2,4}}};
+        const auto alive=read_room_condition(parse_xml("<condition condition_type='isalive' id='missing'/>"),markers,template_room);
+        check(alive.kind==RoomConditionKind::is_alive && alive.missing_value && !alive.negated);
+        const auto changed_definition=read_room_condition(parse_xml("<condition condition_type='activated_changed' id='lever'/>"),markers,template_room);
+        check(changed_definition.wanted==-1 && changed_definition.missing_value);
+        const auto started_definition=read_room_condition(parse_xml("<condition condition_type='started' id='clock' started='-2tail'/>"),markers,template_room);
+        check(started_definition.wanted==1 && !started_definition.missing_value);
+        const auto point_definition=read_room_condition(parse_xml("<condition CONDITION_TYPE='at' ID='player' AT='3' not='true'/>"),markers,template_room);
+        check(point_definition.point.x==2 && point_definition.point.y==4 && template_room.cells[30].kind==1 && !point_definition.negated);
+        const auto type_definition=read_room_condition(parse_xml("<condition condition_type='type_at' type='weapon' x=' 2suffix' y='-1'/>"),markers,template_room);
+        check(type_definition.point.x==2 && type_definition.point.y==-1 && type_definition.item_subtype=="random" && !type_definition.cached_item);
+        bool rejected=false;try {read_room_condition(parse_xml("<condition condition_type='at' id='x' x='1'/>"),markers,template_room);} catch(const std::invalid_argument&) {rejected=true;}check(rejected);
+        rejected=false;try {read_room_condition(parse_xml("<condition condition_type='entered' unused='1'/>"),markers,template_room);} catch(const std::invalid_argument&) {rejected=true;}check(rejected);
         RoomScriptContext context;context.room=2;context.player_room=2;context.previous_room=1;
         RoomCondition entered;entered.kind=RoomConditionKind::entered;check(room_condition_value(entered,context).positive);
         context.previous_room=2;check(!room_condition_value(entered,context).positive);context.player_room=3;entered.kind=RoomConditionKind::exited;check(room_condition_value(entered,context).positive);

@@ -116,3 +116,22 @@ linked lists execute; factory/IsItem/string boundaries are controlled. Results,
 constructor arguments/count, cache kind/subtype, tile query count and wrapped
 coordinates all match. Full factory side effects and cached prototype save
 semantics are separate. All55 portable groups pass, with condition regression.
+
+`read_room_condition` now parses all11 original factory condition names and their
+registered XML properties. Keys are case insensitive; factory type values are
+case sensitive. Optional not uses atoi-style boolean parsing. Object conditions
+require id, while notfound defaults true for isdead, isalive and activated_changed,
+and false for the other object conditions. ActivatedChanged's integer activated
+filter defaults -1. Activated/started/stopped boolean filters default true. At
+and TypeAt require coordinates/marker; event requires event_type; TypeAt requires
+type and defaults subtype to random. Marker references immediately produce
+numeric floor. Unused attributes are rejected. Malformed errors and overflow
+retain explicit port error/number policies, not original fatal-handler parity.
+
+`verify_room_condition_metadata.py` executes the actual RoomConditionFrom
+constructors, virtual property registration and ReadFromXMLAttrs on2,048 fixtures
+covering every factory type, defaults, case-insensitive keys, atoi prefixes,
+empty strings and point/template effects, with zero mismatches. Controlled maps,
+string/formatting/ASCII number helpers and erase boundaries are supplied; full
+outer room XML callbacks and duplicate case-alias insertion are separate. All55
+portable groups pass. This reader is not yet wired into Session scripts.
