@@ -125,7 +125,7 @@ InventoryItem make_shop_stock(const std::vector<ItemDefinition>& definitions,
     case ItemKind::toolkit:case ItemKind::trap:break;
     default:throw std::invalid_argument("shop selected unsupported direct item kind");
     }
-    auto item=construct_factory_item(definition,*index,instance,context,candidate);
+    auto item=construct_factory_item(definition,*index,instance,context,candidate);item.for_sale=true;
     if (definition.kind==ItemKind::weapon && (definition.weapon_type==5 || definition.weapon_type==6)) {
         item.stackable=true;
         item.quantity=int(2+((std::uint64_t(candidate.libc.next())*0x1bffffffU)>>57));

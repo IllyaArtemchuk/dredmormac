@@ -33,6 +33,13 @@ std::int32_t item_shop_cost(const ItemDefinition* definition,const InventoryItem
     }
     const float scaled=float(signed_bits(base))*factor;return truncate(scaled);
 }
+bool carried_unpaid_goods(const Inventory::Bag& bag,const Inventory::Belt& belt,
+    const Equipment::Slots& equipment,const std::optional<InventoryItem>& held) {
+    for (const auto& item:bag) if (item && item->for_sale) return true;
+    for (const auto& item:belt) if (item && item->for_sale) return true;
+    for (const auto& item:equipment) if (item && item->for_sale) return true;
+    return held && held->for_sale;
+}
 ShopPedestalAction resolve_shop_pedestal(bool has_item,std::int32_t shop_cost,bool stackable,
     std::int32_t quantity,float buy_scaler,int dialog_choice,std::int32_t balance) {
     ShopPedestalAction result;result.balance=balance;

@@ -21,7 +21,7 @@ int main() {
         for (std::uint32_t seed=0;seed<128;++seed) {
             random.seed(seed*2654435761U);state={};const auto before=random;const auto plan=make_shop_inventory(definitions,tables,context,16,100,random,state);variants.insert(plan.keeper_variant);
             for (std::size_t i=0;i<plan.items.size();++i) {
-                const auto& item=plan.items[i];check(item.instance==100+i && item.definition<6);
+                const auto& item=plan.items[i];check(item.instance==100+i && item.definition<6 && item.for_sale);
                 craft=craft || item.definition==5;
                 if (item.definition==2) {ammo=true;check(item.stackable && item.quantity>=2 && item.quantity<=3);}
                 if (item.definition==3) {enchanted=true;check(item.artifact && item.artifact->quality>=1);}

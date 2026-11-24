@@ -1,12 +1,17 @@
 #pragma once
 #include "dredmor/currency.hpp"
 #include "dredmor/shop_layout.hpp"
+#include "dredmor/equipment.hpp"
 
 namespace dredmor {
 // Original virtual Item/Weapon/Armour::GetShopCost. A missing definition uses
 // the base100 fallback. Artifact spell presence is explicit until that part of
 // artifact headers is represented by the item model.
 std::int32_t item_shop_cost(const ItemDefinition* definition,const InventoryItem& item,bool artifact_spell=false);
+// Actual PlayerHasStolenGoods examines all bag/belt/equipment entries and the
+// mouse-held item; an unpaid item alone is enough, regardless of quantity/kind.
+bool carried_unpaid_goods(const Inventory::Bag& bag,const Inventory::Belt& belt,
+    const Equipment::Slots& equipment,const std::optional<InventoryItem>& held=std::nullopt);
 struct ShopPedestalAction {
     bool handled=false,transfer_item=false,item_for_sale=true,force_keeper_move=false,insufficient_funds=false;
     std::int32_t scaled_cost=0,total_cost=0,balance=0;

@@ -6,7 +6,15 @@
 using namespace dredmor;
 int main(int argc,char** argv) {
     try {
-        if (argc==2 && std::string(argv[1])=="--markers") {
+        if (argc==2 && std::string(argv[1])=="--unpaid") {
+            unsigned state;
+            while (std::cin>>state) {
+                Inventory::Bag bag;Inventory::Belt belt;Equipment::Slots equipment;std::optional<InventoryItem> held;std::size_t n=0;
+                auto take=[&](auto& slot) {if (n++) std::cin>>state;if (!std::cin || state>2) throw std::invalid_argument("invalid unpaid fixture");if (state) {InventoryItem item;item.for_sale=state==2;slot=item;}};
+                for (auto& item:bag) take(item);for (auto& item:belt) take(item);for (auto& item:equipment) take(item);take(held);
+                std::cout<<carried_unpaid_goods(bag,belt,equipment,held)<<'\n';
+            }
+        } else if (argc==2 && std::string(argv[1])=="--markers") {
             int width,height;std::size_t count;
             while (std::cin>>width>>height>>count) {
                 if (count>512) throw std::invalid_argument("too many shop rows");std::vector<std::string> rows(count);for (auto& row:rows) std::cin>>std::quoted(row);

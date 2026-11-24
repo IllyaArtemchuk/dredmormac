@@ -1617,3 +1617,18 @@ The integer parameter is unused: inShop plus carried unpaid goods selects guard
 mode; only flag transitions teleport, for all keepers in original list order.
 Shop ownership/persistence and native purchase/theft integration remain next;
 this source does not yet connect a complete generated floor or full shop gameplay.
+
+
+Unpaid item ownership is now modeled and persisted as Session format19, with
+prior versions1..18 still readable and prior canonical saves unchanged. Shop
+stock carries for_sale=true; bag/belt/equipment/ground and cached floors preserve
+it. Session exposes has_unpaid_goods; the lower-level kernel also accepts a
+mouse-held item. All2,048 actual complete PlayerHasStolenGoods/CurrentPickedUpItem
+executions match all70 query locations and unchanged RNG. All47 local groups
+pass, including equip/unequip saves, invalid/version-gated flags and whole-run
+floor travel with unpaid items. Actual arm64 validation is pending.
+DoSteppedOn130e60 shop presence uses numeric cell kind13, not room bounds. Exit
+with unpaid goods calls AngerShopkeepers620c6 and clears carried stolen flags,
+changes music/dialog. Those transitions and full shop entity/native interaction
+are not yet integrated. Keeper MonsterC2/tweak rank draws occur after the variant
+and before stock; full construction must preserve that callback point.

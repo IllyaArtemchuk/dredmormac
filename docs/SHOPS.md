@@ -112,3 +112,32 @@ with string boundaries. The real keeper movement function executes with supplied
 stolen-goods and teleport boundaries. All1,024 row parses and1,024 guard transitions
 match, including marker defaults/order/truncation, ignored int arguments, ordered
 teleports, final fields and unchanged random state for movement.
+
+Item instances now retain `for_sale`, matching original Item+0xa0. Shop stock
+sets it true. Bag/belt/equipment/ground items keep it across port saves and cached
+floor travel. Format19 writes `for-sale="1"` only when needed; older formats still
+load, reject that new field if present, and retain their existing canonical bytes.
+This is the port save format, not original save compatibility.
+
+`carried_unpaid_goods` checks all48 bag entries,9 belt entries,12 equipped entries
+and the optional mouse-held item. Session exposes its owned-container query;
+mouse-held ownership is a separate explicit input to the kernel. Quantity and kind
+do not gate the original check. Ground items are not carried stolen goods.
+
+    .venv/bin/python scripts/verify_unpaid_goods.py ORIGINAL build/dredmor-shop --cases 2048 --out PRIVATE.json
+
+All2,048 original PlayerHasStolenGoods0x47b20 and CurrentPickedUpItem0x59f20
+executions match, including every query location and unchanged random state.
+The routines execute completely on controlled pointers with no call replacements.
+Local tests cover all query slots, equipped/bag/ground save continuation, malformed
+flags/old-format rejection, cached unpaid stock and carrying it through floor travel.
+Full shop entity and modal purchase/theft integration remains unfinished.
+
+Further recovered integration constraints (not yet implemented): DoSteppedOn
+0x130e60 uses numeric cell kind13, not a room bounding rectangle, to enter/leave
+shops. On exiting with stolen goods it calls AngerShopkeepers0x620c6, marks the
+level and all keepers angry, clears carried stolen flags, and switches music/dialog.
+ForceShopkeeperMove's mode flag is global inShop. Shopkeeper construction includes
+MonsterC2/tweak-dependent rank adjustment between the variant draw and stock;
+a full shop constructor must account for those draws, rather than treating the
+stock-only plan's keeper initialization boundary as a no-op in full gameplay.

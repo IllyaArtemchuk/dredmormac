@@ -1,5 +1,6 @@
 #pragma once
 #include "dredmor/levers.hpp"
+#include "dredmor/shops.hpp"
 #include "dredmor/decorations.hpp"
 #include "dredmor/equipment.hpp"
 #include "dredmor/progression.hpp"
@@ -100,6 +101,7 @@ public:
     const std::vector<BreakableRoomObject>& breakables() const { return breakables_; }
     const std::vector<TrapInstance>& traps() const {return traps_;}
     bool passable(Position position) const;
+    bool has_unpaid_goods() const {return carried_unpaid_goods(inventory_.bag(),inventory_.belt(),equipment_.slots());}
     std::optional<std::size_t> create_custom_object(const CustomRoomDefinition& definition,Position origin={0,0});
     std::optional<std::size_t> create_pedestal(const RoomPedestalRecord& definition,Position origin={0,0});
     std::optional<std::size_t> create_breakable(const BreakableRoomDefinition& definition,Position origin={0,0},BreakableFrames frames={});

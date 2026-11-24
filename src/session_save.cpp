@@ -260,6 +260,7 @@ Actor read_actor(const XmlNode& node,bool currency_fields,bool room_fields,bool 
 void write_item(std::ostream& out,const InventoryItem& item,const std::string& extra) {
     out<<"<item id=\""<<item.instance<<"\" kind=\""<<static_cast<std::uint32_t>(item.kind)<<"\" definition=\""<<item.definition
        <<"\" weapon=\""<<item.weapon_type<<"\" quantity=\""<<item.quantity<<"\" stackable=\""<<item.stackable<<"\"";
+    if (item.for_sale) out<<" for-sale=\"1\"";
     if (item.charges) out<<" charges=\""<<*item.charges<<"\"";
     if (item.currency_value) out<<" currency=\""<<*item.currency_value<<"\"";
     if (!item.room_local_id.empty() || item.can_push!=1) out<<" room-id=\""<<escape(item.room_local_id)<<"\" push=\""<<unsigned(item.can_push)<<"\"";
@@ -286,6 +287,7 @@ InventoryItem read_item_instance(const XmlNode& node) {
         if (item.kind!=ItemKind::currency) throw std::runtime_error("unexpected saved currency value");
     }
     if (item.kind==ItemKind::currency && !item.currency_value) throw std::runtime_error("saved currency value missing");
+    if (node.attributes.count("for-sale")) item.for_sale=flag(node,"for-sale");
     if (node.attributes.count("room-id")) item.room_local_id=attribute(node,"room-id");
     if (node.attributes.count("push")) item.can_push=attribute_number<std::uint8_t>(node,"push");
     if (!node.children.empty()) {
@@ -343,7 +345,8 @@ void Session::save(std::ostream& out) const {
     }
     bool corpse_state=player_.corpse && player_.health>0;for (const auto& enemy:enemies_) corpse_state=corpse_state || (enemy.corpse && enemy.health>0);
     const bool depth_state=depth_context_.depth!=0 || depth_context_.alternate || depth_context_.alternate_depth!=-1;
-    out<<"<dredmor-session version=\""<<(!secret_levers_.empty()?18:!stairs_.empty() || floor_branch_ || item_floor_!=1?17:regeneration_?16:!spell_cooldowns_.empty()?15:depth_state?14:corpse_state?13:monster_state?12:buff_state?11:gated?10:scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
+    bool unpaid_state=has_unpaid_goods();for (const auto& item:ground_) unpaid_state=unpaid_state || item.item.for_sale;
+    out<<"<dredmor-session version=\""<<(unpaid_state?19:!secret_levers_.empty()?18:!stairs_.empty() || floor_branch_ || item_floor_!=1?17:regeneration_?16:!spell_cooldowns_.empty()?15:depth_state?14:corpse_state?13:monster_state?12:buff_state?11:gated?10:scheduled?8:7)<<"\" turn=\""<<world_.turn()<<"\" next-actor=\""<<next_actor_<<"\" experience-n=\""<<experience_n_
        <<"\" content=\""<<signature(definitions_)<<"\"";
     if (player_facing_!=2) out<<" facing=\""<<player_facing_<<"\"";
     out<<">\n<room>"<<escape(world_.room_text())<<"</room>\n";
@@ -357,7 +360,7 @@ void Session::save(std::ostream& out) const {
         out<<"<regeneration hp-turns=\""<<r.health_turns<<"\" mp-turns=\""<<r.mana_turns<<"\" hp-clock=\""<<r.health_clock<<"\" mp-clock=\""<<r.mana_clock
            <<"\" food=\""<<r.food<<"\" booze=\""<<r.booze<<"\" vampire=\""<<r.vampire<<"\"/>\n";
     }
-    if (!secret_levers_.empty() || !stairs_.empty() || floor_branch_ || item_floor_!=1) {
+    if (unpaid_state || !secret_levers_.empty() || !stairs_.empty() || floor_branch_ || item_floor_!=1) {
         out<<"<floor-state branch=\""<<floor_branch_<<"\" item-base=\""<<item_floor_<<"\">\n";
         for (const auto& stair:stairs_) out<<"<stair x=\""<<stair.position.x<<"\" y=\""<<stair.position.y<<"\" up=\""<<stair.up<<"\" link=\""<<unsigned(stair.link)<<"\"/>\n";
         for (const auto& lever:secret_levers_) out<<"<secret-lever x=\""<<lever.position.x<<"\" y=\""<<lever.position.y<<"\" target-x=\""<<lever.target.x<<"\" target-y=\""<<lever.target.y<<"\" activated=\""<<lever.activated<<"\"/>\n";
@@ -469,15 +472,15 @@ Session Session::load(std::istream& input,std::shared_ptr<const std::vector<Item
 Session Session::load_node(const XmlNode& root,std::shared_ptr<const std::vector<ItemDefinition>> definitions,
                           std::shared_ptr<const std::vector<AbilityDefinition>> abilities,std::shared_ptr<const std::vector<SpellDefinition>> spells) {
     const auto version=attribute(root,"version");
-    const bool modern=version=="7" || version=="8" || version=="9" || version=="10" || version=="11" || version=="12" || version=="13" || version=="14" || version=="15" || version=="16" || (version=="17" || version=="18");
-    const bool monster_fields=version=="12" || version=="13" || version=="14" || version=="15" || version=="16" || (version=="17" || version=="18");
-    const bool corpse_fields=version=="13" || version=="14" || version=="15" || version=="16" || (version=="17" || version=="18");
+    const bool modern=version=="7" || version=="8" || version=="9" || version=="10" || version=="11" || version=="12" || version=="13" || version=="14" || version=="15" || version=="16" || (version=="17" || version=="18" || version=="19");
+    const bool monster_fields=version=="12" || version=="13" || version=="14" || version=="15" || version=="16" || (version=="17" || version=="18" || version=="19");
+    const bool corpse_fields=version=="13" || version=="14" || version=="15" || version=="16" || (version=="17" || version=="18" || version=="19");
     if (version=="14" && !root.first("depth-context")) throw std::runtime_error("version fourteen requires depth context");
-    if (version!="14" && version!="15" && version!="16" && (version!="17" && version!="18") && root.first("depth-context")) throw std::runtime_error("depth context requires version fourteen");
-    if ((version=="17" || version=="18") && !root.first("floor-state")) throw std::runtime_error("version seventeen requires floor state");
-    if ((version!="17" && version!="18") && root.first("floor-state")) throw std::runtime_error("floor state requires version seventeen");
+    if (version!="14" && version!="15" && version!="16" && (version!="17" && version!="18" && version!="19") && root.first("depth-context")) throw std::runtime_error("depth context requires version fourteen");
+    if ((version=="17" || version=="18" || version=="19") && !root.first("floor-state")) throw std::runtime_error("version seventeen requires floor state");
+    if ((version!="17" && version!="18" && version!="19") && root.first("floor-state")) throw std::runtime_error("floor state requires version seventeen");
     if (version=="16" && !root.first("regeneration")) throw std::runtime_error("version sixteen requires regeneration state");
-    if (version!="16" && (version!="17" && version!="18") && root.first("regeneration")) throw std::runtime_error("regeneration requires version sixteen");
+    if (version!="16" && (version!="17" && version!="18" && version!="19") && root.first("regeneration")) throw std::runtime_error("regeneration requires version sixteen");
     if (version=="15" && !root.first("spell-cooldowns")) throw std::runtime_error("version fifteen requires cooldown state");
     if (version=="11" && !root.first("player-buffs")) throw std::runtime_error("version eleven requires buff state");
     if (version=="10" && !root.first("scheduled-spells")) throw std::runtime_error("version ten requires gated spell state");
@@ -518,7 +521,7 @@ Session Session::load_node(const XmlNode& root,std::shared_ptr<const std::vector
         const auto& saved=child(root,"floor-state");std::vector<StairPlacement> stairs;std::vector<SecretLever> levers;
         for (const auto& node:saved.children) {
             if (node.tag=="secret-lever") {
-                if (version!="18" || !node.children.empty() || levers.size()>=4096) throw std::runtime_error("invalid secret lever record");
+                if ((version!="18" && version!="19") || !node.children.empty() || levers.size()>=4096) throw std::runtime_error("invalid secret lever record");
                 levers.push_back({{attribute_number<int>(node,"x"),attribute_number<int>(node,"y")},{attribute_number<int>(node,"target-x"),attribute_number<int>(node,"target-y")},flag(node,"activated")});continue;
             }
             if (node.tag!="stair" || !node.children.empty() || stairs.size()>=4096) throw std::runtime_error("invalid floor stair record");
@@ -531,7 +534,7 @@ Session Session::load_node(const XmlNode& root,std::shared_ptr<const std::vector
     }
     session.definitions_=std::move(definitions);session.spells_=std::move(spells);session.next_actor_=attribute_number<std::uint64_t>(root,"next-actor");
     if (root.first("spell-cooldowns")) {
-        if ((version!="15" && version!="16" && (version!="17" && version!="18")) || !session.spells_ || !root.first("spell-rules") || !child(root,"spell-rules").attributes.count("casting")) throw std::runtime_error("cooldowns require matching casting rules");
+        if ((version!="15" && version!="16" && (version!="17" && version!="18" && version!="19")) || !session.spells_ || !root.first("spell-rules") || !child(root,"spell-rules").attributes.count("casting")) throw std::runtime_error("cooldowns require matching casting rules");
         for (const auto& saved:child(root,"spell-cooldowns").children) {
             if (saved.tag!="cooldown" || !saved.children.empty()) throw std::runtime_error("invalid cooldown record");
             const auto index=attribute_number<std::size_t>(saved,"spell");const auto remaining=attribute_number<std::int32_t>(saved,"remaining");
@@ -635,6 +638,7 @@ Session Session::load_node(const XmlNode& root,std::shared_ptr<const std::vector
     Inventory::Bag bag{};Inventory::Belt belt{};
     auto validate_item=[&](const XmlNode& node) {
         if (node.tag!="item") throw std::runtime_error("invalid saved item node");
+        if (version!="19" && node.attributes.count("for-sale")) throw std::runtime_error("unpaid item metadata requires version nineteen");
         auto item=read_item_instance(node);
         if (item.artifact && !modern) throw std::runtime_error("artifact payload requires save version seven");
         if (!modern && (node.attributes.count("room-id") || node.attributes.count("push"))) throw std::runtime_error("item room metadata requires save version seven");
