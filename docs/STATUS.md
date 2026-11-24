@@ -1726,3 +1726,14 @@ visible in-pass, created objects get PostGameTick, deletion precedes movement,
 and the next pass observes removal. All63 portable groups pass. This is core
 composition verification; native Session script binding/save and full gameplay
 remain unfinished. Latest source and deferred2669e90 await Mac validation.
+
+Linked programs/puzzle sourcedf653b0 passed arm64 Mac run45371692156:102 checks
+and packaged-app smoke. Deferred2669e90 passed Mac run45369588185.
+Level::SpawnHorde now matches4,096 complete original wrappers with6,042 members,
+4,399 site searches and1,112 accepted failed-search coordinates. Full libc/MT
+state+next8, callback order, depth reduction vs original-depth table selection,
+named overrides, leader percentages/names/group links, quest counts and queues
+match. All64 portable groups pass. Constructors/name generators/tint/rebuild/
+eligibility/queue helpers are explicit boundaries; actual name/tint routines and
+Session/native horde persistence/adoption remain next. Full native scripting,
+object scheduling/population/AI/effects/UI/audio and complete gameplay unfinished.

@@ -2514,3 +2514,12 @@ scripts/76 spells/55 created records, independently audited across346 rooms.
 Combined core puzzle tests compose the verified lifecycle, but no full Session/
 world/constructor or original save claim follows. See ROOM_SCRIPTS.md. Binary
 SHA256`a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.
+
+Level::SpawnHorde0x6491a complete wrapper matches4,096 cases/6,042 members with
+real bounded locations, including1,112 accepted failed-search coordinates.
+Argument depth reduction survives while selection uses original capped depth.
+Named override retains random eligibility and repeated lookup; leader percentages,
+queue-before-group fields, quest counts and non-reserved spawn occupancy recovered.
+High confidence for this wrapper with explicit constructor/name/tint/rebuild and
+other boundaries. Full RNG state+next8 match. See HORDES.md. Binary SHA256
+`a8718ac188f932ef5b965e637805c446681db7af8a609a5f44069ec5c6e1973d`.
