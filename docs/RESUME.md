@@ -1875,3 +1875,15 @@ awaits Mac CI. Recovered next: Level::DoRoomTriggerLogic0x61bd4 and repeat gate
 0x61ac6; repeat defaults1 in outer script XML, only eligible success actions run,
 previous-room identity updates after actions and events clear at end. Implement
 and compare the lifecycle next; full generated game remains incomplete.
+
+
+Action XML source9027bfb passed arm64 Mac run45355629436 and packaged-app smoke.
+Complete Level room-trigger lifecycle/repeat gates now match4,096 original
+fixtures/9,494 success callbacks: filled-room order, limit/debug counter effects,
+wrapping, no failure-action call, live events, moved-player previous-room update
+and end-pass queue clearing. Event set/query/clear and GameObj forwarding match
+another25,573 original operations/2,048 fixtures; owner level/assigned room/local
+ID matter, independent of position/global level. All56 portable groups pass.
+See docs/ROOM_SCRIPTS.md for explicit call/library boundaries. New lifecycle code
+awaits Mac CI. Parent script XML, record/actor scope finalization, constructors,
+Session/native wiring and full generated game/AI/damage/UI/audio remain unfinished.

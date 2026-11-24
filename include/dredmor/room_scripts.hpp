@@ -3,6 +3,9 @@
 #include "dredmor/world.hpp"
 #include "dredmor/room_records.hpp"
 #include <functional>
+#include <map>
+#include <memory>
+#include <set>
 
 namespace dredmor {
 enum class RoomConditionKind {object,at,is_dead,is_alive,activation_changed,event,stopped,started,activated,entered,exited,type_at};
@@ -94,4 +97,42 @@ struct RoomActionContext {
 // roomError's fatal behavior is not emulated by calling an unrelated vtable.
 std::vector<RoomActionRequest> perform_room_action(const RoomAction& action,const RoomActionContext& context);
 void perform_room_actions(const std::vector<RoomAction>& actions,const RoomActionContext& context);
+struct RoomScriptDefinition {
+    std::int32_t success_repeat=1;
+    std::vector<RoomCondition> conditions;
+    std::vector<RoomAction> success,failure;
+};
+using RoomEventKey=std::pair<std::int32_t,std::string>;
+using RoomEventQueue=std::map<RoomEventKey,std::set<std::string>>;
+void set_room_event(RoomEventQueue& events,std::int32_t assigned_room,std::string_view object_id,std::string_view event);
+bool room_event_is_set(const RoomEventQueue& events,std::int32_t room,std::string_view object_id,std::string_view event);
+using RoomScriptKey=std::pair<std::int32_t,std::int32_t>;
+struct RoomTriggerState {
+    std::map<RoomScriptKey,std::int32_t> success_counts;
+    std::int32_t previous_room=0;
+    RoomEventQueue events;
+};
+struct RoomTriggerRoom {
+    bool present=true;
+    // DirectorFillRoom sets RoomInfo +0x10 when content has been filled. A null
+    // scripts pointer represents the original missing room template.
+    std::int32_t content_filled=1,identity=0;
+    std::shared_ptr<const std::vector<RoomScriptDefinition>> scripts;
+};
+struct RoomTriggerCallbacks {
+    std::function<bool(std::size_t,std::size_t)> conditions_positive;
+    std::function<void(std::size_t,std::size_t)> success_actions;
+    std::function<std::int32_t()> player_room;
+};
+struct RoomTriggerPass {
+    std::vector<RoomScriptKey> checked,conditions,successes;
+    std::vector<std::size_t> invalid_room_ids;
+};
+bool wants_room_script_success(RoomTriggerState& state,RoomScriptKey key,std::int32_t repeat);
+// Original level pass. Only success actions run here. Callbacks see live counts,
+// events and the prior room identity; at the end player_room is resolved after
+// all actions, then every queued event is cleared. Debug logging materializes
+// otherwise absent counter entries, even for unlimited/failed scripts.
+RoomTriggerPass run_room_trigger_logic(const std::vector<RoomTriggerRoom>& rooms,RoomTriggerState& state,
+    const RoomTriggerCallbacks& callbacks,bool debug=false);
 }

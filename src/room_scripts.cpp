@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <limits>
 #include <stdexcept>
 
 namespace dredmor {
@@ -182,5 +183,36 @@ std::vector<RoomActionRequest> perform_room_action(const RoomAction& action,cons
 }
 void perform_room_actions(const std::vector<RoomAction>& actions,const RoomActionContext& context) {
     for (const auto& action:actions) (void)perform_room_action(action,context);
+}
+void set_room_event(RoomEventQueue& events,std::int32_t assigned_room,std::string_view object_id,std::string_view event) {
+    events[{assigned_room,std::string(object_id)}].insert(std::string(event));
+}
+bool room_event_is_set(const RoomEventQueue& events,std::int32_t room,std::string_view object_id,std::string_view event) {
+    const auto object=events.find({room,std::string(object_id)});
+    return object!=events.end() && object->second.find(std::string(event))!=object->second.end();
+}
+bool wants_room_script_success(RoomTriggerState& state,RoomScriptKey key,std::int32_t repeat) {
+    return repeat==-1 || state.success_counts[key]<repeat;
+}
+RoomTriggerPass run_room_trigger_logic(const std::vector<RoomTriggerRoom>& rooms,RoomTriggerState& state,
+    const RoomTriggerCallbacks& callbacks,bool debug) {
+    if (!callbacks.player_room) throw std::invalid_argument("room trigger pass requires player room lookup");
+    RoomTriggerPass result;
+    for (std::size_t room=0;room<rooms.size();++room) {
+        const auto& info=rooms[room];if (!info.present || !info.content_filled || !info.scripts) continue;
+        if (std::int64_t(info.identity)!=std::int64_t(room)) result.invalid_room_ids.push_back(room);
+        for (std::size_t script=0;script<info.scripts->size();++script) {
+            if (room>std::size_t(std::numeric_limits<std::int32_t>::max()) || script>std::size_t(std::numeric_limits<std::int32_t>::max())) throw std::overflow_error("room script index exceeds original range");
+            const RoomScriptKey key{std::int32_t(room),std::int32_t(script)};
+            result.checked.push_back(key);if (debug) (void)state.success_counts[key];
+            if (!wants_room_script_success(state,key,info.scripts->at(script).success_repeat)) continue;
+            if (!callbacks.conditions_positive) throw std::invalid_argument("room trigger pass requires conditions");
+            result.conditions.push_back(key);if (!callbacks.conditions_positive(room,script)) continue;
+            if (!callbacks.success_actions) throw std::invalid_argument("room trigger pass requires success actions");
+            result.successes.push_back(key);callbacks.success_actions(room,script);
+            const auto bits=std::uint32_t(state.success_counts[key])+1U;std::int32_t value;std::memcpy(&value,&bits,4);state.success_counts[key]=value;
+        }
+    }
+    state.previous_room=callbacks.player_room();state.events.clear();return result;
 }
 }

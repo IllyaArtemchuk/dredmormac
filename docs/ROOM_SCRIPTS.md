@@ -152,3 +152,36 @@ compared using supplied standard-library map/string/number boundaries. Spell
 lookup and created-record factory/body reading are explicit recording boundaries;
 record-body schema/effects and outer on routing are not included. All55 portable
 groups pass. Script repetition/level event lifecycle and Session wiring remain.
+
+The complete Level trigger lifecycle is now ported: DoRoomTriggerLogic0x61bd4 and
+WantsSuccessActionsPerformed0x61ac6. It visits filled rooms and template scripts
+in order. DirectorFillRoom0x152310 checks/sets RoomRecord+0x10 as its content-filled
+flag (store0x15232f); the scripting gate does not mean the player currently occupies
+the room. Null rooms/templates and unfilled rooms are skipped.
+
+Only repeat=-1 is unlimited. Other limits materialize a zero count if absent and
+compare signed count < limit. Successful actions run immediately, then their
+count increments with 32-bit wrapping. Exhausted scripts do not evaluate conditions.
+Debug flag8 materializes counters before the limit check, including unlimited
+scripts whose conditions fail. Failure actions are stored by the schema but
+DoRoomTriggerLogic does not invoke them. Previous-room identity remains unchanged
+through all callbacks, then resolves the player's room after actions. Every queued
+event clears at the end. Shared template definitions keep per-room counters.
+
+`verify_room_triggers.py` compares4,096 complete original fixtures across repeated
+passes, with9,494 success callbacks, zero mismatches. Real repeat getters, map
+lookup, loop/control flow, prior-room update and full event-tree clearing run.
+Counter insertion, library destruction, conditions/actions, debug output and a
+returning roomError are boundaries. It compares skip/gate order, debug insertion,
+negative/wrapping counts, live event/counter visibility, moved-player room and all
+final state. Full condition/action bodies and GameTick/Session timing are separate.
+
+The event queue is now a case-sensitive map (assigned room, object-local ID) to a
+set of event names. Set deduplicates; absent queries do not insert. GameObj::SetEvent
+0x36cbe uses its own level+0x64, assigned room+0x6c and local ID+0x70, independent
+of current position or global current level. Level set/query/clear are0x61712,
+0x6150c,0x60ab8. `verify_room_events.py` matches25,573 actual operations across2,048
+fixtures, comparing every result and complete queue contents/counts. Container
+insertion/destruction and strings are supplied. Actor room assignment/finalization,
+constructors, script metadata aggregation and Session/native scheduling/save remain
+work. All56 portable groups pass.
