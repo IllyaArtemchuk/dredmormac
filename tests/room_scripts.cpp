@@ -21,6 +21,11 @@ int main() {
         object.clock=true;object.timer.step=0;RoomCondition stopped;stopped.kind=RoomConditionKind::stopped;stopped.wanted=1;check(room_condition_value(stopped,context).positive);
         object.clock=false;check(room_condition_value(stopped,context).error==RoomConditionError::clock_required);
         context.find_object=[](auto,std::string_view)->std::optional<ScriptObjectState>{return std::nullopt;};stopped.missing_value=true;check(room_condition_value(stopped,context).positive && !room_condition_value(stopped,context).error);
+        RoomCondition type_at;type_at.kind=RoomConditionKind::type_at;type_at.item_type="weapon";type_at.item_subtype="random";type_at.point={1,1};int created=0;
+        context.create_item=[&](auto,auto)->std::optional<ScriptItemType>{++created;return ScriptItemType{1,3};};
+        context.tile_items=[](Position p) {check(p.x==(-2147483647-1) && p.y==4);return std::vector<ScriptTileItem>{{false,{1,3}},{true,{1,5}}};};
+        check(room_condition_value(type_at,context).positive && created==1);check(room_condition_value(type_at,context).positive && created==1);
+        type_at.item_subtype="test weapon";check(!room_condition_value(type_at,context).positive && created==1);
         std::cout<<"script entry/exit, live object/event lookups, two-update activation, short circuit/negation, wrapped coordinates and missing objects passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

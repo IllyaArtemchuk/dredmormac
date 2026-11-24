@@ -2,8 +2,24 @@
 #include <iostream>
 #include <stdexcept>
 using namespace dredmor;
-int main() {
+int main(int argc,char** argv) {
     try {
+        if (argc==2 && std::string(argv[1])=="--type-at") {
+            RoomScriptContext context;RoomCondition condition;condition.kind=RoomConditionKind::type_at;condition.item_type="weapon";
+            bool random_subtype,cached;ScriptItemType prototype;
+            while (std::cin>>context.origin.x>>context.origin.y>>condition.point.x>>condition.point.y>>random_subtype>>cached>>prototype.kind>>prototype.subtype) {
+                std::size_t count;std::cin>>count;if (count>4096) throw std::invalid_argument("too many script tile objects");
+                std::vector<ScriptTileItem> objects(count);for (auto& object:objects) std::cin>>object.item>>object.type.kind>>object.type.subtype;
+                if (!std::cin) throw std::runtime_error("truncated type-at fixture");
+                condition.item_subtype=random_subtype?"random":"test weapon";condition.cached_item=cached?std::optional<ScriptItemType>(prototype):std::nullopt;
+                int created=0,queried=0;Position target;
+                context.create_item=[&](std::string_view type,std::string_view subtype)->std::optional<ScriptItemType> {if (type!="weapon" || subtype!=condition.item_subtype) throw std::logic_error("wrong prototype lookup");++created;return prototype;};
+                context.tile_items=[&](Position point) {target=point;++queried;return objects;};
+                const auto first=room_condition_value(condition,context),second=room_condition_value(condition,context);
+                std::cout<<first.positive<<' '<<second.positive<<' '<<created<<' '<<queried<<' '<<condition.cached_item->kind<<' '<<condition.cached_item->subtype<<' '<<target.x<<' '<<target.y<<'\n';
+            }
+            return 0;
+        }
         RoomScriptContext context;ScriptObjectState object;bool event;
         while (std::cin>>context.room>>context.player_room>>context.previous_room>>context.origin.x>>context.origin.y
             >>object.position.x>>object.position.y>>object.monster>>object.activatable>>object.clock>>object.dead

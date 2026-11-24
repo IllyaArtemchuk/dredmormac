@@ -1842,3 +1842,14 @@ All55 portable groups pass. Full constructors/teleport/destruction/spell bodies
 and original error handling are explicit boundaries. See docs/ROOM_SCRIPTS.md.
 TypeAt condition/prototype caching, XML/events/scheduler/Session entities remain
 work; full generated game/AI/damage/effects/original UI/audio is not finished.
+
+
+TypeAt is now the twelfth room condition: lazy prototype construction precedes
+tile inspection, caches native kind/subtype, and exact "random" skips subtype
+comparison. All8,192 actual evaluations on4,096 conditions match (2,017 prototype
+creations), with constructor arguments, cache, target linked lists, nonitems and
+wrapped coordinates compared. Factory/IsItem boundaries are explicit; complete
+constructor RNG/uniqueness and original save semantics are not included. All55
+portable groups pass. Script XML metadata/event queue/scheduler/Session entities
+and the full generated game remain unfinished. Action source a08b89c awaits
+its currently running Mac CI; do not claim completion of the full game.

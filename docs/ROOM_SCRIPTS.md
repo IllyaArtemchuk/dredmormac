@@ -100,3 +100,19 @@ returning-error boundaries are controlled. Unknown-property diagnostics do not
 establish original fatal behavior; wrong-clock-type guards are excluded. All55
 portable groups pass. Record XML/constructors, full downstream callees, event
 queue, script scheduler and Session/native entities remain unfinished.
+
+TypeAt (0x1a5a36) is now available as the twelfth condition kind. Its first
+evaluation constructs an item prototype before inspecting the tile, even for an
+empty tile. The original factory gets type/subtype, current level, quantity1 and
+artifact=false. Later evaluations reuse the cached native kind/subtype. It scans
+items at wrapped room-origin plus relative point, matching kind and subtype;
+only the exact subtype string "random" skips the subtype comparison. Non-item
+objects cannot satisfy the condition. Prototype construction is an explicit
+callback so its RNG and uniqueness effects can be composed with the item factory.
+
+`verify_type_at.py` compares8,192 complete original evaluations on4,096 conditions,
+including2,017 lazy prototype constructions and preexisting caches. Native target
+linked lists execute; factory/IsItem/string boundaries are controlled. Results,
+constructor arguments/count, cache kind/subtype, tile query count and wrapped
+coordinates all match. Full factory side effects and cached prototype save
+semantics are separate. All55 portable groups pass, with condition regression.

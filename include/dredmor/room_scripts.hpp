@@ -4,13 +4,17 @@
 #include <functional>
 
 namespace dredmor {
-enum class RoomConditionKind {object,at,is_dead,is_alive,activation_changed,event,stopped,started,activated,entered,exited};
+enum class RoomConditionKind {object,at,is_dead,is_alive,activation_changed,event,stopped,started,activated,entered,exited,type_at};
+struct ScriptItemType {std::uint32_t kind=0,subtype=0;};
+struct ScriptTileItem {bool item=false;ScriptItemType type;};
 struct RoomCondition {
     RoomConditionKind kind=RoomConditionKind::object;
     bool negated=false,missing_value=false;
     std::string object_id,event_name;
     Position point{};
     std::int32_t wanted=2;
+    std::string item_type,item_subtype;
+    mutable std::optional<ScriptItemType> cached_item;
 };
 struct ScriptObjectState {
     Position position{};
@@ -26,6 +30,10 @@ struct RoomScriptContext {
     Position origin{};
     std::function<std::optional<ScriptObjectState>(std::int32_t,std::string_view)> find_object;
     std::function<bool(std::int32_t,std::string_view,std::string_view)> event_occurred;
+    // Original prototype factory receives quantity1 and artifact=false. It is
+    // called even when the target tile is empty, and only until a cache exists.
+    std::function<std::optional<ScriptItemType>(std::string_view,std::string_view)> create_item;
+    std::function<std::vector<ScriptTileItem>(Position)> tile_items;
 };
 enum class RoomConditionError {monster_required,activatable_required,clock_required};
 struct RoomConditionValue {

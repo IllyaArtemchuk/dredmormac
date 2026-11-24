@@ -4,12 +4,25 @@
 
 namespace dredmor {
 RoomConditionValue room_condition_value(const RoomCondition& condition,const RoomScriptContext& context) {
+    auto wrapped=[](int a,int b) {const auto bits=std::uint32_t(a)+std::uint32_t(b);std::int32_t result;std::memcpy(&result,&bits,4);return result;};
     if (condition.kind==RoomConditionKind::entered) return {context.player_room==context.room && context.previous_room!=context.room,{}};
     if (condition.kind==RoomConditionKind::exited) return {context.previous_room==context.room && context.player_room!=context.room,{}};
+    if (condition.kind==RoomConditionKind::type_at) {
+        if (!condition.cached_item) {
+            if (!context.create_item) throw std::invalid_argument("type-at condition requires prototype factory");
+            const auto item=context.create_item(condition.item_type,condition.item_subtype);
+            if (!item) throw std::runtime_error("type-at prototype creation failed");
+            condition.cached_item=item;
+        }
+        if (!context.tile_items) throw std::invalid_argument("type-at condition requires tile object query");
+        const auto objects=context.tile_items({wrapped(context.origin.x,condition.point.x),wrapped(context.origin.y,condition.point.y)});
+        for (const auto& object:objects) if (object.item && object.type.kind==condition.cached_item->kind &&
+            (condition.item_subtype=="random" || object.type.subtype==condition.cached_item->subtype)) return {true,{}};
+        return {};
+    }
     if (!context.find_object) throw std::invalid_argument("room condition requires object lookup");
     const auto object=context.find_object(context.room,condition.object_id);
     if (!object) return {condition.missing_value,{}};
-    auto wrapped=[](int a,int b) {const auto bits=std::uint32_t(a)+std::uint32_t(b);std::int32_t result;std::memcpy(&result,&bits,4);return result;};
     switch (condition.kind) {
         case RoomConditionKind::object:return {};
         case RoomConditionKind::at:return {object->position.x==wrapped(context.origin.x,condition.point.x) && object->position.y==wrapped(context.origin.y,condition.point.y),{}};
