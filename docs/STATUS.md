@@ -1925,3 +1925,15 @@ observe both hit and broken on the breaking turn, remove the live breakable,
 clear events and prevent replay. All70 portable groups pass. Full source event
 coverage/lifetime, scheduling and the complete game remain unfinished; native
 scripted puzzle51ff808 is still running Mac CI45398534536.
+
+Native scripted puzzle51ff808 passed arm64 Mac run45398534536: all113 checks,
+including native-room-scripts-window and relocated packaged-app smoke. Full log
+retained privately. GameContent now supplies the executor's named/random NPC,
+loot and trap Create boundary via existing measured Session constructors and
+factory tables/depth context. Native scripted-room hooks route these requests;
+its puzzle now creates a guardian and reward alongside the replacement gate.
+Portable coverage compares scripted vs direct construction including full Session
+bytes/RNG, counter maps, labels, object bindings and saved continuation. All70
+portable groups pass; extended native constructor fixture awaits Mac CI. Live
+trap geometry still comes from caller-supplied grid, and all earlier outer-tick,
+carried-object/lifetime, clock, effect/AI/generation/UI/audio/full-game limits apply.

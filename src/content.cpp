@@ -9,6 +9,7 @@
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <type_traits>
 
 namespace dredmor {
 namespace {
@@ -89,6 +90,25 @@ RoomScriptProgram GameContent::room_script_program(std::size_t room_index) const
         const auto* spell=find_spell(spell_name);if (!spell) throw std::invalid_argument("unknown room script spell: "+std::string(spell_name));
         return ScriptSpellBinding{std::uint64_t(spell-spells_.data())+1,spell_cast_sound(*spell)};
     });
+}
+std::optional<SessionRoomObjectRef> GameContent::create_script_record(Session& session,const RoomRecord& record,
+    const TrapMap& map,Position origin,Difficulty difficulty,std::size_t level_set) const {
+    return std::visit([&](const auto& definition)->std::optional<SessionRoomObjectRef> {
+        using T=std::decay_t<decltype(definition)>;
+        if constexpr (std::is_same_v<T,RoomMonsterRecord>) {
+            const auto depth=session.depth_context();
+            if (auto id=session.create_room_monster(definition,[&](const auto& plan,auto& random,auto& counts) {
+                return create_room_monster(plan,{depth},difficulty,random,counts);
+            },origin)) return SessionRoomObjectRef{SessionRoomObjectKind::monster,*id};
+        } else if constexpr (std::is_same_v<T,RoomLootRecord>) {
+            if (auto result=session.create_room_loot(definition,item_factory_tables(),loot_context(session.depth_context(),level_set,difficulty),origin);result.instance)
+                return SessionRoomObjectRef{SessionRoomObjectKind::item,*result.instance};
+        } else if constexpr (std::is_same_v<T,RoomTrapRecord>) {
+            if (auto result=session.create_room_trap(definition,item_factory_tables(),loot_context(session.depth_context(),level_set,difficulty),map,origin);result.instance)
+                return SessionRoomObjectRef{SessionRoomObjectKind::trap,*result.instance};
+        } else throw std::invalid_argument("room script record requires another constructor");
+        return std::nullopt;
+    },record);
 }
 RoomStamp RoomDefinition::numeric_template() const {
     const auto width=legacy_attribute(source,"width"),height=legacy_attribute(source,"height");

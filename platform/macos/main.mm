@@ -736,6 +736,12 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
     for (const auto& event:session.events()) if (event.kind==dredmor::EventKind::object_hit || event.kind==dredmor::EventKind::object_broken)
         objects.set_event(session,runtime.triggers.events,{dredmor::SessionRoomObjectKind::breakable,event.target},event.kind==dredmor::EventKind::object_hit?"hit":"broken");
     dredmor::SessionRoomScriptHooks hooks;const auto root=_dataRoot;
+    const auto* content=_content.get();dredmor::TrapMap trapMap{_roomScripts->layout.width(),_roomScripts->layout.height(),{}};
+    for (const auto& cell:_roomScripts->layout.cells()) trapMap.tiles.push_back(cell.kind);
+    hooks.create_record=[content,trapMap](auto& candidate,const auto& record,auto origin) {
+        if (!content) throw std::runtime_error("script record requires installation content");
+        return content->create_script_record(candidate,record,trapMap,origin);
+    };
     hooks.breakable_frames=[root](const auto& definition) {
         return breakableFrames(breakableSprites(definition.intact,definition.breaking.value_or(definition.intact),definition.broken,root));
     };
@@ -825,6 +831,8 @@ static std::vector<dredmor::SecretLever> sceneSecretLevers(id value) {
         if (_session->player().position.x!=4 || _session->player().position.y!=1 || _session->world().turn()!=3 ||
             _session->custom_objects().size()!=1 || _session->custom_objects()[0].room_local_id!="replacement" ||
             !_session->passable({4,1}) || _objectImages.count!=1 || _scriptMessages.count!=2 ||
+            _session->enemies().size()!=1 || _session->ground_items().size()!=1 ||
+            !_roomScriptObjects->find(*_session,0,"guardian") || !_roomScriptObjects->find(*_session,0,"reward") ||
             ![_scriptMessages[1] isEqualToString:@"gate visible until clear"] || _roomScriptObjects->find(*_session,0,"gate"))
             throw std::runtime_error("native mouse did not solve scripted puzzle");
         const auto solved=snapshot();[self display];[self loadFromURL:url];

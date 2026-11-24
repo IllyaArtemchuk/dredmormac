@@ -85,13 +85,14 @@ if __name__=='__main__':
         (root/'dungeon').mkdir(exist_ok=True);(root/'dungeon/fixture.spr').write_bytes(sprite())
         if args.room_scripts:
             (root/'dungeon/lever1.spr').write_bytes(sprite());(root/'dungeon/replacement.spr').write_bytes(sprite())
+            monsters=ET.parse(root/'game/monDB.xml');ET.SubElement(monsters.getroot().find('monster'),'idleSprite',{'down':'dungeon/fixture.spr'});monsters.write(root/'game/monDB.xml',encoding='unicode')
             rows=['#######','#@....#','#.....#','#.....#','#######'];template=['#######','#..12.#','#..3..#','#.....#','#######']
             database=ET.Element('roomdb');room=ET.SubElement(database,'room',{'name':'Starting Room','width':'7','height':'5'})
             for row in template:ET.SubElement(room,'row',{'text':row})
             ET.SubElement(room,'element',{'type':'lever','at':'1','id':'switch'})
             ET.SubElement(room,'customblocker',{'at':'2','png':'dungeon/fixture.spr','id':'gate'})
             script=ET.SubElement(room,'script');ET.SubElement(script,'condition',{'condition_type':'activated_changed','id':'switch','activated':'1'})
-            for attributes in [dict(action_type='remove',id='gate'),dict(action_type='create',create_type='customblocker',at='3',png='dungeon/replacement.spr',id='replacement'),dict(action_type='move',id='player',at='2'),dict(action_type='ticker',text='switch fired')]:
+            for attributes in [dict(action_type='remove',id='gate'),dict(action_type='create',create_type='customblocker',at='3',png='dungeon/replacement.spr',id='replacement'),dict(action_type='create',create_type='monster',name='Fixture monster',x='5',y='3',id='guardian'),dict(action_type='create',create_type='loot',type='armour',subtype='Fixture cap',x='4',y='3',id='reward'),dict(action_type='move',id='player',at='2'),dict(action_type='ticker',text='switch fired')]:
                 ET.SubElement(script,'action',dict(on='success',**attributes))
             script=ET.SubElement(room,'script');ET.SubElement(script,'condition',{'condition_type':'at','id':'gate','at':'2'})
             ET.SubElement(script,'condition',{'condition_type':'activated_changed','id':'switch','activated':'1'})

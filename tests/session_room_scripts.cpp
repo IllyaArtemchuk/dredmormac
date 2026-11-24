@@ -9,7 +9,7 @@ template<class F> bool rejects(F body) {try {body();} catch(const std::exception
 std::string saved(const Session& session) {std::ostringstream out;session.save(out);return out.str();}
 std::string saved(const SessionRoomObjects& objects,const Session& session) {std::ostringstream out;objects.save(out,session);return out.str();}
 std::string saved(const RoomRuntimeState& state,const std::vector<RoomRuntimeRoom>& rooms) {std::ostringstream out;write_room_runtime_state(out,state,rooms);return out.str();}
-int main() {
+int main(int argc,char** argv) {
     try {
         RoomDefinition definition;definition.name="Synthetic live Session puzzle";
         definition.rows={"#########","#.......#","#..1234.#","#.......#","#########"};
@@ -140,6 +140,33 @@ int main() {
         check(last_hit.presentation.size()==2 && last_hit.presentation[1].text=="broken" && pending.session.breakables().empty());
         check(!pending.objects.find(pending.session,0,"fragile") && pending.session.events().empty() && pending.runtime.triggers.events.empty());
         check(SessionRoomScriptExecutor::run(pending.session,event_profile,pending.objects,pending.runtime).presentation.empty());
+        check(argc==2);const auto content=GameContent::load(argv[1]);
+        std::istringstream content_rows("#########\n#@......#\n#.......#\n#.......#\n#########\n");
+        Session populated(World::read(content_rows),make_player({3,2,2}),7);
+        populated.equipment_profile({3,2,2},std::make_shared<const std::vector<ItemDefinition>>(content.items()));
+        RoomDefinition constructor_room;constructor_room.name="Script constructors";
+        constructor_room.rows={"#########","#....1..#","#....2..#","#.......#","#########"};
+        constructor_room.source=parse_xml(R"(<room width="9" height="5"><script>
+            <action on="success" action_type="create" create_type="monster" name="Fixture monster" at="1" id="guardian"/>
+            <action on="success" action_type="create" create_type="loot" type="armour" subtype="Fixture cap" at="2" id="reward"/>
+            </script></room>)");
+        auto constructor_program=std::make_shared<const RoomScriptProgram>(constructor_room.script_program());
+        SessionRoomScriptProfile constructor_profile(DungeonLayout(9,5,event_cells));
+        constructor_profile.programs={constructor_program};constructor_profile.sources={constructor_room.source};
+        constructor_profile.rooms={{{true,1,0,std::shared_ptr<const std::vector<RoomScriptDefinition>>(constructor_program,&constructor_program->scripts)},{0,0},1}};
+        SessionRoomObjects constructor_objects;constructor_objects.bind(populated,{SessionRoomObjectKind::player,populated.player().id},constructor_profile.layout);
+        RoomRuntimeState constructor_runtime;TrapMap map{9,5,std::vector<std::uint8_t>(45,1)};
+        SessionRoomScriptHooks constructors;constructors.create_record=[&](auto& owner,const auto& record,auto origin) {return content.create_script_record(owner,record,map,origin);};
+        auto direct=populated;
+        for (const auto& record:constructor_program->created_records) check(content.create_script_record(direct,record,map));
+        auto constructed=SessionRoomScriptExecutor::run(populated,constructor_profile,constructor_objects,constructor_runtime,constructors);
+        check(constructed.triggers.successes.size()==1 && populated.enemies().size()==1 && populated.ground_items().size()==1);
+        check(constructor_objects.find(populated,0,"guardian")->monster && constructor_objects.find(populated,0,"reward")->position.y==2);
+        check(populated.monster_spawn_state().counts==direct.monster_spawn_state().counts && saved(populated)==saved(direct));
+        std::ostringstream constructed_save;SessionRoomScriptExecutor::save(constructed_save,populated,constructor_profile,constructor_objects,constructor_runtime);
+        std::istringstream constructed_input(constructed_save.str());
+        auto constructed_restored=SessionRoomScriptExecutor::load(constructed_input,constructor_profile,std::make_shared<const std::vector<ItemDefinition>>(content.items()));
+        check(saved(constructed_restored.session)==saved(populated) && constructed_restored.objects.find(constructed_restored.session,0,"reward"));
         std::cout<<"live Session room puzzle preserves same-pass visibility, deferred deletion/movement, stable references, rollback and saved continuation\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }

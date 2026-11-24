@@ -10,6 +10,7 @@
 #include "dredmor/spells.hpp"
 #include "dredmor/decorations.hpp"
 #include "dredmor/hordes.hpp"
+#include "dredmor/session_room_objects.hpp"
 
 namespace dredmor {
 struct SkillLoadout { std::string type,subtype;int amount=1;bool always=false; };
@@ -53,6 +54,10 @@ public:
     const RoomDefinition& room(std::string_view name) const;
     RoomScriptProgram room_script_program(std::string_view name) const;
     RoomScriptProgram room_script_program(std::size_t room_index) const;
+    // Single-object script Create constructors beyond the executor's custom
+    // records. Caller supplies the live trap grid and owns resource preflight.
+    std::optional<SessionRoomObjectRef> create_script_record(Session& session,const RoomRecord& record,
+        const TrapMap& map,Position origin={0,0},Difficulty difficulty=Difficulty::medium,std::size_t level_set=0) const;
     const MonsterDefinition& monster(std::string_view name) const;
     const Tweaks& tweaks() const { return tweaks_; }
     const RoomNameWords& room_name_words() const { return room_name_words_; }
