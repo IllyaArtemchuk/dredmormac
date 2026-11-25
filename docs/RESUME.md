@@ -2373,3 +2373,15 @@ pass plus focused rerun after encoded-size guard;110tick save/continuation byte/
 trace identity through respawn/expiry/autosaves. Next combine room-script registry/
 runtime candidate ownership with live driver scheduling; native remains pending.
 Shared-RNG1555371 passed Mac45417001620/package. MonsterPost091e6f3 running45417450787.
+
+Latest prepared-level driver: SessionRoomGameTickExecutor owns Session/RNG,
+bindings/runtime and GameTickState candidates together. See docs/GAME_TICK.md,
+new header/source/test. All78portable groups pass plus focused final rerun.
+Includes source-positioned script phases, live registry/player/cooldown projection,
+pre-existing teleport cancellation/merge, no-move finish before autosave and
+nine late-failure rollback boundaries. Virtual bodies and native adoption remain
+explicitly unfinished. Whole game unfinished. MonsterPost091e6f3 Mac45417450787
+passed/package. Respawn45415969486 and driver-save45418494600 native jobs cancelled
+before steps (no logs), so newest push must receive fresh full Mac validation.
+User asked about usage-limit progress loss: existing HEAD3cc51ce matched origin
+exactly; latest executor files remained intact, were rebuilt/tested and checkpointed.

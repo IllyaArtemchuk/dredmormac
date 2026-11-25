@@ -1,4 +1,4 @@
-# Status — 2026-11-24
+# Status — 2026-11-25
 
 Branch: implementation/native-foundation. Initial repository had only Readme.md.
 Overall implementation is incomplete. Milestone 1 has a working Ghidra/Unicorn
@@ -2121,3 +2121,20 @@ These are port formats, not original save compatibility. Independent room bindin
 runtime registries remain caller-owned; native scheduling/combined scripted tick
 ownership is next. Full game remains unfinished. PostGameTick091e6f3 running
 Mac45417450787; respawn0d9c749 still queued45415969486.
+
+SessionRoomGameTickExecutor now owns a single transaction across Session/RNG,
+room bindings, script runtime and outer driver state. It projects live object/
+player/cooldown state, runs scripts at room_triggers, clears destruction before
+Post, cancels destroyed subjects' earlier queued moves, merges script moves after
+existing teleports, publishes cooldowns before placement and finishes the phase
+before clock/autosave even with no moves. Hooks distinguish managed script moves
+from external placement bodies. All78 portable groups pass, plus a focused rerun
+after clock-failure/gating coverage. Tests check appended Update objects, fresh
+Post-only creations, respawn registration/counts, signed cooldowns, player moves,
+updates-player gating and full four-owner rollback at nine late boundaries.
+This prepared-level adapter still requires explicit virtual/subsystem bodies and
+is not adopted as the native scheduler. See docs/GAME_TICK.md. Full game remains
+unfinished. MonsterPost091e6f3 passed arm64 Mac45417450787/package. Respawn45415969486
+and driver-save45418494600 jobs were cancelled with no build steps/logs; these
+runs do not establish code failures, and the next source push requests validation
+of their changes together with this milestone.

@@ -251,6 +251,7 @@ public:
 private:
     friend class SessionRoomScriptExecutor;
     friend class SessionGameTickExecutor;
+    friend class SessionRoomGameTickExecutor;
     friend class FloorRegistry;
     static Session load_node(const XmlNode& root,std::shared_ptr<const std::vector<ItemDefinition>> definitions,
                              std::shared_ptr<const std::vector<AbilityDefinition>> abilities,
