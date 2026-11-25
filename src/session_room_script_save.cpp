@@ -43,7 +43,11 @@ SessionRoomScriptSnapshot SessionRoomScriptExecutor::load(std::istream& input,co
     std::string bytes;char buffer[8192];
     while (input) {input.read(buffer,sizeof(buffer));bytes.append(buffer,std::size_t(input.gcount()));if (bytes.size()>64*1024*1024) throw std::runtime_error("scripted room save exceeds 64 MiB");}
     if (input.bad()) throw std::runtime_error("cannot read scripted room snapshot");
-    const auto node=parse_xml(bytes);
+    return load_node(parse_xml(bytes),profile,std::move(definitions),std::move(abilities),std::move(spells));
+}
+SessionRoomScriptSnapshot SessionRoomScriptExecutor::load_node(const XmlNode& node,const SessionRoomScriptProfile& profile,
+    std::shared_ptr<const std::vector<ItemDefinition>> definitions,std::shared_ptr<const std::vector<AbilityDefinition>> abilities,
+    std::shared_ptr<const std::vector<SpellDefinition>> spells) {
     if (node.tag!="dredmor-scripted-room" || node.attributes.size()!=2 || (node.attribute("version")!="1" && node.attribute("version")!="2") || node.children.size()!=3 ||
         node.children[0].tag!="dredmor-session" || node.children[1].tag!="room-bindings" || node.children[2].tag!="room-runtime" ||
         node.text.find_first_not_of(" \t\r\n")!=std::string::npos) throw std::runtime_error("invalid scripted room save structure");

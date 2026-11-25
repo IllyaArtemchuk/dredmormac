@@ -2138,3 +2138,15 @@ unfinished. MonsterPost091e6f3 passed arm64 Mac45417450787/package. Respawn45415
 and driver-save45418494600 jobs were cancelled with no build steps/logs; these
 runs do not establish code failures, and the next source push requests validation
 of their changes together with this milestone.
+
+The prepared-room tick adapter now saves/loads all four owners together under a
+version1 scripted-tick wrapper, retaining the existing authoritative-profile
+scripted-room payload plus complete driver state. Validation checks player/level
+agreement, exact live registration order and every spell cooldown before output
+and after load. Session/RNG, bindings/runtime and driver reload atomically; a
+subsequent tick remains byte-identical to uninterrupted execution. Corrupt order
+and mismatched cooldowns reject, and existing scripted-room save compatibility
+is preserved through a shared private node loader. All78 portable groups pass.
+This closes snapshot ownership for the prepared-level driver, but native driver
+adoption and missing virtual gameplay bodies are still pending. Full game remains
+unfinished. Executor3c4b004 is running fresh arm64 Mac45525637652.

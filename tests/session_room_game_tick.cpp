@@ -80,6 +80,19 @@ int main() {
         check(external_moves==1 && script_moves==2 && saves==1 && pass.player_teleported && pass.presentation.size()==1);
         check(tick.teleports.empty() && tick.player.respawn_counter==1 && tick.spell_cooldowns==std::vector<std::int32_t>({2,-7,0}) && session.spell_cooldown(0)==2);
         check(objects.bindings().size()==4 && session.enemies().size()==2 && tick.level->objects==posts && session.monster_spawn_state().counts.at("fixture")==1);
+        std::ostringstream snapshot;SessionRoomGameTickExecutor::save(snapshot,session,profile,objects,runtime,tick);
+        std::istringstream reload_input(snapshot.str());auto reloaded=SessionRoomGameTickExecutor::load(reload_input,profile,{},{},definitions);
+        check(bundle(reloaded.session,profile,reloaded.objects,reloaded.runtime,reloaded.tick)==bundle(session,profile,objects,runtime,tick));
+        auto wrong=tick;wrong.level->objects[0]=900;std::ostringstream rejected_output;bool rejected=false;
+        try {SessionRoomGameTickExecutor::save(rejected_output,session,profile,objects,runtime,wrong);} catch(const std::runtime_error&) {rejected=true;}
+        check(rejected && rejected_output.str().empty());
+        wrong=tick;wrong.spell_cooldowns[0]=123;rejected=false;
+        try {SessionRoomGameTickExecutor::save(rejected_output,session,profile,objects,runtime,wrong);} catch(const std::runtime_error&) {rejected=true;}
+        check(rejected && rejected_output.str().empty());
+        auto corrupted=snapshot.str();const auto registration=corrupted.find("<objects>");check(registration!=std::string::npos);corrupted.replace(registration+9,1,"9");
+        std::istringstream corrupted_input(corrupted);rejected=false;
+        try {SessionRoomGameTickExecutor::load(corrupted_input,profile,{},{},definitions);} catch(const std::runtime_error&) {rejected=true;}
+        check(rejected);
         const auto before=bundle(initial,profile,initial_objects,initial_runtime,initial_tick);
         for (auto failure:{TickRequestKind::room_triggers,TickRequestKind::clear_destruction,TickRequestKind::director,TickRequestKind::spawn_monster,TickRequestKind::post_game_tick,TickRequestKind::teleport,TickRequestKind::save_game,TickRequestKind::platform_callbacks}) {
             auto failed=initial;auto failed_objects=initial_objects;auto failed_runtime=initial_runtime;auto failed_tick=initial_tick;
@@ -104,6 +117,8 @@ int main() {
             if (request.kind==TickRequestKind::save_game) {check(owner.spell_cooldown(0)==1);std::ostringstream out;SessionRoomScriptExecutor::save(out,owner,profile,registry,scripts);write_game_tick_state(out,driver);}
         };
         auto second=SessionRoomGameTickExecutor::run(session,profile,objects,runtime,tick,quiet);check(!second.player_teleported && second.presentation.empty() && session.spell_cooldown(0)==1);
+        SessionRoomGameTickExecutor::run(reloaded.session,profile,reloaded.objects,reloaded.runtime,reloaded.tick,quiet);
+        check(bundle(reloaded.session,profile,reloaded.objects,reloaded.runtime,reloaded.tick)==bundle(session,profile,objects,runtime,tick));
         {
             auto gated=initial;auto registry=initial_objects;auto scripts=initial_runtime;auto driver=initial_tick;driver.level->updates_player=false;
             unsigned player_passes=0,respawns=0;SessionRoomGameTickHooks inactive;inactive.ticks=[](auto&,auto&) {return 1U;};

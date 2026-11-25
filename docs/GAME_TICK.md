@@ -52,3 +52,13 @@ order, pending teleport cancellation, unsigned autosaves and updates-player gate
 Virtual subsystem bodies in the composed fixtures are controlled boundaries;
 full Monster::Update/AI, clock/effect lifetimes, dungeon generation and native
 scheduler adoption remain work in progress.
+
+The prepared-level adapter also has a combined scripted-tick snapshot. It nests
+the existing authoritative-profile scripted-room payload and complete driver
+payload in one bounded version1 wrapper. Save/load checks the live registration
+order, player/geometry agreement and every projected cooldown. Session/RNG, room
+bindings/runtime and driver state are returned together only after validation;
+resource preflight and final file replacement remain the native owner's job.
+Tests reload all owners together and compare subsequent ticks with uninterrupted
+execution. The earlier standalone Session/driver wrapper remains available when
+a caller does not own room scripts.

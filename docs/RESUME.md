@@ -2385,3 +2385,12 @@ passed/package. Respawn45415969486 and driver-save45418494600 native jobs cancel
 before steps (no logs), so newest push must receive fresh full Mac validation.
 User asked about usage-limit progress loss: existing HEAD3cc51ce matched origin
 exactly; latest executor files remained intact, were rebuilt/tested and checkpointed.
+
+Combined scripted tick snapshot added: SessionRoomGameTickExecutor save/load
+stores existing signed/profile-bound scripted-room payload and full GameTickState
+in one bounded wrapper. It verifies live registry order, player/geometry and
+Session cooldown projection; reload+next-tick continuation matches all four
+uninterrupted owners. All78portable groups pass (build-scripted-tick-snapshot-78.log).
+Prior executor3c4b004 pushed successfully; fresh Mac45525637652 in progress. Native
+scheduler adoption and full virtual AI/effect/visibility/generation/UI/audio work
+remain unfinished. No progress was lost around the user's usage-limit interruption.

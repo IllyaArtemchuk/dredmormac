@@ -76,6 +76,11 @@ public:
         std::shared_ptr<const std::vector<AbilityDefinition>> abilities={},
         std::shared_ptr<const std::vector<SpellDefinition>> spells={});
 private:
+    friend class SessionRoomGameTickExecutor;
+    static SessionRoomScriptSnapshot load_node(const XmlNode& node,const SessionRoomScriptProfile& profile,
+        std::shared_ptr<const std::vector<ItemDefinition>> definitions,
+        std::shared_ptr<const std::vector<AbilityDefinition>> abilities,
+        std::shared_ptr<const std::vector<SpellDefinition>> spells);
     static SessionRoomObjectRef reference(const SessionRoomObjects& objects,std::uint64_t identity);
     static CustomRoomObject& custom(Session& session,SessionRoomObjectRef reference);
 };
